@@ -60,6 +60,75 @@ export default function AsesoramientoLooks({
     }
   }, [selectedHistorialItem]);
 
+  // Generate instant classic looks from active wardrobe if user hasn't called the AI yet
+  useEffect(() => {
+    if (selectedHistorialItem) return;
+
+    const hasOnlyInstantOrEmpty = looks.length === 0 || looks.every(l => l.titulo.includes("Sartorial Instantáneo"));
+    
+    if (armario.length > 0 && hasOnlyInstantOrEmpty && !loading) {
+      const tops = armario.filter((p) => p.categoria === "top");
+      const pantalones = armario.filter((p) => p.categoria === "pantalon");
+      const calzados = armario.filter((p) => p.categoria === "calzado");
+      const accesorios = armario.filter((p) => p.categoria === "accesorio");
+
+      const generatedInstantLooks: Look[] = [];
+
+      // 1. Atuendo Boutique Esencial
+      if (tops.length > 0 || pantalones.length > 0) {
+        generatedInstantLooks.push({
+          titulo: "Atuendo Boutique Esencial (Sartorial Instantáneo)",
+          id_prendas: [
+            ...(tops.length > 0 ? [tops[0].id] : []),
+            ...(pantalones.length > 0 ? [pantalones[0].id] : []),
+            ...(calzados.length > 0 ? [calzados[0].id] : []),
+            ...(accesorios.length > 0 ? [accesorios[0].id] : [])
+          ],
+          porque: "Una elegante combinación sastrera inmediata. Hemos emparejado tus mejores prendas superiores con una faja formal estructurada para conseguir una caída limpia y armonizada sin esperas de procesamiento.",
+          pelo_sugerido: "Corte clásico texturizado con raya al lado",
+          barba_sugerida: "Barba de tres días perfilada y aceitada",
+          consejo_barberia: "Aplica cera mate de fijación media para fijar el pelo sin perder flexibilidad ni brillo."
+        });
+      }
+
+      // 2. Silueta Urbana de Contraste
+      if (pantalones.length > 0 && (tops.length > 1 || calzados.length > 0)) {
+        generatedInstantLooks.push({
+          titulo: "Silueta Urbana de Contraste (Sartorial Instantáneo)",
+          id_prendas: [
+            ...(tops.length > 1 ? [tops[1].id] : tops.length > 0 ? [tops[0].id] : []),
+            ...[pantalones[0].id],
+            ...(calzados.length > 1 ? [calzados[1].id] : calzados.length > 0 ? [calzados[0].id] : []),
+            ...(accesorios.length > 1 ? [accesorios[1].id] : accesorios.length > 0 ? [accesorios[0].id] : [])
+          ],
+          porque: "Una silueta casual-chic idónea para tarde noche o almuerzos de negocios discretos. El contraste de color enriquece la figura corporal con sutileza editorial.",
+          pelo_sugerido: "Tupé moderno levantado con secador de mano",
+          barba_sugerida: "Afeitado clásico apurado de caballeros",
+          consejo_barberia: "Un poco de bálsamo hidratante para después del afeitado mantendrá la tez impecable y libre de rojeces."
+        });
+      }
+
+      // 3. Línea Purificada de Gala
+      if (tops.length > 0 || pantalones.length > 0) {
+        generatedInstantLooks.push({
+          titulo: "Línea Purificada de Gala (Sartorial Instantáneo)",
+          id_prendas: [
+            ...(tops.length > 2 ? [tops[2].id] : tops.length > 0 ? [tops[0].id] : []),
+            ...(pantalones.length > 1 ? [pantalones[1].id] : pantalones.length > 0 ? [pantalones[0].id] : []),
+            ...(calzados.length > 0 ? [calzados[0].id] : []),
+            ...(accesorios.length > 0 ? [accesorios[0].id] : [])
+          ],
+          porque: "Estilo distinguido de máxima formalidad. Ideal para galas u ocasiones solemnes que reclamen un balance sobrio y distinguido.",
+          pelo_sugerido: "Degradado nítido con acabado limpio de barbería",
+          barba_sugerida: "Perfilado nítido de la línea del cuello y mejillas",
+          consejo_barberia: "Utiliza un peine de púas finas para esculpir perfectamente las guías de cada mechón."
+        });
+      }
+
+      setLooks(generatedInstantLooks);
+    }
+  }, [armario, selectedHistorialItem]);
+
   // Simulation states
   const [simulating, setSimulating] = useState(false);
   const [simulationError, setSimulationError] = useState<string | null>(null);
@@ -131,8 +200,9 @@ export default function AsesoramientoLooks({
 
     try {
       let prendasTexto = "";
+      let matchingPrendas: any[] = [];
       if (fullBody) {
-        const matchingPrendas = look.id_prendas
+        matchingPrendas = look.id_prendas
           .map((id) => armario.find((p) => p.id === id))
           .filter(Boolean);
         prendasTexto = matchingPrendas
@@ -151,6 +221,7 @@ export default function AsesoramientoLooks({
           estiloBarba: look.barba_sugerida,
           fullBody,
           prendasTexto,
+          prendasDetalle: matchingPrendas,
           customFullBodyImage: fullBody && customFullBodyPhoto ? customFullBodyPhoto : undefined,
         }),
       });
@@ -352,9 +423,23 @@ export default function AsesoramientoLooks({
                   {/* Left Column: Garments list (Magazine Collage style) */}
                   <div className="lg:col-span-7 space-y-6">
                     <div>
-                      <span className="text-[10px] tracking-widest text-laton uppercase font-medium">Asesoría de Looks</span>
-                      <h3 className="font-serif text-2xl font-bold text-tinta italic mt-0.5 leading-tight">
-                        {selectedLook.titulo}
+                      {selectedLook.titulo.includes("Sartorial Instantáneo") ? (
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="text-[9px] bg-laton/15 text-laton border border-laton/30 px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans">
+                            Catálogo Express (Sin IA)
+                          </span>
+                          <span className="text-[10px] text-tinta-apagada">Sinergia Automática de Armario</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="text-[9px] bg-[#C9A35B] text-fondo px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans animate-pulse">
+                            Bespoke por Gemini sastre IA
+                          </span>
+                          <span className="text-[10px] text-laton font-medium">Coordinación Exclusiva</span>
+                        </div>
+                      )}
+                      <h3 className="font-serif text-2xl font-bold text-tinta italic mt-1 leading-tight">
+                        {selectedLook.titulo.replace(" (Sartorial Instantáneo)", "")}
                       </h3>
                       <p className="text-sm font-light text-tinta/80 mt-3 leading-relaxed">
                         {selectedLook.porque}
@@ -733,7 +818,10 @@ export default function AsesoramientoLooks({
                                   <button
                                     type="button"
                                     id="boton-simular-cuerpo"
-                                    onClick={() => triggerSimulation(activeLookIndex, selectedLook, true)}
+                                    onClick={() => {
+                                      setSimulationTab("cuerpo");
+                                      triggerSimulation(activeLookIndex, selectedLook, true);
+                                    }}
                                     className="button-press w-full py-2.5 bg-tarjeta border border-laton text-laton hover:bg-laton hover:text-fondo text-xs font-bold uppercase tracking-widest rounded flex items-center justify-center gap-1.5 transition active:scale-97"
                                   >
                                     <Sparkles size={12} /> Proyectar sobre {customFullBodyPhoto ? "mi cuerpo" : "silueta clásica"} con IA
@@ -775,12 +863,15 @@ export default function AsesoramientoLooks({
 
                                   {selectedLook.simulatedFullBodyImageUrl?.startsWith("data:image/svg+xml") && (
                                     <div className="p-3 bg-[#1e1a13] border border-laton/20 rounded-md text-left text-[11px] font-sans">
-                                      <div className="flex items-center gap-1.5 text-[#C9A35B] font-bold uppercase tracking-wider text-[9.5px] mb-1">
+                                      <div className="flex items-center gap-1.5 text-[#C9A35B] font-bold uppercase tracking-wider text-[9.5px] mb-1.5">
                                         <AlertCircle size={12} className="shrink-0 text-laton" />
-                                        <span>BOCETO EDITORIAL ACTIVO</span>
+                                        <span>BOCETO EDITORIAL ACTIVO (MODO DE RESERVA)</span>
                                       </div>
                                       <p className="text-tinta-apagada leading-relaxed text-[10.5px]">
-                                        Hemos compuesto tu fotografía en una proyección boutique. Para habilitar un retoque fotorrealista con cambio completo de ropa mediante Inteligencia Artificial, se requiere autorizar la cuota de imagen en AI Studio (procediendo con la opción de Créditos/Paid Flow).
+                                        Esta vista previa utiliza nuestro diseño de sastrería boutique para ilustrar la combinación: tu foto original se mantiene a la izquierda ("Referencia Base") y el maniquí a la derecha ("Fitting Sartorial") **se viste digitalmente con los colores exactos y los cortes sugeridos de tu look**.
+                                      </p>
+                                      <p className="text-tinta-apagada/80 leading-relaxed text-[10px] mt-1.5 border-t border-linea/20 pt-1.5">
+                                        Para realizar una proyección fotorrealista directa sobre tu cuerpo que reemplace visualmente la ropa en tu foto real mediante inteligencia artificial generativa, se requiere autorizar la cuota en el panel de AI Studio (Dressing-credits flow).
                                       </p>
                                     </div>
                                   )}

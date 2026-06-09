@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface TuArmarioProps {
   prendas: Prenda[];
-  onPrendaAgregada: (prenda: Prenda) => void;
+  onPrendaAgregada: (prenda: Prenda | Prenda[]) => void;
   onPrendaEliminada: (id: string) => void;
   onPrendaActualizada?: (prenda: Prenda) => void;
 }
@@ -20,7 +20,9 @@ const cropGarmentImage = (
 ): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (base64Src && !base64Src.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
@@ -33,11 +35,24 @@ const cropGarmentImage = (
         const totalW = img.width;
         const totalH = img.height;
 
+        // Auto-detect if coordinates are in [0, 1] range rather than [0, 1000] range
+        let yminScale = Number(ymin);
+        let xminScale = Number(xmin);
+        let ymaxScale = Number(ymax);
+        let xmaxScale = Number(xmax);
+
+        if (yminScale <= 1.05 && xminScale <= 1.05 && ymaxScale <= 1.05 && xmaxScale <= 1.05) {
+          yminScale = yminScale * 1000;
+          xminScale = xminScale * 1000;
+          ymaxScale = ymaxScale * 1000;
+          xmaxScale = xmaxScale * 1000;
+        }
+
         // Convert normalized (0-1000) coordinates to actual pixels
-        const yStart = (Math.max(0, Math.min(1000, ymin)) / 1000) * totalH;
-        const xStart = (Math.max(0, Math.min(1000, xmin)) / 1000) * totalW;
-        const yEnd = (Math.max(0, Math.min(1000, ymax)) / 1000) * totalH;
-        const xEnd = (Math.max(0, Math.min(1000, xmax)) / 1000) * totalW;
+        const yStart = (Math.max(0, Math.min(1000, yminScale)) / 1000) * totalH;
+        const xStart = (Math.max(0, Math.min(1000, xminScale)) / 1000) * totalW;
+        const yEnd = (Math.max(0, Math.min(1000, ymaxScale)) / 1000) * totalH;
+        const xEnd = (Math.max(0, Math.min(1000, xmaxScale)) / 1000) * totalW;
 
         let cropW = xEnd - xStart;
         let cropH = yEnd - yStart;
@@ -285,47 +300,60 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
           const infoParsed = await res.json();
           
-          if (isMultiMode && infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
-            for (let idx = 0; idx < infoParsed.prendas.length; idx++) {
-              const item = infoParsed.prendas[idx];
+          let prendasArray: any[] = [];
+          if (infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
+            prendasArray = infoParsed.prendas;
+          } else if (infoParsed.nombre) {
+            prendasArray = [infoParsed];
+          }
+
+          if (prendasArray.length > 0) {
+            const listToAdd: Prenda[] = [];
+            for (let idx = 0; idx < prendasArray.length; idx++) {
+              const item = prendasArray[idx];
               let croppedImg = resizedBase64;
+              
+              const yminVal = item.box_ymin !== undefined && item.box_ymin !== null ? Number(item.box_ymin) : NaN;
+              const xminVal = item.box_xmin !== undefined && item.box_xmin !== null ? Number(item.box_xmin) : NaN;
+              const ymaxVal = item.box_ymax !== undefined && item.box_ymax !== null ? Number(item.box_ymax) : NaN;
+              const xmaxVal = item.box_xmax !== undefined && item.box_xmax !== null ? Number(item.box_xmax) : NaN;
+
               if (
-                typeof item.box_ymin === "number" &&
-                typeof item.box_xmin === "number" &&
-                typeof item.box_ymax === "number" &&
-                typeof item.box_xmax === "number"
+                !isNaN(yminVal) &&
+                !isNaN(xminVal) &&
+                !isNaN(ymaxVal) &&
+                !isNaN(xmaxVal) &&
+                !(yminVal === 0 && xminVal === 0 && ymaxVal === 1000 && xmaxVal === 1000 && prendasArray.length === 1)
               ) {
-                croppedImg = await cropGarmentImage(
-                  resizedBase64,
-                  item.box_ymin,
-                  item.box_xmin,
-                  item.box_ymax,
-                  item.box_xmax
-                );
+                try {
+                  croppedImg = await cropGarmentImage(
+                    resizedBase64,
+                    yminVal,
+                    xminVal,
+                    ymaxVal,
+                    xmaxVal
+                  );
+                } catch (cropErr) {
+                  console.error("No se pudo recortar la prenda, usando imagen base:", cropErr);
+                }
               }
 
               const nuevaPrenda: Prenda = {
                 id: "prenda_" + Date.now() + "_" + i + "_" + idx + "_" + Math.floor(Math.random() * 1000),
-                nombre: item.nombre,
-                categoria: item.categoria as CategoriaPrenda,
-                color: item.color,
-                formalidad: item.formalidad,
-                temporada: item.temporada as TemporadaPrenda,
+                nombre: item.nombre || "Prenda identificada con IA",
+                categoria: (item.categoria as CategoriaPrenda) || "top",
+                color: item.color || "#C9A35B",
+                formalidad: item.formalidad !== undefined ? item.formalidad : 3,
+                temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
               };
-              onPrendaAgregada(nuevaPrenda);
+              listToAdd.push(nuevaPrenda);
+            }
+            if (listToAdd.length > 0) {
+              onPrendaAgregada(listToAdd);
             }
           } else {
-            const nuevaPrenda: Prenda = {
-              id: "prenda_" + Date.now() + "_" + i + "_" + Math.floor(Math.random() * 1000),
-              nombre: infoParsed.nombre,
-              categoria: infoParsed.categoria as CategoriaPrenda,
-              color: infoParsed.color,
-              formalidad: infoParsed.formalidad,
-              temporada: infoParsed.temporada as TemporadaPrenda,
-              imageSrc: resizedBase64,
-            };
-            onPrendaAgregada(nuevaPrenda);
+            throw new Error("No se pudo extraer ninguna prenda válida de la imagen analizada.");
           }
           
           completedCount++;
@@ -438,47 +466,60 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
           const infoParsed = await res.json();
           
-          if (isMultiMode && infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
-            for (let idx = 0; idx < infoParsed.prendas.length; idx++) {
-              const item = infoParsed.prendas[idx];
+          let prendasArray: any[] = [];
+          if (infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
+            prendasArray = infoParsed.prendas;
+          } else if (infoParsed.nombre) {
+            prendasArray = [infoParsed];
+          }
+
+          if (prendasArray.length > 0) {
+            const listToAdd: Prenda[] = [];
+            for (let idx = 0; idx < prendasArray.length; idx++) {
+              const item = prendasArray[idx];
               let croppedImg = resizedBase64;
+
+              const yminVal = item.box_ymin !== undefined && item.box_ymin !== null ? Number(item.box_ymin) : NaN;
+              const xminVal = item.box_xmin !== undefined && item.box_xmin !== null ? Number(item.box_xmin) : NaN;
+              const ymaxVal = item.box_ymax !== undefined && item.box_ymax !== null ? Number(item.box_ymax) : NaN;
+              const xmaxVal = item.box_xmax !== undefined && item.box_xmax !== null ? Number(item.box_xmax) : NaN;
+
               if (
-                typeof item.box_ymin === "number" &&
-                typeof item.box_xmin === "number" &&
-                typeof item.box_ymax === "number" &&
-                typeof item.box_xmax === "number"
+                !isNaN(yminVal) &&
+                !isNaN(xminVal) &&
+                !isNaN(ymaxVal) &&
+                !isNaN(xmaxVal) &&
+                !(yminVal === 0 && xminVal === 0 && ymaxVal === 1000 && xmaxVal === 1000 && prendasArray.length === 1)
               ) {
-                croppedImg = await cropGarmentImage(
-                  resizedBase64,
-                  item.box_ymin,
-                  item.box_xmin,
-                  item.box_ymax,
-                  item.box_xmax
-                );
+                try {
+                  croppedImg = await cropGarmentImage(
+                    resizedBase64,
+                    yminVal,
+                    xminVal,
+                    ymaxVal,
+                    xmaxVal
+                  );
+                } catch (cropErr) {
+                  console.error("Error al recortar captura:", cropErr);
+                }
               }
 
               const nuevaPrenda: Prenda = {
                 id: "prenda_" + Date.now() + "_" + idx + "_" + Math.floor(Math.random() * 1000),
-                nombre: item.nombre,
-                categoria: item.categoria as CategoriaPrenda,
-                color: item.color,
-                formalidad: item.formalidad,
-                temporada: item.temporada as TemporadaPrenda,
+                nombre: item.nombre || "Prenda identificada con IA",
+                categoria: (item.categoria as CategoriaPrenda) || "top",
+                color: item.color || "#C9A35B",
+                formalidad: item.formalidad !== undefined ? item.formalidad : 3,
+                temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
               };
-              onPrendaAgregada(nuevaPrenda);
+              listToAdd.push(nuevaPrenda);
+            }
+            if (listToAdd.length > 0) {
+              onPrendaAgregada(listToAdd);
             }
           } else {
-            const nuevaPrenda: Prenda = {
-              id: "prenda_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-              nombre: infoParsed.nombre,
-              categoria: infoParsed.categoria as CategoriaPrenda,
-              color: infoParsed.color,
-              formalidad: infoParsed.formalidad,
-              temporada: infoParsed.temporada as TemporadaPrenda,
-              imageSrc: resizedBase64,
-            };
-            onPrendaAgregada(nuevaPrenda);
+            throw new Error("Fallo al identificar la prenda o prendas de la captura.");
           }
         } catch (err: any) {
           console.error(err);

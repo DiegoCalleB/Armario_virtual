@@ -46,8 +46,8 @@ function getGenAI(): GoogleGenAI {
 // Helper to retry Gemini API calls in case of rate limits, 503 unavailable, or spikes in demand
 async function callGeminiWithRetry<T>(
   apiCallFn: () => Promise<T>,
-  retries = 3,
-  delayMs = 1200
+  retries = 4,
+  delayMs = 1500
 ): Promise<T> {
   let lastError: any = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -170,23 +170,50 @@ app.post("/api/analizar-prenda", async (req, res) => {
 
     const { mimeType, data } = parseDataUri(image);
     const ai = getGenAI();
+    const isMultiModeEnabled = isMulti === true || isMulti === "true";
 
-    const promptText = isMulti 
-      ? "Esta imagen contiene múltiples prendas o accesorios masculinos (por ejemplo, varias camisetas puestas juntas, un conjunto completo, o una colección de ropa). Desglosa e identifica CADA una de las prendas visibles como un artículo de armario independiente. Para cada una de ellas, determina su nombre elegante en español, categoría (top, pantalon, calzado, accesorio), color hexadecimal representativo, formalidad del 1 al 5 e idoneidad estacional. También debes identificar su caja delimitadora (bounding box) aproximada en la imagen para poder recortar cada artículo individualmente. Proporciona las cuatro coordenadas normalizadas en una escala de 0 a 1000 (donde box_ymin es el borde superior, box_xmin el borde izquierdo, box_ymax el borde inferior y box_xmax el borde derecho de la prenda). Todo detallado en español castellano elegante. Responde estrictamente con el formato JSON definido en el esquema."
-      : "Analiza este artículo de ropa masculina. Identifica su nombre de forma elegante y refinada en español (ej: 'Americana estructurada marrón chocolate', 'Pantalón chino beige de corte recto', 'Zapatos Loafer de piel marrón oscura'). Determina su categoría de armario: top (camisas, camisetas, abrigos, chaquetas), pantalon (pantalones, vaqueros, bermudas), calzado (zapatos, zapatillas, botas) o accesorio (reloj, pañuelo, gafas de sol, cinturón). Devuelve su color predominante en formato hexadecimal (#HEX). Evalúa su formalidad del 1 al 5 (1: deportivo/muy casual, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala). Determina la temporada idónea: verano, invierno o todo. Responde estrictamente con el esquema JSON indicado.";
+    // We distinguish between single garment and multi-garment analysis
+    const promptText = isMultiModeEnabled
+      ? `Analiza detalladamente esta imagen de armario masculino o prenda de vestir. 
+Identifica CADA una de las prendas, calzado o accesorios de hombre visibles de forma independiente.
 
-    const responseSchema = isMulti 
+- DETECCIÓN INDEPENDIENTE OBLIGATORIA: Si la imagen muestra a una persona vestida, un maniquí o un grupo de prendas juntas (ej: armario o ropa colgada), DEBES desglosar e identificar CADA una de las prendas por separado (ej: la chaqueta por un lado como 'top', la camisa por otro como 'top', los pantalones o vaqueros por otro como 'pantalon', los zapatos por otro como 'calzado', y el reloj, cinturón o gafas como 'accesorio'). Es de suma importancia que NO los agrupes en una sola prenda de armario.
+- Si la imagen contiene un único artículo de vestir aislado, lístalo como un único elemento en el array.
+
+Para cada prenda identificada de forma independiente, determina:
+1. Nombre de lujo sastrero y refinado en español (ej: "Americana estructurada marrón chocolate", "Pantalón chino beige de corte recto", "Zapatos Loafer de piel marrón oscura").
+2. Categoría: "top" (camisas, camisetas, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas), "calzado" (zapatos, zapatillas, botas) o "accesorio" (relojes, gafas, cinturones, bufandas).
+3. Color predominante en hexadecimal (ej: "#2C3E50").
+4. Formalidad del 1 al 5 (1: muy casual/deportivo, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
+5. Temporada: "verano", "invierno" o "todo".
+6. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0 a 1000 (donde box_ymin es el borde superior, box_xmin el borde izquierdo, box_ymax el borde inferior y box_xmax el borde derecho de la prenda, ej: una camisa puede ser box_ymin: 150, box_xmin: 250, box_ymax: 550, box_xmax: 750).
+
+Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
+      : `Analiza este artículo de ropa o calzado de hombre de la imagen de forma individual. 
+Identifica SOLO la prenda de vestir o el artículo de armario principal visible en la imagen como un elemento único del armario.
+
+Determina con precisión:
+1. Nombre elegante y refinado en español (ej: 'Americana estructurada marrón chocolate', 'Pantalón chino beige de corte recto', 'Zapatos Loafer de piel marrón oscura').
+2. Categoría de armario: "top" (camisas, camisetas, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas), "calzado" (zapatos, zapatillas, botas) o "accesorio" (reloj, pañuelo, gafas de sol, cinturón).
+3. Color predominante en formato hexadecimal (#HEX) (ej: '#1E3A8A').
+4. Formalidad del 1 al 5 (1: deportivo/muy casual, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
+5. Temporada idónea: "verano", "invierno" o "todo".
+
+Responde estrictamente con el formato JSON definido en el esquema de respuesta.`;
+
+    const responseSchema = isMultiModeEnabled
       ? {
           type: Type.OBJECT,
           properties: {
             prendas: {
               type: Type.ARRAY,
+              description: "Lista de prendas de armario identificadas. Si la imagen contiene un outfit completo o varias prendas, desglósalo en múltiples elementos individuales. Si solo contiene una única prenda, devuelve un único elemento en este array.",
               items: {
                 type: Type.OBJECT,
                 properties: {
                   nombre: {
                     type: Type.STRING,
-                    description: "Nombre de la prenda de forma descriptiva y sofisticada.",
+                    description: "Nombre de la prenda de forma descriptiva, sofisticada y elegante.",
                   },
                   categoria: {
                     type: Type.STRING,
@@ -206,19 +233,19 @@ app.post("/api/analizar-prenda", async (req, res) => {
                   },
                   box_ymin: {
                     type: Type.INTEGER,
-                    description: "Coordenada Y superior (0 a 1000) donde empieza verticalmente la prenda en la imagen.",
+                    description: "Coordenada Y superior (0 a 1000) donde empieza la prenda verticalmente.",
                   },
                   box_xmin: {
                     type: Type.INTEGER,
-                    description: "Coordenada X izquierda (0 a 1000) donde empieza horizontalmente la prenda en la imagen.",
+                    description: "Coordenada X izquierda (0 a 1000) donde empieza la prenda horizontalmente.",
                   },
                   box_ymax: {
                     type: Type.INTEGER,
-                    description: "Coordenada Y inferior (0 a 1000) donde termina verticalmente la prenda en la imagen.",
+                    description: "Coordenada Y inferior (0 a 1000) donde termina la prenda verticalmente.",
                   },
                   box_xmax: {
                     type: Type.INTEGER,
-                    description: "Coordenada X derecha (0 a 1000) donde termina horizontalmente la prenda en la imagen.",
+                    description: "Coordenada X derecha (0 a 1000) donde termina la prenda horizontalmente.",
                   }
                 },
                 required: ["nombre", "categoria", "color", "formalidad", "temporada", "box_ymin", "box_xmin", "box_ymax", "box_xmax"],
@@ -232,7 +259,7 @@ app.post("/api/analizar-prenda", async (req, res) => {
           properties: {
             nombre: {
               type: Type.STRING,
-              description: "Nombre de la prenda de forma descriptiva y sofisticada.",
+              description: "Nombre de la prenda de forma descriptiva, sofisticada y elegante.",
             },
             categoria: {
               type: Type.STRING,
@@ -279,7 +306,12 @@ app.post("/api/analizar-prenda", async (req, res) => {
       throw new Error("No se obtuvo respuesta de la prenda del modelo.");
     }
 
-    const parsedResponse = JSON.parse(response.text.trim());
+    let cleanText = response.text.trim();
+    if (cleanText.startsWith("```")) {
+      cleanText = cleanText.replace(/^```(json)?/, "").replace(/```$/, "").trim();
+    }
+
+    const parsedResponse = JSON.parse(cleanText);
     res.json(parsedResponse);
   } catch (error: any) {
     console.error("Error en analizar-prenda, aplicando fallback de atelier:", error);
@@ -489,7 +521,7 @@ Responde estrictamente utilizando el esquema de formato JSON siguiente.`;
 // 4. VER EN EL ESPEJO (GENERACIÓN DE IMAGEN - NANO BANANA / GEMINI-2.5-FLASH-IMAGE)
 app.post("/api/generar-imagen", async (req, res) => {
   try {
-    const { faceImage, estiloCabello, estiloBarba, fullBody, prendasTexto, customFullBodyImage } = req.body;
+    const { faceImage, estiloCabello, estiloBarba, fullBody, prendasTexto, customFullBodyImage, prendasDetalle } = req.body;
 
     if (!faceImage && !customFullBodyImage) {
       res.status(400).json({ error: "Por favor, sube tu foto de rostro en 'Tu espejo' o tu foto de cuerpo completo primero." });
@@ -514,20 +546,21 @@ app.post("/api/generar-imagen", async (req, res) => {
     if (fullBody) {
       aspectRatio = "3:4";
       if (isUsingCustomBody) {
-        promptText = `Generate a photorealistic, full-body menswear editorial fashion photograph of the SAME person shown in the uploaded full-body target photograph, wearing the specified garments.
-Do a virtual clothes overlay on the user's body: digital wardrobe replacement with high quality tailoring drape.
-They are now wearing this precise look combination:
+        promptText = `CRITICAL INSTRUCTION: You must completely change the clothes of the person in the provided input full-body photograph. 
+Do NOT keep or output their original shirt, suit, top, trousers, jeans, or shoes.
+Fully replace their entire outfit with the specified new ensemble.
+New outfit garments to wear:
 - ${prendasTexto || "a tailored blazer and formal chino trousers with elegant shoes"}
 
-You must keep their exact face identity, hair color, gaze, physical stance, and pose from the provided body photograph. Preserve the context structure of the background nicely. Retouch and fit the items (tops, trousers, shoes) beautifully to match their proportions. Extremely clean, high-fashion magazine page outcome.`;
+Keep their exact face, gaze, hair color, physique, stance, hands, and the general pose from the original picture. Preserve the high-fashion background scene nicely. Fit and drape the new tailoring items (tops, pants, shoes) beautifully onto their body proportions as a highly realistic menswear editorial digital outfit replacement. Extremely photorealistic, high-fashion catalog magazine page quality.`;
       } else {
-        promptText = `Generate a photorealistic, full-body high-fashion editorial sartorial photograph of this same man. Use the original photograph provided for his face.
-His face identity, eyes, lips, ethnicity, beard, hair, age, and skeletal facial structure must be exactly matched with the provided image.
-He must be standing elegant in a full-body pose, looking stylishly toward the camera.
-He is wearing this complete outfit combination:
+        promptText = `Generate a photorealistic, full-body high-fashion editorial sartorial photograph of the same man shown in the portrait face photo.
+His facial identity, eyes, lips, ethnicity, beard, hair style, age, and skeletal structure must be matched perfectly with the provided visage photograph.
+He must be standing elegantly in a stylish, full-body menswear posture, looking directly at the camera. He must be shown from head to toe.
+He is wearing this complete tailored outfit combination:
 - ${prendasTexto || "a tailored blazer and formal chino trousers with loafer shoes"}
 
-The background is a tasteful, luxurious modern gentlemen's barber/sartorial lounge interior, with brass accents, warm wood paneling, and dramatic premium studio lighting. Focus on clean wardrobe textures, sharp elegant tailoring drape, and flawless visual style. Sharp high quality editorial page magazine quality.`;
+The background is a tasteful, luxurious modern gentlemen's barber and sartorial atelier interior, with brass accents, warm wood paneling, and dramatic premium studio lighting. Focus on high-quality fabrics, professional tailoring drape, extremely sharp garment textures, and flawless visual style. High-fashion magazine editorial.`;
       }
     } else {
       promptText = `Generate a photorealistic, professional, high-fashion editorial portrait of this same man. Use the original photograph provided as the base.
@@ -582,12 +615,23 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
       imageUrl: `data:image/png;base64,${base64Output}`,
     });
   } catch (error: any) {
-    const { faceImage, estiloCabello, estiloBarba, fullBody, prendasTexto, customFullBodyImage } = req.body;
+    const { faceImage, estiloCabello, estiloBarba, fullBody, prendasTexto, customFullBodyImage, prendasDetalle } = req.body;
     console.error("Error en generar-imagen, ejecutando fallback elegante:", error);
     
-    // Si la gema de imagen falla por cuota o crédito, creamos un boceto sastrero editorial de lujo con su rostro filtrado para no romper la app
+    // Si la gema de imagen falla por cuota o crédito, creamos un boceto sastrero de primera calidad que dibuja vectorialmente su atuendo coordinado
     try {
       const activeFallbackPhoto = (fullBody && customFullBodyImage) ? customFullBodyImage : faceImage;
+      
+      const findColorByCategory = (category: string, defaultColor: string) => {
+        if (!prendasDetalle || !Array.isArray(prendasDetalle)) return defaultColor;
+        const g = prendasDetalle.find((p: any) => p.categoria === category);
+        return g && g.color ? g.color : defaultColor;
+      };
+
+      const topColor = findColorByCategory("top", "#C9A35B");
+      const pantColor = findColorByCategory("pantalon", "#3A3225");
+      const shoeColor = findColorByCategory("calzado", "#8C7440");
+
       let fallbackSvg = "";
       if (fullBody) {
         fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 600" width="100%" height="100%">
@@ -623,14 +667,29 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
     <path d="M 120 150 L 130 150 L 130 140" fill="none" stroke="#C9A35B" stroke-width="1.5" />
   </g>
 
-  <g transform="translate(255, 60)" stroke="#C9A35B" stroke-opacity="0.8">
+  <!-- MANIQUÍ SARTORIAL CON ROPA DEL LOOK DETALLADA -->
+  <g transform="translate(255, 60)">
     <text x="70" y="5" font-family="'Outfit', sans-serif" font-size="10" fill="#C9A35B" font-weight="900" letter-spacing="2" text-anchor="middle" stroke="none">FITTING SARTORIAL</text>
-    <ellipse cx="70" cy="40" rx="10" ry="14" fill="none" stroke-width="1" />
-    <path d="M 25 70 Q 70 50 115 70" fill="none" stroke-width="2" />
-    <path d="M 40 70 L 45 155 Q 70 170 95 155 L 100 70" fill="none" stroke-width="1" stroke-dasharray="2,2" />
-    <line x1="70" y1="40" x2="70" y2="280" stroke-width="1.5" />
-    <path d="M 50 280 L 70 260 L 90 280" fill="none" stroke-width="1.5" />
-    <circle cx="70" cy="110" r="15" fill="none" stroke-width="0.5" stroke-dasharray="3,3" />
+    
+    <!-- Soporte y Percha del Maniquí -->
+    <path d="M 70 30 Q 70 18 64 12 Q 70 6 76 12 Q 70 18 70 30" fill="none" stroke="#C9A35B" stroke-width="1.5" />
+    <line x1="70" y1="30" x2="70" y2="330" stroke="#8C7440" stroke-width="1.5" stroke-opacity="0.6" />
+    <path d="M 45 330 L 70 315 L 95 330" fill="none" stroke="#C9A35B" stroke-width="2" />
+    
+    <!-- Parte Superior (Blazer / Jacket / Top) con color real -->
+    <path d="M 58 40 L 82 40 L 115 65 L 105 150 L 85 155 L 70 160 L 55 155 L 35 150 L 25 65 Z" fill="${topColor}" fill-opacity="0.9" stroke="#F3ECDD" stroke-width="1" stroke-opacity="0.7" />
+    <path d="M 58 40 L 70 95 L 82 40" fill="none" stroke="#C9A35B" stroke-width="1.5" />
+    <path d="M 70 95 L 70 155" fill="none" stroke="#C9A35B" stroke-width="1" stroke-dasharray="2,2" />
+    <circle cx="70" cy="115" r="2" fill="#F3ECDD" />
+    <circle cx="70" cy="130" r="2" fill="#F3ECDD" />
+
+    <!-- Parte Inferior (Pantalón / Pantalon) con color real -->
+    <path d="M 50 155 L 90 155 L 95 275 L 77 275 L 70 195 L 63 275 L 45 275 Z" fill="${pantColor}" fill-opacity="0.9" stroke="#F3ECDD" stroke-width="1" stroke-opacity="0.7" />
+    <line x1="70" y1="155" x2="70" y2="195" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
+    
+    <!-- Calzado (Zapatos / Calzado) con color real -->
+    <path d="M 45 275 L 35 290 L 52 292 L 55 275 Z" fill="${shoeColor}" fill-opacity="0.95" stroke="#C9A35B" stroke-width="0.8" />
+    <path d="M 95 275 L 105 290 L 88 292 L 85 275 Z" fill="${shoeColor}" fill-opacity="0.95" stroke="#C9A35B" stroke-width="0.8" />
   </g>
 
   <g transform="translate(45, 465)">
