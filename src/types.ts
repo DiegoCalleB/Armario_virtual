@@ -18,6 +18,8 @@ export interface Prenda {
   temporada: TemporadaPrenda;
   imageSrc: string; // Base64 representation of item
   descripcion?: string; // Observaciones opcionales o notas del sastre
+  tejido?: string; // Tipo de tejido identificado por la IA (ej: Algodón, Lana, Denim, etc.)
+  tags?: string[]; // Etiquetas automatizadas de estilo y corte
 }
 
 export interface Look {
@@ -65,5 +67,19 @@ export interface AuditoriaArmarioResult {
   grado_cohesion_porcentaje: number;
   necesita: AuditoriaGap[];
   sobran: AuditoriaPrendaExceso[];
+}
+
+export interface PerfilEstilo {
+  estiloVibe?: string;
+  formaSer?: string;
+  estiloObjetivo?: string;
+  estiloPresupuesto?: string;
+  detallesLibres?: string;
+  respuestasQuiz?: {
+    silueta?: string;
+    colores?: string[];
+    rutina?: string;
+    edad?: string;
+  };
 }
 

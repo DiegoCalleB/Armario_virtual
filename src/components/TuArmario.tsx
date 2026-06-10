@@ -150,7 +150,12 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<"all" | CategoriaPrenda>("all");
   
   // Registration control tabs
-  const [registrationTab, setRegistrationTab] = useState<"ia" | "manual">("ia");
+  const [registrationTab, setRegistrationTab] = useState<"ia" | "manual" | "link">("ia");
+
+  // Link Importer Form States
+  const [linkInputUrl, setLinkInputUrl] = useState("");
+  const [loadingLink, setLoadingLink] = useState(false);
+  const [extractedPrenda, setExtractedPrenda] = useState<Partial<Prenda> | null>(null);
 
   // Manual Form States
   const [manualNombre, setManualNombre] = useState("");
@@ -346,6 +351,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 formalidad: item.formalidad !== undefined ? item.formalidad : 3,
                 temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
+                tejido: item.tejido || "Algodón mixto",
+                tags: Array.isArray(item.tags) ? item.tags : ["Modern", "Básico"],
               };
               listToAdd.push(nuevaPrenda);
             }
@@ -512,6 +519,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 formalidad: item.formalidad !== undefined ? item.formalidad : 3,
                 temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
+                tejido: item.tejido || "Algodón mixto",
+                tags: Array.isArray(item.tags) ? item.tags : ["Modern", "Básico"],
               };
               listToAdd.push(nuevaPrenda);
             }
@@ -560,21 +569,21 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
           </p>
 
           {/* Tab Selector */}
-          <div className="flex border-b border-linea mb-5 select-none font-sans">
+          <div className="flex border-b border-linea mb-5 select-none font-sans overflow-x-auto no-scrollbar gap-1">
             <button
               type="button"
               onClick={() => {
                 setRegistrationTab("ia");
                 setError(null);
               }}
-              className={`flex-1 py-4 text-xs font-semibold uppercase tracking-widest border-b-2 transition ${
+              className={`flex-1 min-w-[90px] py-3 text-[9.5px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest border-b-2 transition ${
                 registrationTab === "ia"
                   ? "border-laton text-laton bg-tarjeta/15"
                   : "border-transparent text-tinta-apagada hover:text-tinta hover:bg-tarjeta/5"
               }`}
             >
-              <span className="flex items-center justify-center gap-1.5">
-                <Sparkles size={11} className={registrationTab === "ia" ? "animate-pulse" : ""} /> Escáner IA sastre
+              <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                <Sparkles size={11} className={registrationTab === "ia" ? "text-laton animate-pulse" : "text-tinta-apagada"} /> Escáner IA
               </span>
             </button>
             <button
@@ -583,14 +592,32 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 setRegistrationTab("manual");
                 setError(null);
               }}
-              className={`flex-1 py-4 text-xs font-semibold uppercase tracking-widest border-b-2 transition ${
+              className={`flex-1 min-w-[90px] py-3 text-[9.5px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest border-b-2 transition ${
                 registrationTab === "manual"
                   ? "border-laton text-laton bg-tarjeta/15"
                   : "border-transparent text-tinta-apagada hover:text-tinta hover:bg-tarjeta/5"
               }`}
             >
-              <span className="flex items-center justify-center gap-1.5">
-                <Plus size={12} /> Registro Rápido
+              <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                <Plus size={11} className={registrationTab === "manual" ? "text-laton" : "text-tinta-apagada"} /> Rápido
+              </span>
+            </button>
+            <button
+              type="button"
+              id="tab-importar-link"
+              onClick={() => {
+                setRegistrationTab("link");
+                setError(null);
+                setExtractedPrenda(null);
+              }}
+              className={`flex-1 min-w-[90px] py-3 text-[9.5px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest border-b-2 transition ${
+                registrationTab === "link"
+                  ? "border-laton text-laton bg-tarjeta/15"
+                  : "border-transparent text-tinta-apagada hover:text-tinta hover:bg-tarjeta/5"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                <ExternalLink size={11} className={registrationTab === "link" ? "text-laton" : "text-tinta-apagada"} /> Por Enlace
               </span>
             </button>
           </div>
@@ -964,6 +991,210 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 </button>
               </motion.form>
             )}
+
+            {registrationTab === "link" && (
+              <motion.div
+                key="link-panel"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="space-y-4 text-left"
+              >
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-widest text-laton font-bold font-sans block">
+                    Enlace de Moda Sastre
+                  </label>
+                  <p className="text-[10px] text-tinta-apagada font-sans leading-relaxed mb-2">
+                    Introduce la URL de cualquier prenda en tiendas de internet (Zara, Mango, Amazon, etc.). El sastre digital extraerá su imagen e indexará todas sus propiedades estéticas por ti.
+                  </p>
+                  <div className="flex gap-1.5 items-stretch">
+                    <div className="relative flex-1 min-w-0">
+                      <input
+                        type="url"
+                        required
+                        placeholder="https://www.zara.com/share/..."
+                        value={linkInputUrl}
+                        onChange={(e) => setLinkInputUrl(e.target.value)}
+                        className="w-full text-xs font-sans bg-fondo border border-linea text-tinta pl-2.5 pr-10 py-2.5 rounded focus:border-laton focus:outline-none placeholder-tinta-apagada/30 font-medium select-text pointer-events-auto"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            if (navigator?.clipboard?.readText) {
+                              const text = await navigator.clipboard.readText();
+                              if (text) {
+                                setLinkInputUrl(text);
+                                setError(null);
+                              } else {
+                                setError("El portapapeles está vacío.");
+                              }
+                            } else {
+                              throw new Error("El navegador no soporta lectura automática.");
+                            }
+                          } catch (err) {
+                            setError("No se pudo leer automáticamente el portapapeles. Selecciónalo y mantén presionado para pegar.");
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-tinta-apagada hover:text-laton transition rounded"
+                        title="Pegar del portapapeles"
+                      >
+                        <Clipboard size={14} />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loadingLink || !linkInputUrl.trim()}
+                      onClick={async () => {
+                        setLoadingLink(true);
+                        setError(null);
+                        setExtractedPrenda(null);
+                        try {
+                          const res = await fetch("/api/extraer-prenda-url", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ url: linkInputUrl.trim() }),
+                          });
+                          if (!res.ok) {
+                            const data = await res.json();
+                            throw new Error(data.error || "Fallo estilístico en el lector.");
+                          }
+                          const decoded = await res.json();
+                          if (decoded.success && decoded.data) {
+                            setExtractedPrenda(decoded.data);
+                          } else {
+                            throw new Error("No se pudo extraer información sastrera.");
+                          }
+                        } catch (err: any) {
+                          console.error(err);
+                          setError(err.message || "Error al leer el enlace. Intenta con un enlace directo o diferente.");
+                        } finally {
+                          setLoadingLink(false);
+                        }
+                      }}
+                      className="px-3 sm:px-4 bg-laton text-fondo hover:bg-white text-xs font-extrabold uppercase tracking-widest rounded transition duration-150 disabled:opacity-40 shrink-0"
+                    >
+                      {loadingLink ? "Leyendo..." : "Extraer"}
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-tinta-apagada/70 font-sans italic pt-1">
+                    Consejo en móvil: Toca el botón <Clipboard size={8} className="inline mx-0.5" /> para pegar al instante, o mantén pulsado el campo para que aparezca el menú "Pegar" de tu sistema.
+                  </p>
+                </div>
+
+                {loadingLink && (
+                  <div className="py-8 bg-tarjeta/10 border border-dashed border-linea rounded text-center flex flex-col items-center justify-center">
+                    <div className="w-6 h-6 mb-2 relative">
+                      <div className="absolute inset-0 rounded-full border border-linea"></div>
+                      <div className="absolute inset-0 rounded-full border border-laton border-t-transparent animate-spin"></div>
+                    </div>
+                    <p className="font-serif text-xs text-tinta italic">Analizando escaparate digital...</p>
+                    <p className="text-[9px] text-tinta-apagada mt-0.5 animate-pulse">Clasificando cromática, texturas y cortes con IA...</p>
+                  </div>
+                )}
+
+                {extractedPrenda && !loadingLink && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-4 bg-tarjeta border border-laton/40 rounded-lg space-y-4"
+                  >
+                    <div className="flex gap-4 items-start">
+                      <div className="w-20 h-20 bg-fondo border border-linea rounded overflow-hidden shrink-0 relative">
+                        <img
+                          src={extractedPrenda.imageSrc}
+                          alt={extractedPrenda.nombre}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <span className="text-[8px] bg-[#C9A35B]/20 text-[#C9A35B] px-1.5 py-0.5 rounded font-extrabold uppercase tracking-widest font-sans">
+                          Sugerencia IA
+                        </span>
+                        <h4 className="font-serif text-sm font-bold text-tinta truncate mt-1">
+                          {extractedPrenda.nombre}
+                        </h4>
+                        
+                        <div className="flex flex-wrap gap-1">
+                          <span className="text-[8px] bg-fondo border border-linea text-tinta-apagada px-1.5 py-0.5 rounded uppercase font-bold">
+                            {extractedPrenda.categoria === "top" ? "Prenda Superior" : extractedPrenda.categoria === "pantalon" ? "Prenda Inferior" : extractedPrenda.categoria === "calzado" ? "Calzado" : "Accesorio"}
+                          </span>
+                          <span className="text-[8px] bg-fondo border border-linea text-tinta-apagada px-1.5 py-0.5 rounded uppercase font-bold">
+                            Grado {extractedPrenda.formalidad}/10
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full border border-white/10"
+                            style={{ backgroundColor: extractedPrenda.color }}
+                          />
+                          <span className="text-[9px] font-mono text-tinta-apagada uppercase font-light">
+                            {extractedPrenda.color}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-linea/60 pt-3 space-y-3 font-sans">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[8px] uppercase tracking-wider text-laton font-semibold">Título de prenda</label>
+                          <input
+                            type="text"
+                            maxLength={40}
+                            value={extractedPrenda.nombre || ""}
+                            onChange={(e) => setExtractedPrenda({ ...extractedPrenda, nombre: e.target.value })}
+                            className="w-full text-[11px] bg-fondo border border-linea px-2 py-1.5 rounded text-tinta focus:outline-none focus:border-laton"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] uppercase tracking-wider text-laton font-semibold">Tejido / Hilado</label>
+                          <input
+                            type="text"
+                            maxLength={30}
+                            value={extractedPrenda.tejido || ""}
+                            onChange={(e) => setExtractedPrenda({ ...extractedPrenda, tejido: e.target.value })}
+                            className="w-full text-[11px] bg-fondo border border-linea px-2 py-1.5 rounded text-tinta focus:outline-none focus:border-laton"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const id = "prenda_url_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+                          let finalImg = extractedPrenda.imageSrc || "";
+                          
+                          const resolvedPrenda: Prenda = {
+                            id,
+                            nombre: (extractedPrenda.nombre || "Camiseta sastre").trim(),
+                            categoria: (extractedPrenda.categoria as CategoriaPrenda) || "top",
+                            color: extractedPrenda.color || "#C9A35B",
+                            formalidad: extractedPrenda.formalidad || 5,
+                            temporada: (extractedPrenda.temporada as TemporadaPrenda) || "todo",
+                            imageSrc: finalImg,
+                            tejido: extractedPrenda.tejido || "Algodón",
+                            tags: extractedPrenda.tags || ["importado", "nuevo"]
+                          };
+                          
+                          onPrendaAgregada(resolvedPrenda);
+                          
+                          setLinkInputUrl("");
+                          setExtractedPrenda(null);
+                          setError(null);
+                        }}
+                        className="w-full py-2 bg-laton hover:bg-white text-fondo font-bold text-xs uppercase tracking-widest rounded transition flex items-center justify-center gap-1 shadow-md"
+                      >
+                        <Check size={13} /> Añadir al Vestidor
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {error && (
@@ -1109,6 +1340,22 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                         <p className="text-[10px] text-tinta-apagada line-clamp-1 italic mt-1 font-light border-l border-laton-apagado/30 pl-1.5">
                           {prenda.descripcion}
                         </p>
+                      )}
+
+                      {prenda.tejido && (
+                        <p className="text-[10px] text-laton font-medium mt-1">
+                          Tejido: <span className="text-white/80 font-normal">{prenda.tejido}</span>
+                        </p>
+                      )}
+
+                      {prenda.tags && prenda.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {prenda.tags.map((tg, iIdx) => (
+                            <span key={iIdx} className="text-[8.5px] font-sans px-1.5 py-0.5 rounded bg-linea/40 text-tinta-apagada border border-linea/20">
+                              #{tg}
+                            </span>
+                          ))}
+                        </div>
                       )}
 
                       <div className="flex items-center justify-between mt-2.5">
@@ -1262,6 +1509,30 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           </p>
                         </div>
                       </div>
+
+                      {/* AI Detected Fabric and Tags */}
+                      {(selectedPrenda.tejido || (selectedPrenda.tags && selectedPrenda.tags.length > 0)) && (
+                        <div className="p-3 bg-fondo border border-linea/60 rounded space-y-2">
+                          {selectedPrenda.tejido && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-[9px] uppercase tracking-wider text-laton font-medium">Tejido Identificado</span>
+                              <span className="text-tinta font-semibold bg-linea/40 px-2 py-0.5 rounded border border-linea/20 text-[10.5px]">{selectedPrenda.tejido}</span>
+                            </div>
+                          )}
+                          {selectedPrenda.tags && selectedPrenda.tags.length > 0 && (
+                            <div className="space-y-1">
+                              <span className="text-[9px] uppercase tracking-wider text-laton font-medium block">Estilo & Silueta Automáticos</span>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedPrenda.tags.map((tg, iIdx) => (
+                                  <span key={iIdx} className="text-[9px] font-sans px-2 py-0.5 rounded bg-[#1e1a13] text-[#C9A35B] border border-laton/20">
+                                    #{tg}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Description Input Textarea */}
                       <div className="space-y-1">

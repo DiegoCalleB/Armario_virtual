@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Prenda, Rostro, Look, EventoConfig, HistorialLook } from "../types";
+import { Prenda, Rostro, Look, EventoConfig, HistorialLook, PerfilEstilo } from "../types";
 import { Sparkles, Compass, Thermometer, ChevronRight, CheckCircle2, RotateCcw, HelpCircle, Eye, AlertCircle, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { fileToBase64, resizeImage } from "../utils";
@@ -10,6 +10,7 @@ interface AsesoramientoLooksProps {
   selectedHistorialItem?: HistorialLook | null;
   onLooksGenerados?: (looks: Look[], ocasion: string, clima: string) => void;
   onUpdateLookImg?: (lookTitle: string, imageUrl: string, ocasion: string, clima: string, isFullBody?: boolean) => void;
+  perfilEstilo?: PerfilEstilo | null;
 }
 
 const OCASIONES_PREDEFINIDAS = [
@@ -42,6 +43,7 @@ export default function AsesoramientoLooks({
   selectedHistorialItem,
   onLooksGenerados,
   onUpdateLookImg,
+  perfilEstilo,
 }: AsesoramientoLooksProps) {
   const [ocasion, setOcasion] = useState("");
   const [clima, setClima] = useState("");
@@ -158,6 +160,7 @@ export default function AsesoramientoLooks({
           peloActual: rostro?.pelo_actual || "",
           barbaActual: rostro?.barba_actual || "",
           armario,
+          perfilEstilo,
         }),
       });
 

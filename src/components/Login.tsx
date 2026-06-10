@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase, isSupabaseConfigured } from "../supabase";
 import { motion } from "motion/react";
 import { Sparkles, KeyRound, Mail, LogIn, UserPlus, Eye, EyeOff, AlertCircle, HelpCircle, CheckCircle } from "lucide-react";
@@ -27,6 +27,11 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [showConfigHelp, setShowConfigHelp] = useState(false);
 
   const [forceLocalDemo, setForceLocalDemo] = useState(false);
+  const [isIframe, setIsIframe] = useState(false);
+
+  useEffect(() => {
+    setIsIframe(window.self !== window.top);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,8 +150,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           );
 
           if (!popup) {
-            // Popup was blocked, redirect the frame directly (or show warning)
-            window.location.href = data.url;
+            setErrorMsg(
+              "El navegador ha bloqueado la ventana emergente de Google. Para poder acceder con Google en AI Studio: 1) Permite las ventanas emergentes (popups) en la configuración de la barra de direcciones de tu navegador, o 2) Abre este probador en una Pestaña Nueva haciendo clic en el botón con una flecha saliente en la esquina superior derecha del simulador. También puedes registrarte o entrar usando un Correo y Contraseña abajo sin restricciones."
+            );
             return;
           }
 
@@ -170,13 +176,18 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       } else {
         // SIMULATED AUTHENTICATION FOR LOCAL DEMO MODE
         await new Promise((resolve) => setTimeout(resolve, 850));
+        setInfoMsg("Acceso simulado con Google en Modo Demo.");
         onLoginSuccess({
           id: `usr_goo_${Math.floor(Math.random() * 900000 + 100000)}`,
           email: "diego.sartorial@gmail.com",
         }, true);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Ocurrió un error al iniciar sesión con Google.");
+      let friendlyError = err.message || "Ocurrió un error al iniciar sesión con Google.";
+      if (err.message && (err.message.includes("provider is not enabled") || err.message.includes("Unsupported provider"))) {
+        friendlyError = "El inicio de sesión con Google no está habilitado en tu panel de control de Supabase (Authentication -> Providers -> Google -> Habilitar). No te preocupes: puedes registrarte e ingresar escribiendo cualquier Correo y Contraseña abajo en 2 segundos, o presionar el botón 'Entrar como Invitado' para explorar toda la suite de inmediato.";
+      }
+      setErrorMsg(friendlyError);
     } finally {
       setIsLoading(false);
     }
@@ -192,9 +203,38 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const activeSupabase = isSupabaseConfigured && !forceLocalDemo;
 
   return (
-    <div className="grain min-h-screen bg-fondo text-tinta font-sans flex items-center justify-center p-4 relative selection:bg-laton selection:text-fondo overflow-y-auto">
+    <div className="grain min-h-screen bg-fondo text-tinta font-sans flex flex-col items-center justify-center p-4 relative selection:bg-laton selection:text-fondo overflow-y-auto">
       {/* Background illumination */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-[400px] bg-radial from-laton/5 via-transparent to-transparent pointer-events-none" />
+
+      {isIframe && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md mb-4 bg-amber-950/25 border border-laton/30 rounded-xl p-4 text-xs text-amber-200/95 leading-relaxed text-center space-y-3 shadow-xl relative z-20"
+        >
+          <div className="flex items-start gap-2 text-left">
+            <Sparkles size={14} className="text-laton shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <p className="font-serif text-xs font-bold tracking-wider text-white uppercase mb-1">
+                ¿PROBAR DESDE FUERA DE AI STUDIO?
+              </p>
+              <p className="text-[11px] opacity-90 leading-normal">
+                Para eludir bloqueos de ventanas emergentes o restricciones de cookies y usar cómodamente servicios completos como el acceso con Google, haz clic abajo:
+              </p>
+            </div>
+          </div>
+          
+          <a
+            href={window.location.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2 bg-laton hover:bg-laton-apagado text-fondo text-[10px] font-bold uppercase tracking-widest rounded text-center transition flex items-center justify-center gap-1.5 focus:outline-none shadow-md"
+          >
+            Abrir Probador en Pestaña Externa ↗
+          </a>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -330,6 +370,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <GoogleLogomark />
             Acceder con Google
           </button>
+
+          <p className="text-[10.5px] text-amber-200/80 bg-amber-950/20 border border-amber-920/10 rounded p-2.5 text-center leading-relaxed">
+            ⚠️ <strong>Entorno Seguro Iframe:</strong> Si este botón no abre la ventana de Google, se debe a restricciones del simulador de AI Studio. Permite las <strong>ventanas emergentes (popups)</strong> en la barra de tu navegador, o abre la app en una <strong>Pestaña Nueva</strong> desde el botón superior derecho. ¡O usa el registro manual con contraseña abajo sin trabas!
+          </p>
 
           <div className="relative flex py-1.5 items-center">
             <div className="flex-grow border-t border-linea/30"></div>

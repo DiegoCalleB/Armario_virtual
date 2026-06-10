@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Prenda, Rostro, AuditoriaArmarioResult, AuditoriaPrendaExceso, AuditoriaGap } from "../types";
-import { Sparkles, Tag, TrendingUp, AlertCircle, Check, Clipboard, ArrowRight, Hourglass, ExternalLink, RotateCcw, HelpCircle, CornerDownRight, Coins, Percent, Shirt, ChevronRight, ShoppingBag } from "lucide-react";
+import { Prenda, Rostro, AuditoriaArmarioResult, AuditoriaPrendaExceso, AuditoriaGap, PerfilEstilo } from "../types";
+import { Sparkles, Tag, TrendingUp, AlertCircle, Check, Clipboard, ArrowRight, Hourglass, ExternalLink, RotateCcw, HelpCircle, CornerDownRight, Coins, Percent, Shirt, ChevronRight, ShoppingBag, Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import AsistenteMaleta from "./AsistenteMaleta";
+import AsesorCompras from "./AsesorCompras";
 
 interface AuditoriaArmarioProps {
   armario: Prenda[];
   rostro: Rostro | null;
   onPrendaEliminada: (id: string) => void;
+  perfilEstilo?: PerfilEstilo | null;
 }
 
 export default function AuditoriaArmario({
   armario,
   rostro,
   onPrendaEliminada,
+  perfilEstilo,
 }: AuditoriaArmarioProps) {
+  const [subTab, setSubTab] = useState<"auditoria" | "maleta" | "compras">("auditoria");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [auditResult, setAuditResult] = useState<AuditoriaArmarioResult | null>(() => {
@@ -61,7 +66,7 @@ export default function AuditoriaArmario({
       const res = await fetch("/api/auditar-armario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ armario, rostro }),
+        body: JSON.stringify({ armario, rostro, perfilEstilo }),
       });
 
       if (!res.ok) {
@@ -143,15 +148,82 @@ export default function AuditoriaArmario({
 
   return (
     <section id="auditoria-armario-seccion" className="border-t border-linea pt-8 pb-4">
-      <div className="flex items-baseline justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <span className="font-serif italic text-laton font-medium text-lg">05</span>
-          <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Auditoría del Sastre & Vinted</h2>
-        </div>
-        <p className="text-xs font-sans text-tinta-apagada select-none font-medium">OPTIMIZER & REDUNDANCIES</p>
+      {/* Selector de sub-suites de Inteligencia Sastrera */}
+      <div className="flex gap-1.5 p-1 bg-fondo border border-linea/60 max-w-lg mx-auto rounded-full mb-8 font-serif text-[10px] uppercase tracking-wider">
+        <button
+          onClick={() => setSubTab("auditoria")}
+          className={`flex-1 text-center py-2 px-3 rounded-full transition-all cursor-pointer font-bold flex items-center justify-center gap-1.5 ${
+            subTab === "auditoria" ? "bg-laton/15 text-laton border border-laton/20 shadow-md" : "text-tinta-apagada hover:text-white"
+          }`}
+        >
+          <Clipboard size={12} />
+          <span>Auditoría & Vinted</span>
+        </button>
+
+        <button
+          onClick={() => setSubTab("maleta")}
+          className={`flex-1 text-center py-2 px-3 rounded-full transition-all cursor-pointer font-bold flex items-center justify-center gap-1.5 ${
+            subTab === "maleta" ? "bg-laton/15 text-laton border border-laton/20 shadow-md" : "text-tinta-apagada hover:text-white"
+          }`}
+        >
+          <Briefcase size={12} />
+          <span>Maletas</span>
+        </button>
+
+        <button
+          onClick={() => setSubTab("compras")}
+          className={`flex-1 text-center py-2 px-3 rounded-full transition-all cursor-pointer font-bold flex items-center justify-center gap-1.5 ${
+            subTab === "compras" ? "bg-laton/15 text-laton border border-laton/20 shadow-md" : "text-tinta-apagada hover:text-white"
+          }`}
+        >
+          <TrendingUp size={12} />
+          <span>Tendencias</span>
+        </button>
       </div>
 
-      {/* Intro pitch explanation */}
+      <AnimatePresence mode="wait">
+        {subTab === "maleta" && (
+          <motion.div
+            key="maleta"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AsistenteMaleta armario={armario} perfilEstilo={perfilEstilo} />
+          </motion.div>
+        )}
+
+        {subTab === "compras" && (
+          <motion.div
+            key="compras"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AsesorCompras armario={armario} perfilEstilo={perfilEstilo} />
+          </motion.div>
+        )}
+
+        {subTab === "auditoria" && (
+          <motion.div
+            key="auditoria"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <div className="flex items-baseline justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <span className="font-serif italic text-laton font-medium text-lg">05</span>
+                <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Auditoría del Sastre & Vinted</h2>
+              </div>
+              <p className="text-xs font-sans text-tinta-apagada select-none font-medium">OPTIMIZER & REDUNDANCIES</p>
+            </div>
+
+            {/* Intro pitch explanation */}
       <div className="bg-tarjeta border border-linea rounded p-5 mb-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
           <div className="space-y-1 max-w-xl">
@@ -756,6 +828,9 @@ export default function AuditoriaArmario({
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+          </motion.div>
         )}
       </AnimatePresence>
     </section>

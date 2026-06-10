@@ -44,6 +44,30 @@ function getGenAI(): GoogleGenAI {
 }
 
 // Helper to retry Gemini API calls in case of rate limits, 503 unavailable, or spikes in demand
+function compilePerfilContext(perfilEstilo: any): string {
+  if (!perfilEstilo) return "";
+  
+  const respuestas = perfilEstilo.respuestasQuiz || {};
+  const coloresText = Array.isArray(respuestas.colores) ? respuestas.colores.join(", ") : (respuestas.colores || "No especificados");
+  
+  return `
+---
+PERFIL Y DIAGNÓSTICO DE ESTILO DEL USUARIO:
+- Estilo Preferido (Vibe/Esencia): "${perfilEstilo.estiloVibe || "No especificado"}"
+- Forma de ser / Imagen / Personalidad: "${perfilEstilo.formaSer || "No especificado"}"
+- Estilo Objetivo (Lo que quiere conseguir y lograr transmitir): "${perfilEstilo.estiloObjetivo || "No especificado"}"
+- Filosofía/Presupuesto de compra: "${perfilEstilo.estiloPresupuesto || "No especificado"}"
+- Silueta Corporal: "${respuestas.silueta || "No especificada"}"
+- Rutina Diaria: "${respuestas.rutina || "No especificada"}"
+- Rango de Edad/Generación: "${respuestas.edad || "No especificado"}"
+- Paleta de Colores Favoritos: "${coloresText}"
+- Detalles Libres / Observaciones estilísticas del usuario: "${perfilEstilo.detallesLibres || "Ninguna"}"
+
+INSTRUCCIÓN CRUCIAL DE INTEGRACIÓN: Debes alinear al 100% tu análisis sastrero, las combinaciones de looks sugeridas, los consejos de peluquería/barba, las prendas a descartar y las recomendaciones de compras sugeridas con este perfil y diagnóstico personal. Explica al usuario explícitamente cómo tus propuestas encajan con su forma de ser y le ayudan a conseguir su Estilo Objetivo ("${perfilEstilo.estiloObjetivo || "su estilo ideal"}") resolviendo lo que realmente necesita y depurando lo que le sobra.
+---
+`;
+}
+
 async function callGeminiWithRetry<T>(
   apiCallFn: () => Promise<T>,
   retries = 4,
@@ -186,7 +210,9 @@ Para cada prenda identificada de forma independiente, determina:
 3. Color predominante en hexadecimal (ej: "#2C3E50").
 4. Formalidad del 1 al 5 (1: muy casual/deportivo, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
 5. Temporada: "verano", "invierno" o "todo".
-6. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0 a 1000 (donde box_ymin es el borde superior, box_xmin el borde izquierdo, box_ymax el borde inferior y box_xmax el borde derecho de la prenda, ej: una camisa puede ser box_ymin: 150, box_xmin: 250, box_ymax: 550, box_xmax: 750).
+6. Tejido o material (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa", "Seda", "Punto/Knit").
+7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estilo Oxford", "Básico"]).
+8. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0 a 1000 (donde box_ymin es el borde superior, box_xmin el borde izquierdo, box_ymax el borde inferior y box_xmax el borde derecho de la prenda, ej: una camisa puede ser box_ymin: 150, box_xmin: 250, box_ymax: 550, box_xmax: 750).
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
       : `Analiza este artículo de ropa o calzado de hombre de la imagen de forma individual. 
@@ -198,6 +224,8 @@ Determina con precisión:
 3. Color predominante en formato hexadecimal (#HEX) (ej: '#1E3A8A').
 4. Formalidad del 1 al 5 (1: deportivo/muy casual, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
 5. Temporada idónea: "verano", "invierno" o "todo".
+6. Tejido o material de confección (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa").
+7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estructurado", "Básico"]).
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`;
 
@@ -231,6 +259,15 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
                     type: Type.STRING,
                     description: "Debe ser estrictamente uno de estos valores: verano, invierno, todo.",
                   },
+                  tejido: {
+                    type: Type.STRING,
+                    description: "Material o tejido de la prenda.",
+                  },
+                  tags: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                    description: "2 a 4 etiquetas breves descriptivas del corte, estilo o silueta.",
+                  },
                   box_ymin: {
                     type: Type.INTEGER,
                     description: "Coordenada Y superior (0 a 1000) donde empieza la prenda verticalmente.",
@@ -248,7 +285,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
                     description: "Coordenada X derecha (0 a 1000) donde termina la prenda horizontalmente.",
                   }
                 },
-                required: ["nombre", "categoria", "color", "formalidad", "temporada", "box_ymin", "box_xmin", "box_ymax", "box_xmax"],
+                required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags", "box_ymin", "box_xmin", "box_ymax", "box_xmax"],
               },
             },
           },
@@ -277,8 +314,17 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
               type: Type.STRING,
               description: "Debe ser estrictamente uno de estos valores: verano, invierno, todo.",
             },
+            tejido: {
+              type: Type.STRING,
+              description: "Material o tejido de la prenda.",
+            },
+            tags: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "2 a 4 etiquetas breves descriptivas del corte, estilo o silueta.",
+            },
           },
-          required: ["nombre", "categoria", "color", "formalidad", "temporada"],
+          required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags"],
         };
 
     const response = await callGeminiWithRetry(() =>
@@ -349,7 +395,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
 // 3. GENERAR LOOKS DE EVENTO
 app.post("/api/generar-looks", async (req, res) => {
   try {
-    const { ocasion, clima, formaCara, peloActual, barbaActual, armario } = req.body;
+    const { ocasion, clima, formaCara, peloActual, barbaActual, armario, perfilEstilo } = req.body;
 
     if (!ocasion || !clima) {
        res.status(400).json({ error: "Se requiere especificar la ocasión y el clima." });
@@ -371,11 +417,15 @@ app.post("/api/generar-looks", async (req, res) => {
       )
       .join("\n");
 
+    const perfilContext = compilePerfilContext(perfilEstilo);
+
     const prompt = `Actúa como el estilista jefe de un salón de imagen masculina de lujo llamado ESPEJO.
 Analiza la fisionomía del usuario:
 - Forma de cara: ${formaCara || "No especificada"}
 - Pelo actual: ${peloActual || "No especificado"}
 - Barba actual: ${barbaActual || "No especificada"}
+
+${perfilContext}
 
 Recomendación requerida para el siguiente contexto:
 - Ocasión/Evento: ${ocasion}
@@ -387,7 +437,7 @@ ${inventoryText}
 Tu tarea:
 1. Diseña de 2 a 3 looks sofisticados perfectos para la ocasión y el clima.
 2. Cada look DEBE componerse de prendas presentes en el inventario. Proporciona sus IDs exactos en el campo 'id_prendas'. ¡Está TOTALMENTE PROHIBIDO inventar IDs o incluir prendas que no estén en la lista de arriba!
-3. Explica detalladamente y en lenguaje editorial de alta costura el porqué de esta combinación ('porque').
+3. Explica detalladamente y en lenguaje editorial de alta costura el porqué de esta combinación ('porque'), relacionándolo con sus aspiraciones y diagnósticos estilísticos si se proporcionan en el perfil.
 4. Aconseja sobre el corte de cabello óptimo adaptado a su forma de cara ('pelo_sugerido') para estilizar su silueta. Si consideras que su peinado o corte actual ("${peloActual || "No especificado"}") ya es ideal y encaja de maravilla, indícalo expresamente afirmando que su estilo actual de pelo es perfecto y describe por qué.
 5. Aconseja sobre el estilo de barba óptimo adaptado a su rostro ('barba_sugerida') para balancear sus facciones. Si consideras que su barba actual o afeitado ("${barbaActual || "No especificado"}") ya es óptimo y armoniza a la perfección, indícalo expresamente diciendo que su estilo de barba actual es perfecto y describe por qué.
 6. Ofrece un truco o truco práctico del barbero ('consejo_barberia') para mantener o lucir este estilo.
@@ -775,7 +825,7 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
 // 5. AUDITORÍA INTELIGENTE DE ARMARIO Y VINTED
 app.post("/api/auditar-armario", async (req, res) => {
   try {
-    const { armario, rostro } = req.body;
+    const { armario, rostro, perfilEstilo } = req.body;
 
     if (!armario || !Array.isArray(armario) || armario.length === 0) {
       res.status(400).json({ error: "Sube y registra al menos un par de prendas en tu armario para poder realizar la auditoría." });
@@ -791,8 +841,12 @@ app.post("/api/auditar-armario", async (req, res) => {
       )
       .join("\n");
 
+    const perfilContext = compilePerfilContext(perfilEstilo);
+
     const prompt = `Actúas como el maestro sastre y estilista jefe de la boutique premium de caballeros ESPEJO.
 Analiza con exquisitez literaria e impecable gusto de alta costura el actual inventario de ropa de este caballero.
+
+${perfilContext}
 
 Perfil del Cliente:
 - Fisionomía de Rostro: ${rostro?.forma_cara || "No especificada"}
@@ -805,11 +859,11 @@ ${inventoryText}
 
 Tu misión:
 1. Redacta un análisis sastrero crítico ('analisis_editorial') impecable de 2 párrafos cortos en español. Debe destacar con elegancia las virtudes, la coordinación de colores, los balances térmicos/temporales y los huecos en la formalidad de su armario.
-2. Calcula una nota numérica ('grado_cohesion_porcentaje') de 0 a 100 de cohesión, basándote en la sinergia y versatilidad de sus prendas.
-3. Determina de 1 a 2 vacíos o necesidades ('necesita'): prendas específicas que NO tiene pero que le complementarían de una forma milagrosa para armar conjuntos para toda ocasión.
-4. Identifica hasta 2 prendas redundantes, repetitivas o de menor calidad estilística ('sobran') de las que el cliente debería desprenderse para renovar o purificar su armario. Para cada prenda seleccionada en exceso:
+2. Calcula una nota numérica ('grado_cohesion_porcentaje') de 0 a 100 de cohesión, basándote en la sinergia y versatilidad de sus prendas para lograr su Estilo Objetivo.
+3. Determina de 1 a 2 vacíos o necesidades ('necesita'): prendas específicas que NO tiene pero que le complementarían de una forma milagrosa para lograr su Estilo Objetivo adaptado a su rutina y silueta (ej: "lo que realmente necesita").
+4. Identifica hasta 2 prendas redundantes, repetitivas o de menor calidad estilística ('sobran') de las que el cliente debería desprenderse para renovar o purificar su armario (ej: "lo que le sobra" para depurar su look). Para cada prenda seleccionada en exceso:
    - Indica su ID exacto ('id_prenda') para cruzarlo en el cliente.
-   - Da el veredicto del estilista ('motivo_descarte') explicando con elegancia por qué es prescindible o de baja sinergia.
+   - Da el veredicto del estilista ('motivo_descarte') explicando con elegancia por qué es prescindible o de baja sinergia respecto a su Estilo Objetivo.
    - Recomienda un precio digno de reventa en euros ('precio_sugerido_vinted') para la plataforma Vinted.
    - Escribe un título llamativo y optimizado para SEO en Vinted ('titulo_vinted') para una máxima atracción.
    - Escribe una detallada y persuasiva descripción narrativa para el anuncio de Vinted ('descripcion_vinted') en español elegante, describiendo sus virtudes, su encaje en un atuendo de calidad y hashtags premium como #sartorial, #smartcasual o #slowfashion.
@@ -937,6 +991,440 @@ Responde obligatoriamente en estricto formato JSON, siguiendo el esquema estruct
     } catch (innerError) {
       res.status(500).json({ error: "Fallo al componer auditoría local." });
     }
+  }
+});
+
+// 6. ASISTENTE DE MALETAS INTELIGENTE (CÁPSULA DE VIAJE)
+app.post("/api/asistente-maleta", async (req, res) => {
+  try {
+    const { armario, destino, dias, clima, actividades, perfilEstilo } = req.body;
+
+    if (!armario || !Array.isArray(armario) || armario.length === 0) {
+      res.status(400).json({ error: "Sube prendas a tu armario para que la IA arme tu maleta de viaje." });
+      return;
+    }
+
+    if (!destino || !dias) {
+      res.status(400).json({ error: "Debes especificar el destino y los días de viaje." });
+      return;
+    }
+
+    const ai = getGenAI();
+    const inventoryText = armario
+      .map(
+        (item: any, idx: number) =>
+          `${idx + 1}. [ID: "${item.id}"] "${item.nombre}" (${item.categoria}), Color: "${item.color}", Tejido: "${item.tejido || "Algodón mixto"}", Formalidad: ${item.formalidad}/5`
+      )
+      .join("\n");
+
+    const perfilContext = compilePerfilContext(perfilEstilo);
+
+    const promptText = `Actúas como un Asesor Sastrero Experto especializado en Equipaje de Cápsula Minimalista.
+Estás planificando la maleta perfecta para un viaje de caballeros.
+
+${perfilContext}
+
+Detalles del Viaje:
+- Destino: ${destino}
+- Duración: ${dias} días
+- Clima esperado: ${clima || "Templado"}
+- Actividades planeadas: ${actividades || "Turismo, cenas y paseos"}
+
+Armario del cliente del cual debes seleccionar prendas reales:
+${inventoryText}
+
+Tu misión es crear una guía de equipaje impecable y súper optimizada que viaje ligera pero mantenga el mayor nivel de estilo posible:
+1. Diseña un análisis del destino ('analisis_destino') justificando el código de vestimenta.
+2. Selecciona hasta un máximo de 5 a 8 prendas del armario que cubran el viaje usando principios de armario cápsula (pocas prendas muy combinables). Indica sus IDs exactos en 'prendas_seleccionadas'.
+3. Para cada prenda elegida, explica detalladamente por qué es ideal para el viaje en el array 'por_que_seleccion_garment' en sintonía con su estilo preferido y silueta.
+4. Diseña propuestas de outfits día por día ('combinaciones') combinando las prendas seleccionadas para cada uno de los días del viaje. Cada combinación debe incluir una lista de los IDs de prendas que integran el outfit ('prendas_combinadas') y una elegante justificación ('explicacion_outfit').
+5. Añade complementos y recomendaciones de compra para equipaje extra que no esté en su armario en 'recomendaciones_extras'.
+
+Responde estrictamente con el formato JSON definido en el esquema.`;
+
+    const response = await callGeminiWithRetry(() =>
+      ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: promptText,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              analisis_destino: {
+                type: Type.STRING,
+                description: "Elegante introducción estilística del destino y pronóstico conceptual del viaje.",
+              },
+              prendas_seleccionadas: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Lista de IDs de las prendas seleccionadas del armario real.",
+              },
+              por_que_seleccion_garment: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    prenda_id: { type: Type.STRING },
+                    motivo_seleccion: { type: Type.STRING },
+                  },
+                  required: ["prenda_id", "motivo_seleccion"],
+                },
+              },
+              combinaciones: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    dia_numero: { type: Type.INTEGER },
+                    titulo_actividad: { type: Type.STRING },
+                    prendas_combinadas: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                    },
+                    explicacion_outfit: { type: Type.STRING },
+                  },
+                  required: ["dia_numero", "titulo_actividad", "prendas_combinadas", "explicacion_outfit"],
+                },
+              },
+              recomendaciones_extras: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Recomendaciones secundarias (ej: crema solar, paraguas de viaje, neceser de sastre).",
+              },
+            },
+            required: ["analisis_destino", "prendas_seleccionadas", "por_que_seleccion_garment", "combinaciones", "recomendaciones_extras"],
+          },
+        },
+      })
+    );
+
+    if (!response.text) {
+      throw new Error("No se obtuvo respuesta del sastre de maleta.");
+    }
+
+    res.json(JSON.parse(response.text.trim()));
+  } catch (error: any) {
+    console.error("Error en asistente-maleta, aplicando fallback elegante:", error);
+    const { armario = [] } = req.body;
+    const itemsSelected = armario.slice(0, Math.min(armario.length, 5)).map((p: any) => p.id);
+    res.json({
+      analisis_destino: "Tu viaje exige una combinación inteligente de prendas superpuestas para adaptarte a los cambios de temperatura sin sacrificar un ápice de elegancia.",
+      prendas_seleccionadas: itemsSelected,
+      por_que_seleccion_garment: itemsSelected.map((id: string) => ({
+        prenda_id: id,
+        motivo_seleccion: "Prenda de alta versatilidad que constituye la espina dorsal del armario cápsula de este viaje.",
+      })),
+      combinaciones: [
+        {
+          dia_numero: 1,
+          titulo_actividad: "Llegada y exploración inicial",
+          prendas_combinadas: itemsSelected.slice(0, 3),
+          explicacion_outfit: "Propuesta de bienvenida cómoda y estructurada, ideal para transiciones y primer contacto con el entorno satoral.",
+        }
+      ],
+      recomendaciones_extras: ["Añade un calzador de viaje y un cepillo textil portátil para mantener tus prendas impecables."],
+    });
+  }
+});
+
+// 7. ANÁLISIS DE TENDENCIAS Y COMPRAS (AUDITORÍA DE COMPRAS IA)
+app.post("/api/analizar-compras", async (req, res) => {
+  try {
+    const { armario, perfilEstilo } = req.body;
+
+    if (!armario || !Array.isArray(armario) || armario.length === 0) {
+      res.status(400).json({ error: "Tu armario está vacío para generar propuestas de compras." });
+      return;
+    }
+
+    const ai = getGenAI();
+    const inventoryText = armario
+      .map(
+        (item: any, idx: number) =>
+          `${idx + 1}. "${item.nombre}" (${item.categoria}), Color: "${item.color}", Tejido: "${item.tejido || "Mixto"}", Formalidad: ${item.formalidad}/5`
+      )
+      .join("\n");
+
+    const perfilContext = compilePerfilContext(perfilEstilo);
+
+    const promptText = `Actúas como un cazador de tendencias (Trend Forecaster) y Personal Shopper de alta costura masculina de la sastrería ESPEJO.
+Estudia la colección actual de este armario y elabora un informe para guiarlo e influir en su próxima inversión de moda en función de su perfil personal, silueta y deseos:
+
+${perfilContext}
+
+Armario Actual:
+${inventoryText}
+
+Identifica de forma meticulosa e inteligente:
+1. 'basicos_faltantes': De 2 a 3 prendas de vestir básicas o de fondo de armario que el usuario no tiene y que multiplicarían exponencialmente sus combinaciones ("multiplicadores de armario"), enfocados 100% en complementar lo que realmente necesita según su perfil.
+2. 'analisis_capsula': Un análisis editorial de 1-2 párrafos que asigne un "estilo de tendencia de alta gama" idóneo para su perfil actual (como Quiet Luxury, Neo-Sartorial core, Athletic Preppy, o Heritage Workwear) detallando qué siluetas debería buscar y por qué encaja con su personalidad.
+3. 'proxima_compra_estrella': Una sola sugerencia sumamente detallada e ideal para su próxima adquisición estrella que resolvería su vestimenta para alcanzar su Estilo Objetivo.
+
+Responde estrictamente con el formato JSON definido en el esquema.`;
+
+    const response = await callGeminiWithRetry(() =>
+      ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: promptText,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              basicos_faltantes: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    nombre_prenda: { type: Type.STRING },
+                    categoria: { type: Type.STRING },
+                    por_que_es_clave: { type: Type.STRING },
+                    rango_color_sugerido: { type: Type.STRING },
+                  },
+                  required: ["nombre_prenda", "categoria", "por_que_es_clave", "rango_color_sugerido"],
+                },
+              },
+              analisis_capsula: {
+                type: Type.STRING,
+                description: "Análisis conceptual detallado sobre la tendencia ideal recomendada para expandir su armario actual.",
+              },
+              proxima_compra_estrella: {
+                type: Type.OBJECT,
+                properties: {
+                  item: { type: Type.STRING, description: "Nombre específico (ej: 'Mocasines canela de ante italiano')." },
+                  tipo: { type: Type.STRING, description: "Categoría de prenda." },
+                  descripcion_detallada: { type: Type.STRING, description: "Descripción refinada de calidades, materiales y silueta." },
+                  potencial_combinaciones_explicado: { type: Type.STRING, description: "Qué looks de su armario actual mejoraría sustancialmente." },
+                  rango_precio_estimado_en_euros: { type: Type.STRING, description: "Estimación (ej: '150€ - 280€')." },
+                },
+                required: ["item", "tipo", "descripcion_detallada", "potencial_combinaciones_explicado", "rango_precio_estimado_en_euros"],
+              },
+            },
+            required: ["basicos_faltantes", "analisis_capsula", "proxima_compra_estrella"],
+          },
+        },
+      })
+    );
+
+    if (!response.text) {
+      throw new Error("No se obtuvo respuesta del shopping tracker.");
+    }
+
+    res.json(JSON.parse(response.text.trim()));
+  } catch (error: any) {
+    console.error("Error en analizar-compras, aplicando fallback de atelier:", error);
+    res.json({
+      basicos_faltantes: [
+        {
+          nombre_prenda: "Camisa Oxford blanca clásica semi-entallada",
+          categoria: "top",
+          por_que_es_clave: "Actúa como un conector universal que reduce el ruido en combinaciones de chaquetas y cazadoras.",
+          rango_color_sugerido: "Blanco óptico o azul celeste",
+        }
+      ],
+      analisis_capsula: "Tu armario tiene un excelente potencial smart-casual. Sugerimos aproximarlo al estilo 'Quiet Luxury', donde la calidad del tejido y la atemporalidad del color predominen sobre cualquier logotipo.",
+      proxima_compra_estrella: {
+        item: "Chaqueta desestructurada con hombro camisero (spalla camicia)",
+        tipo: "top",
+        descripcion_detallada: "Americana ultra-ligera tejida en mezcla de lana-lino, sin hombreras, que ofrece la silueta y porte de un sastre formal combinada con la comodidad de un cárdigan de punto.",
+        potencial_combinaciones_explicado: "Elevará instantáneamente cualquiera de tus pantalones chinos o vaqueros diarios, aportando autoridad sastrera con espíritu relajado.",
+        rango_precio_estimado_en_euros: "120€ - 240€",
+      },
+    });
+  }
+});
+
+app.post("/api/extraer-prenda-url", async (req, res) => {
+  const { url } = req.body;
+  if (!url) {
+    return res.status(400).json({ error: "No se proporcionó una URL válida." });
+  }
+
+  let finalImageUrl = "";
+  let pageTitle = "Prenda Importada";
+  let htmlSnippet = "";
+  let scrapSuccess = false;
+
+  try {
+    const lowercaseUrl = url.toLowerCase();
+    const isDirectImage = lowercaseUrl.endsWith(".jpg") || 
+                          lowercaseUrl.endsWith(".jpeg") || 
+                          lowercaseUrl.endsWith(".png") || 
+                          lowercaseUrl.endsWith(".webp") || 
+                          lowercaseUrl.endsWith(".gif") ||
+                          lowercaseUrl.includes("data:image/") ||
+                          lowercaseUrl.includes("images.unsplash.com") ||
+                          lowercaseUrl.includes("media.asphalt") ||
+                          lowercaseUrl.includes("media.zara");
+
+    if (isDirectImage) {
+      finalImageUrl = url;
+      scrapSuccess = true;
+      try {
+        const urlObj = new URL(url);
+        const pathSegments = urlObj.pathname.split("/");
+        const lastSegment = pathSegments[pathSegments.length - 1];
+        if (lastSegment && lastSegment.includes(".")) {
+          pageTitle = decodeURIComponent(lastSegment.split(".")[0].replace(/[-_]+/g, " "));
+        }
+      } catch (err) {}
+    } else {
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
+        },
+        signal: AbortSignal.timeout(6000)
+      });
+
+      if (response.ok) {
+        scrapSuccess = true;
+        const html = await response.text();
+
+        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+        if (titleMatch && titleMatch[1]) {
+          pageTitle = titleMatch[1].trim();
+        }
+
+        const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["'](.*?)["']/i) ||
+                             html.match(/<meta\s+content=["'](.*?)["']\s+property=["']og:image["']/i);
+      
+        const twitterImageMatch = html.match(/<meta\s+name=["']twitter:image["']\s+content=["'](.*?)["']/i) ||
+                                  html.match(/<meta\s+content=["'](.*?)["']\s+name=["']twitter:image["']/i);
+
+        if (ogImageMatch && ogImageMatch[1]) {
+          finalImageUrl = ogImageMatch[1];
+        } else if (twitterImageMatch && twitterImageMatch[1]) {
+          finalImageUrl = twitterImageMatch[1];
+        } else {
+          const imgMatches = [...html.matchAll(/<img[^>]+src=["'](https:\/\/[^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/gi)];
+          if (imgMatches.length > 0) {
+            const cleanImgs = imgMatches
+              .map(m => m[1])
+              .filter(src => !src.includes("logo") && !src.includes("icon") && !src.includes("banner") && !src.includes("avatar"));
+            if (cleanImgs.length > 0) {
+              finalImageUrl = cleanImgs[0];
+            } else {
+              finalImageUrl = imgMatches[0][1];
+            }
+          }
+        }
+
+        htmlSnippet = html.substring(0, 30000).replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+      } else {
+        console.warn(`Fetch returned status ${response.status}. Using smart fallback AI parsing.`);
+      }
+    }
+  } catch (error: any) {
+    console.warn("Fetch failed, entering AI intelligent parsing fallback mode. Details:", error.message);
+  }
+
+  try {
+    if (finalImageUrl && !finalImageUrl.startsWith("http") && !finalImageUrl.startsWith("data:")) {
+      try {
+        const base = new URL(url);
+        finalImageUrl = new URL(finalImageUrl, base.origin).toString();
+      } catch (err) {}
+    }
+
+    const ai = getGenAI();
+    let prompt = `Analiza la siguiente información de producto de una tienda de moda online.
+Dirección URL proporcionada: ${url}
+Título detectado: "${pageTitle}"
+Mejor imagen detectada: "${finalImageUrl || "No encontrada"}"
+Estado de descarga: ${scrapSuccess ? "Éxito corporativo" : "Bloqueado por protección anti-robots / Fallo de red (Usar de todos modos el sastre predictivo)"}
+
+${htmlSnippet ? "Fragmento de código HTML parcial:\n" + htmlSnippet.substring(0, 3000) : "No hay fragmento de código HTML."}
+
+Deberás descifrar basados tanto en el HTML como en la estructura de la propia URL (ej: marcas en ruta como "newbalance", "zara", números de modelo "t500", "CT500PHA", "pantalon", etc.) cuáles son las propiedades sastreras de la prenda.
+
+Extrae y devuelve un objeto JSON estructurado con estas propiedades:
+- nombre: Un nombre pulido, elegante, corto y gramaticalmente correcto para la prenda de vestir en español (ej: "Zapatillas New Balance T500 Blancas", "Pantalón Casual de Sarga", "Chaqueta Americana de Lana"). Elimina nombres inútiles de marca comercial, textos de SEO como "Compra gratis", cookies, etc.
+- categoria: Clasifica ESTRICTAMENTE la prenda como uno de estos 4 valores: "top", "pantalon", "calzado" o "accesorio".
+- color: El color principal dominante en formato HEXADECIMAL (ej: "#EEEEEE", "#2C3E50"). Sé muy refinado y preciso de acuerdo al modelo.
+- formalidad: Un número entero de 1 a 10 (1 es chándal / pantuflas, 5 es calzado retro chic / polo casual que sirve para traje sastre moderno, 10 es traje inglés con chaleco).
+- temporada: Clasifica como "verano", "invierno", "otoño", "primavera" o "todo".
+- tejido: Tejido o material principal (ej: "Cuero de Ante", "Lona de Algodón", "Lino", "Sarga de Algodón", "Lana fría", "Cuero noble").
+- tags: Un array de strings sencillos (mínimo 3) que capturen etiquetas o descriptores (ej: ["deportivo", "atemporal", "retro", "sartorial", "casual", "premium"]).
+- imageFoundUrl: La URL de la foto de la prenda encontrada. Si estimas la prenda y no tenemos una URL directa funcional (o si "Mejor imagen" está vacía o es débil), por favor adjudica una de estas imágenes exquisitas de Unsplash en base a la categoría que clasificaste:
+  * Si la categoría es calzado/calzado: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=500&q=80"
+  * Si la categoría es top/jersey/chaqueta: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=500&q=80"
+  * Si la categoría es pantalon/vaqueros/chino: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=500&q=80"
+  * Si la categoría es accesorio/gafas/reloj: "https://images.unsplash.com/photo-1576053139778-7e32f2ae3cfc?auto=format&fit=crop&w=500&q=80"
+  De lo contrario, usa la URL de imagen detectada original ("${finalImageUrl}").
+
+Responde únicamente con el esquema JSON válido, sin delimitadores de código markdown de texto ordinario, con el formato de objeto puro de Gemini.`;
+
+    const chatResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            nombre: { type: Type.STRING },
+            categoria: { type: Type.STRING, enum: ["top", "pantalon", "calzado", "accesorio"] },
+            color: { type: Type.STRING },
+            formalidad: { type: Type.INTEGER },
+            temporada: { type: Type.STRING, enum: ["verano", "invierno", "otoño", "primavera", "todo"] },
+            tejido: { type: Type.STRING },
+            tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            imageFoundUrl: { type: Type.STRING }
+          },
+          required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags"]
+        }
+      }
+    });
+
+    const aiText = chatResponse.text;
+    const extractedData = JSON.parse(aiText);
+
+    let finalUrlToReturn = extractedData.imageFoundUrl || finalImageUrl;
+    if (!finalUrlToReturn) {
+      const cat = extractedData.categoria || "top";
+      if (cat === "calzado") {
+        finalUrlToReturn = "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=500&q=80";
+      } else if (cat === "pantalon") {
+        finalUrlToReturn = "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=500&q=80";
+      } else if (cat === "accesorio") {
+        finalUrlToReturn = "https://images.unsplash.com/photo-1576053139778-7e32f2ae3cfc?auto=format&fit=crop&w=500&q=80";
+      } else {
+        finalUrlToReturn = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=500&q=80";
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        nombre: extractedData.nombre || pageTitle,
+        categoria: extractedData.categoria || "top",
+        color: extractedData.color || "#C9A35B",
+        formalidad: extractedData.formalidad || 5,
+        temporada: extractedData.temporada || "todo",
+        tejido: extractedData.tejido || "Algodón",
+        tags: extractedData.tags || ["importado", "nuevo"],
+        imageSrc: finalUrlToReturn
+      }
+    });
+
+  } catch (err: any) {
+    console.error("Fallo total en estimador estético sastre:", err);
+    res.json({
+      success: true,
+      data: {
+        nombre: "Prenda Importada Sastre",
+        categoria: "top",
+        color: "#C9A35B",
+        formalidad: 5,
+        temporada: "todo",
+        tejido: "Algodón Premium",
+        tags: ["sartorial", "casual", "importado"],
+        imageSrc: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=500&q=80"
+      }
+    });
   }
 });
 
