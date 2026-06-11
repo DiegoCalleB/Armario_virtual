@@ -150,7 +150,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<"all" | CategoriaPrenda>("all");
   
   // Registration control tabs
-  const [registrationTab, setRegistrationTab] = useState<"ia" | "manual" | "link">("ia");
+  const [registrationTab, setRegistrationTab] = useState<"ia" | "manual" | "link">("link");
 
   // Link Importer Form States
   const [linkInputUrl, setLinkInputUrl] = useState("");
@@ -572,6 +572,24 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
           <div className="flex border-b border-linea mb-5 select-none font-sans overflow-x-auto no-scrollbar gap-1">
             <button
               type="button"
+              id="tab-importar-link"
+              onClick={() => {
+                setRegistrationTab("link");
+                setError(null);
+                setExtractedPrenda(null);
+              }}
+              className={`flex-1 min-w-[90px] py-3 text-[9.5px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest border-b-2 transition ${
+                registrationTab === "link"
+                  ? "border-laton text-laton bg-tarjeta/15"
+                  : "border-transparent text-tinta-apagada hover:text-tinta hover:bg-tarjeta/5"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                <ExternalLink size={11} className={registrationTab === "link" ? "text-laton" : "text-tinta-apagada"} /> Por Enlace
+              </span>
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 setRegistrationTab("ia");
                 setError(null);
@@ -600,24 +618,6 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             >
               <span className="flex items-center justify-center gap-1 whitespace-nowrap">
                 <Plus size={11} className={registrationTab === "manual" ? "text-laton" : "text-tinta-apagada"} /> Rápido
-              </span>
-            </button>
-            <button
-              type="button"
-              id="tab-importar-link"
-              onClick={() => {
-                setRegistrationTab("link");
-                setError(null);
-                setExtractedPrenda(null);
-              }}
-              className={`flex-1 min-w-[90px] py-3 text-[9.5px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest border-b-2 transition ${
-                registrationTab === "link"
-                  ? "border-laton text-laton bg-tarjeta/15"
-                  : "border-transparent text-tinta-apagada hover:text-tinta hover:bg-tarjeta/5"
-              }`}
-            >
-              <span className="flex items-center justify-center gap-1 whitespace-nowrap">
-                <ExternalLink size={11} className={registrationTab === "link" ? "text-laton" : "text-tinta-apagada"} /> Por Enlace
               </span>
             </button>
           </div>

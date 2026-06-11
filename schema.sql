@@ -1,0 +1,123 @@
+-- =========================================================================
+-- ESPEJO - BARBERÍA & SASTRERÍA DIGITAL INTELIGENTE
+-- DOCUMENTO DE CONFIGURACIÓN DE BASE DE DATOS SUPABASE (POSTGRESQL)
+-- =========================================================================
+--
+-- Copia y pega esta consulta SQL completa en la sección "SQL Editor"
+-- de tu panel de Supabase para estructurar las tablas, habilitar
+-- Row Level Security (RLS) y garantizar el aislamiento confidencial de datos.
+-- 
+
+-- -------------------------------------------------------------------------
+-- 1. CONFIGURACIÓN DE LA TABLA 'rostro' (Fisionomía del Cabello y Rostro)
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.rostro (
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    forma_cara TEXT NOT NULL,
+    pelo_actual TEXT NOT NULL,
+    barba_actual TEXT NOT NULL,
+    clave TEXT NOT NULL,
+    image_src TEXT, -- Representación gráfica de calibración (Base64)
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar Row Level Security (RLS)
+ALTER TABLE public.rostro ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para 'rostro'
+CREATE POLICY "Permitir lectura individual de rostro" 
+    ON public.rostro FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir inserción individual de rostro" 
+    ON public.rostro FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Permitir actualización individual de rostro" 
+    ON public.rostro FOR UPDATE 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir borrado individual de rostro" 
+    ON public.rostro FOR DELETE 
+    USING (auth.uid() = user_id);
+
+
+-- -------------------------------------------------------------------------
+-- 2. CONFIGURACIÓN DE LA TABLA 'prendas' (Guarda Ropa Digital Inteligente)
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.prendas (
+    id TEXT PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    nombre TEXT NOT NULL,
+    categoria TEXT NOT NULL, -- 'top', 'pantalon', 'calzado', 'accesorio'
+    color TEXT NOT NULL, -- Código Hexadecimal o nombre
+    formalidad INTEGER NOT NULL DEFAULT 5, -- 1 al 5
+    temporada TEXT NOT NULL DEFAULT 'todo', -- 'verano', 'invierno', 'todo'
+    image_src TEXT NOT NULL, -- Imagen minificada de la prenda (Base64)
+    descripcion TEXT, -- Observaciones o ficha sastrera
+    tejido TEXT, -- Clasificación de tejido inteligente (ej: Lino, Lana Peinada)
+    tags TEXT[], -- Etiquetas de corte y silueta estructuradas
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar Row Level Security (RLS)
+ALTER TABLE public.prendas ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para 'prendas'
+CREATE POLICY "Permitir lectura individual de prendas" 
+    ON public.prendas FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir inserción individual de prendas" 
+    ON public.prendas FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Permitir actualización individual de prendas" 
+    ON public.prendas FOR UPDATE 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir borrado individual de prendas" 
+    ON public.prendas FOR DELETE 
+    USING (auth.uid() = user_id);
+
+
+-- -------------------------------------------------------------------------
+-- 3. CONFIGURACIÓN DE LA TABLA 'historial' (Catálogo de Atuendos e Histórico)
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.historial (
+    id TEXT PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    fecha TEXT NOT NULL,
+    ocasion TEXT NOT NULL,
+    clima TEXT NOT NULL,
+    look_titulo TEXT NOT NULL,
+    look_porque TEXT NOT NULL,
+    look_pelo_sugerido TEXT NOT NULL,
+    look_barba_sugerida TEXT NOT NULL,
+    look_consejo_barberia TEXT NOT NULL,
+    look_id_prendas TEXT[], -- Lista de los IDs de prendas que componen el look
+    look_simulated_image_url TEXT, -- Render de retrato
+    look_simulated_full_body_image_url TEXT, -- Render de cuerpo entero
+    favorito BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar Row Level Security (RLS)
+ALTER TABLE public.historial ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para 'historial'
+CREATE POLICY "Permitir lectura individual de historial" 
+    ON public.historial FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir inserción individual de historial" 
+    ON public.historial FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Permitir actualización individual de historial" 
+    ON public.historial FOR UPDATE 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir borrado individual de historial" 
+    ON public.historial FOR DELETE 
+    USING (auth.uid() = user_id);

@@ -1439,9 +1439,29 @@ const startServer = async () => {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    app.use(express.static(distPath, { index: false }));
+    app.get("*", async (req, res) => {
+      try {
+        const fs = await import("fs");
+        const indexPath = path.join(distPath, "index.html");
+        if (fs.existsSync(indexPath)) {
+          let html = fs.readFileSync(indexPath, "utf8");
+          const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
+          const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
+          const scriptTag = `
+    <script>
+      window.VITE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};
+      window.VITE_SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnonKey)};
+    </script>
+`;
+          html = html.replace("<head>", `<head>${scriptTag}`);
+          res.send(html);
+        } else {
+          res.status(404).send("Atelier file not found");
+        }
+      } catch (err) {
+        res.status(500).send("Internal server error loading atelier");
+      }
     });
   }
 

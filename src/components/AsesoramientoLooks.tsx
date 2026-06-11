@@ -4,6 +4,102 @@ import { Sparkles, Compass, Thermometer, ChevronRight, CheckCircle2, RotateCcw, 
 import { motion, AnimatePresence } from "motion/react";
 import { fileToBase64, resizeImage } from "../utils";
 
+// Resiliently resolve garments from requested IDs
+const getResilientMatchingGarments = (id_prendas: string[] | undefined, armario: Prenda[]): Prenda[] => {
+  if (!id_prendas || !Array.isArray(id_prendas)) return [];
+  
+  const resolved: Prenda[] = [];
+  const matchedIds = new Set<string>();
+
+  for (const rawId of id_prendas) {
+    if (!rawId) continue;
+    const strId = String(rawId).trim();
+
+    // 1. Exact match by ID
+    let found = armario.find(p => p.id === strId);
+
+    // 2. Try by 1-based index (sometimes AI outputs "1", "2" instead of actual IDs)
+    if (!found) {
+      const idx = parseInt(strId, 10);
+      if (!isNaN(idx) && idx >= 1 && idx <= armario.length) {
+        found = armario[idx - 1];
+      }
+    }
+
+    // 3. Try to match by ID normalization (removing non-alphanumeric, case-insensitive)
+    if (!found) {
+      const normStrId = strId.toLowerCase().replace(/[^a-z0-9]/g, "");
+      found = armario.find(p => p.id.toLowerCase().replace(/[^a-z0-9]/g, "") === normStrId);
+    }
+
+    // 4. Try matching by garment name contained or containing the ID string
+    if (!found) {
+      const lowerStrId = strId.toLowerCase();
+      found = armario.find(p => 
+        p.nombre.toLowerCase().includes(lowerStrId) || 
+        lowerStrId.includes(p.nombre.toLowerCase())
+      );
+    }
+
+    if (found && !matchedIds.has(found.id)) {
+      resolved.push(found);
+      matchedIds.add(found.id);
+    }
+  }
+
+  // 5. Smart fallback: if look is completely empty of essential categories
+  // (e.g. no "top" or "pantalon" matched but they correspond to what the look talks about, 
+  // or if we just have some garments in the look but some essential piece is missing), 
+  // we do a category-based matching to make sure the model has clothes of the appropriate categories
+  // mentioned in the title/porque of the look.
+  const hasTop = resolved.some(p => p.categoria === "top");
+  const hasPantalon = resolved.some(p => p.categoria === "pantalon");
+  const hasCalzado = resolved.some(p => p.categoria === "calzado");
+
+  const topsInArmario = armario.filter(p => p.categoria === "top");
+  const pantalonesInArmario = armario.filter(p => p.categoria === "pantalon");
+  const calzadosInArmario = armario.filter(p => p.categoria === "calzado");
+
+  if (!hasTop && topsInArmario.length > 0) {
+    // Look for a top that might match keywords in look's title/porque
+    const matchedTop = topsInArmario.find(p => 
+      resolved.length === 0 || // take first if none resolved
+      p.nombre.split(" ").some(word => word.length > 3 && (p.nombre.toLowerCase().includes(word)))
+    ) || topsInArmario[0];
+    
+    if (matchedTop && !matchedIds.has(matchedTop.id)) {
+      resolved.push(matchedTop);
+      matchedIds.add(matchedTop.id);
+    }
+  }
+
+  if (!hasPantalon && pantalonesInArmario.length > 0) {
+    const matchedPant = pantalonesInArmario.find(p => 
+      resolved.length === 0 ||
+      p.nombre.split(" ").some(word => word.length > 3 && (p.nombre.toLowerCase().includes(word)))
+    ) || pantalonesInArmario[0];
+    
+    if (matchedPant && !matchedIds.has(matchedPant.id)) {
+      resolved.push(matchedPant);
+      matchedIds.add(matchedPant.id);
+    }
+  }
+
+  if (!hasCalzado && calzadosInArmario.length > 0) {
+    const matchedCalzado = calzadosInArmario.find(p => 
+      resolved.length === 0 ||
+      p.nombre.split(" ").some(word => word.length > 3 && (p.nombre.toLowerCase().includes(word)))
+    ) || calzadosInArmario[0];
+    
+    if (matchedCalzado && !matchedIds.has(matchedCalzado.id)) {
+      resolved.push(matchedCalzado);
+      matchedIds.add(matchedCalzado.id);
+    }
+  }
+
+  return resolved;
+};
+
 interface AsesoramientoLooksProps {
   armario: Prenda[];
   rostro: Rostro | null;
@@ -205,12 +301,10 @@ export default function AsesoramientoLooks({
       let prendasTexto = "";
       let matchingPrendas: any[] = [];
       if (fullBody) {
-        matchingPrendas = look.id_prendas
-          .map((id) => armario.find((p) => p.id === id))
-          .filter(Boolean);
+        matchingPrendas = getResilientMatchingGarments(look.id_prendas, armario);
         prendasTexto = matchingPrendas
-          .map((p) => `${p?.nombre} (${p?.categoria})`)
-          .join(" con ");
+          .map((p) => `${p?.nombre} (categoría: ${p?.categoria === "top" ? "prenda superior" : p?.categoria === "pantalon" ? "prenda inferior" : p?.categoria === "calzado" ? "calzado" : "accesorio"}, color: ${p?.color}${p?.tejido ? `, tejido: ${p?.tejido}` : ""})`)
+          .join(", combinado con ");
       }
 
       // Trigger user paid flow setting check via show_aistudio_ui under standard model requirements if key is paid,
@@ -452,9 +546,7 @@ export default function AsesoramientoLooks({
                     <div className="h-px bg-linea" />
 
                     {(() => {
-                      const matchingGarments = selectedLook.id_prendas
-                        .map(id => armario.find(p => p.id === id))
-                        .filter((p): p is Prenda => p !== undefined);
+                      const matchingGarments = getResilientMatchingGarments(selectedLook.id_prendas, armario);
 
                       const tops = matchingGarments.filter(p => p.categoria === "top");
                       const pantalones = matchingGarments.filter(p => p.categoria === "pantalon");

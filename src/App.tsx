@@ -106,11 +106,100 @@ export default function App() {
 
         if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
           // Cloud Supabase sync
-          const [dbRostro, dbPrendas, dbHistorial] = await Promise.all([
-            fetchUserRostro(user.id),
-            fetchUserPrendas(user.id),
-            fetchUserHistorial(user.id)
-          ]);
+          let dbRostro: Rostro | null = null;
+          let dbPrendas: Prenda[] = [];
+          let dbHistorial: HistorialLook[] = [];
+
+          try {
+            const results = await Promise.allSettled([
+              fetchUserRostro(user.id),
+              fetchUserPrendas(user.id),
+              fetchUserHistorial(user.id)
+            ]);
+
+            if (results[0].status === "fulfilled") {
+              dbRostro = results[0].value as Rostro | null;
+            }
+            if (results[1].status === "fulfilled") {
+              dbPrendas = (results[1].value as Prenda[]) || [];
+            }
+            if (results[2].status === "fulfilled") {
+              dbHistorial = (results[2].value as HistorialLook[]) || [];
+            }
+          } catch (syncErr) {
+            console.error("Supabase load error, falling back:", syncErr);
+          }
+
+          // Force load representation from local storage cache if the database returned empty/failed
+          const cachedRostro = localStorage.getItem(`espejo_rostro_${user.id}`);
+          const cachedPrendas = localStorage.getItem(`espejo_prendas_${user.id}`);
+          const cachedHistorial = localStorage.getItem(`espejo_historial_${user.id}`);
+
+          if (!dbRostro && cachedRostro) {
+            try { dbRostro = JSON.parse(cachedRostro); } catch (_) {}
+          }
+          if (dbPrendas.length === 0 && cachedPrendas) {
+            try {
+              const parsed = JSON.parse(cachedPrendas);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                dbPrendas = parsed;
+              }
+            } catch (_) {}
+          }
+          if (dbHistorial.length === 0 && cachedHistorial) {
+            try {
+              const parsed = JSON.parse(cachedHistorial);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                dbHistorial = parsed;
+              }
+            } catch (_) {}
+          }
+          
+          // Auto-migrate from guest local session if the Cloud account starts completely empty
+          if (dbPrendas.length === 0) {
+            const guestPrendas = localStorage.getItem("espejo_prendas_usr_guest");
+            if (guestPrendas) {
+              const parsedGuest = JSON.parse(guestPrendas);
+              if (parsedGuest.length > 0) {
+                dbPrendas = parsedGuest;
+                for (const p of dbPrendas) {
+                  await saveUserPrenda(user.id, p).catch(e => console.error(e));
+                }
+              }
+            }
+          }
+
+          if (!dbRostro) {
+            const guestRostro = localStorage.getItem("espejo_rostro_usr_guest");
+            if (guestRostro) {
+              dbRostro = JSON.parse(guestRostro);
+              if (dbRostro) {
+                await saveUserRostro(user.id, dbRostro).catch(e => console.error(e));
+              }
+            }
+          }
+
+          if (dbHistorial.length === 0) {
+            const guestHistorial = localStorage.getItem("espejo_historial_usr_guest");
+            if (guestHistorial) {
+              const parsedGuestHist = JSON.parse(guestHistorial);
+              if (parsedGuestHist.length > 0) {
+                dbHistorial = parsedGuestHist;
+                await saveMultipleUserHistorialItems(user.id, dbHistorial).catch(e => console.error(e));
+              }
+            }
+          }
+
+          // Update local cache for safety and offline work
+          if (dbRostro) {
+            localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(dbRostro));
+          }
+          if (dbPrendas.length > 0) {
+            localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(dbPrendas));
+          }
+          if (dbHistorial.length > 0) {
+            localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(dbHistorial));
+          }
           
           setRostro(dbRostro);
           setPrendas(dbPrendas);
@@ -121,13 +210,45 @@ export default function App() {
           const prendasKey = `espejo_prendas_${user.id}`;
           const historialKey = `espejo_historial_${user.id}`;
 
-          const savedRostro = localStorage.getItem(rostroKey);
-          const savedPrendas = localStorage.getItem(prendasKey);
-          const savedHistorial = localStorage.getItem(historialKey);
+          let finalRostro = localStorage.getItem(rostroKey);
+          let finalPrendas = localStorage.getItem(prendasKey);
+          let finalHistorial = localStorage.getItem(historialKey);
 
-          setRostro(savedRostro ? JSON.parse(savedRostro) : null);
-          setPrendas(savedPrendas ? JSON.parse(savedPrendas) : []);
-          setHistorial(savedHistorial ? JSON.parse(savedHistorial) : []);
+          let parsedRostro = finalRostro ? JSON.parse(finalRostro) : null;
+          let parsedPrendas = finalPrendas ? JSON.parse(finalPrendas) : [];
+          let parsedHistorial = finalHistorial ? JSON.parse(finalHistorial) : [];
+
+          // Auto-migrate Guest local data to the newly logged-in/registered mock user
+          if (user.id !== "usr_guest") {
+            const guestPrendas = localStorage.getItem("espejo_prendas_usr_guest");
+            const guestRostro = localStorage.getItem("espejo_rostro_usr_guest");
+            const guestHistorial = localStorage.getItem("espejo_historial_usr_guest");
+
+            if (parsedPrendas.length === 0 && guestPrendas) {
+              const parsedGuest = JSON.parse(guestPrendas);
+              if (parsedGuest.length > 0) {
+                parsedPrendas = parsedGuest;
+                localStorage.setItem(prendasKey, JSON.stringify(parsedPrendas));
+              }
+            }
+
+            if (!parsedRostro && guestRostro) {
+              parsedRostro = JSON.parse(guestRostro);
+              localStorage.setItem(rostroKey, JSON.stringify(parsedRostro));
+            }
+
+            if (parsedHistorial.length === 0 && guestHistorial) {
+              const parsedGuestHist = JSON.parse(guestHistorial);
+              if (parsedGuestHist.length > 0) {
+                parsedHistorial = parsedGuestHist;
+                localStorage.setItem(historialKey, JSON.stringify(parsedHistorial));
+              }
+            }
+          }
+
+          setRostro(parsedRostro);
+          setPrendas(parsedPrendas);
+          setHistorial(parsedHistorial);
         }
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -168,10 +289,10 @@ export default function App() {
   const handleAnalizado = async (nuevoRostro: Rostro) => {
     setRostro(nuevoRostro);
     if (user) {
+      // Local backup first (Always)
+      localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(nuevoRostro));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await saveUserRostro(user.id, nuevoRostro);
-      } else {
-        localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(nuevoRostro));
       }
     }
   };
@@ -179,10 +300,9 @@ export default function App() {
   const handleBorrarRostro = async () => {
     setRostro(null);
     if (user) {
+      localStorage.removeItem(`espejo_rostro_${user.id}`);
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await deleteUserRostro(user.id);
-      } else {
-        localStorage.removeItem(`espejo_rostro_${user.id}`);
       }
     }
   };
@@ -195,9 +315,7 @@ export default function App() {
       const filteredPrev = prev.filter(p => !nuevas.some(n => n.id === p.id));
       const updated = [...nuevas, ...filteredPrev];
       if (user) {
-        if (!isSupabaseConfigured || isAuthMock || user.id === "usr_guest" || user.id.startsWith("usr_mock")) {
-          localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
-        }
+        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       }
       return updated;
     });
@@ -217,10 +335,9 @@ export default function App() {
     const updated = prendas.filter((p) => p.id !== id);
     setPrendas(updated);
     if (user) {
+      localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await deleteUserPrenda(user.id, id);
-      } else {
-        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       }
     }
   };
@@ -229,10 +346,9 @@ export default function App() {
     const updated = prendas.map((p) => (p.id === prendaActualizada.id ? prendaActualizada : p));
     setPrendas(updated);
     if (user) {
+      localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await updateUserPrenda(user.id, prendaActualizada);
-      } else {
-        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       }
     }
   };
@@ -259,10 +375,9 @@ export default function App() {
     setHistorial(updated);
 
     if (user) {
+      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await saveMultipleUserHistorialItems(user.id, nuevosItems);
-      } else {
-        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       }
     }
   };
@@ -287,6 +402,7 @@ export default function App() {
     setHistorial(updated);
 
     if (user) {
+      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         const matchedItem = historial.find((item) => 
           item.ocasion === ocasionValue &&
@@ -296,8 +412,6 @@ export default function App() {
         if (matchedItem) {
           await updateUserHistorialItemImage(user.id, matchedItem.id, !!isFullBody, imageUrl);
         }
-      } else {
-        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       }
     }
   };
@@ -309,10 +423,9 @@ export default function App() {
       setSelectedHistorialItem(null);
     }
     if (user) {
+      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await deleteUserHistorialItem(user.id, id);
-      } else {
-        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       }
     }
   };
@@ -328,12 +441,11 @@ export default function App() {
     setHistorial(updated);
 
     if (user) {
+      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         if (matched) {
           await toggleUserHistorialItemFavorito(user.id, id, !matched.favorito);
         }
-      } else {
-        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
       }
     }
   };
@@ -357,12 +469,11 @@ export default function App() {
       setSelectedHistorialItem(null);
       
       if (user) {
+        localStorage.removeItem(`espejo_rostro_${user.id}`);
+        localStorage.removeItem(`espejo_prendas_${user.id}`);
+        localStorage.removeItem(`espejo_historial_${user.id}`);
         if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
           await resetUserAllData(user.id);
-        } else {
-          localStorage.removeItem(`espejo_rostro_${user.id}`);
-          localStorage.removeItem(`espejo_prendas_${user.id}`);
-          localStorage.removeItem(`espejo_historial_${user.id}`);
         }
       }
     }
@@ -715,6 +826,7 @@ export default function App() {
           <footer className="text-center pt-10 pb-8 text-[11px] font-sans text-tinta-apagada/40 leading-relaxed max-w-sm mx-auto select-none">
             <p className="font-serif italic font-medium text-laton">ESPEJO</p>
             <p>Atelier de Asesoría de Imagen Masculina & Sastrería Digital Inteligente.</p>
+            <p className="mt-0.5 text-laton/80 font-medium">Diseñado y Desarrollado por <span className="font-bold">AIron Labs</span>.</p>
             <p className="mt-1">© 2026. Todos los derechos reservados.</p>
           </footer>
         </main>

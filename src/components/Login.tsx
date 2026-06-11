@@ -100,9 +100,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           setIsSignUp(false);
           setPassword("");
         } else {
-          // Simulate login
+          // Simulate login with a deterministic user ID based on the email
+          const cleanEmailId = email.toLowerCase().replace(/[^a-z0-9]/g, "_");
           onLoginSuccess({
-            id: `usr_mock_${Math.floor(Math.random() * 900000 + 100000)}`,
+            id: `usr_mock_${cleanEmailId}`,
             email: email,
           }, true);
         }
@@ -178,7 +179,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         await new Promise((resolve) => setTimeout(resolve, 850));
         setInfoMsg("Acceso simulado con Google en Modo Demo.");
         onLoginSuccess({
-          id: `usr_goo_${Math.floor(Math.random() * 900000 + 100000)}`,
+          id: "usr_mock_diego_sartorial_gmail_com",
           email: "diego.sartorial@gmail.com",
         }, true);
       }
