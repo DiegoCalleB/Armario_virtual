@@ -1572,40 +1572,7 @@ const startServer = async () => {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "custom",
-    });
-
-    // Custom index.html serving route in development to inject active environment variables dynamically
-    app.get("*", async (req, res, next) => {
-      // Skip API requests and static assets
-      if (req.path.startsWith("/api") || req.path.includes(".")) {
-        return next();
-      }
-
-      try {
-        const fs = await import("fs");
-        const indexPath = path.join(process.cwd(), "index.html");
-        if (fs.existsSync(indexPath)) {
-          let html = fs.readFileSync(indexPath, "utf8");
-          // Apply Vite's built-in HTML transforms (HMR, preamble injection etc)
-          html = await vite.transformIndexHtml(req.originalUrl || req.url, html);
-
-          const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
-          const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
-          const scriptTag = `
-    <script>
-      window.VITE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};
-      window.VITE_SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnonKey)};
-    </script>
-`;
-          html = html.replace("<head>", `<head>${scriptTag}`);
-          res.status(200).set({ "Content-Type": "text/html" }).end(html);
-        } else {
-          res.status(404).send("Atelier file not found in workspace");
-        }
-      } catch (err) {
-        next(err);
-      }
+      appType: "spa",
     });
 
     app.use(vite.middlewares);
