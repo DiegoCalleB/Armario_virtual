@@ -33,6 +33,29 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setIsIframe(window.self !== window.top);
   }, []);
 
+  // Listen to message from OAuth popup for seamless cross-window sign in completion
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data === "supabase-oauth-success" && isSupabaseConfigured && supabase) {
+        console.log("Parent window received oauth-success. Fetching session...");
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session?.user) {
+            onLoginSuccess({
+              id: sessionData.session.user.id,
+              email: sessionData.session.user.email || "usuario@espejo.ai",
+            }, false);
+          }
+        } catch (err) {
+          console.error("Failed to recover session on postMessage trigger:", err);
+        }
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [onLoginSuccess]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -375,6 +398,22 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           <p className="text-[10.5px] text-amber-200/80 bg-amber-950/20 border border-amber-920/10 rounded p-2.5 text-center leading-relaxed">
             ⚠️ <strong>Entorno Seguro Iframe:</strong> Si este botón no abre la ventana de Google, se debe a restricciones del simulador de AI Studio. Permite las <strong>ventanas emergentes (popups)</strong> en la barra de tu navegador, o abre la app en una <strong>Pestaña Nueva</strong> desde el botón superior derecho. ¡O usa el registro manual con contraseña abajo sin trabas!
           </p>
+
+          {/* Vercel Guidance Card */}
+          <div className="bg-zinc-950/50 border border-linea/60 rounded p-3 text-[10.5px] text-tinta-apagada space-y-2 text-left">
+            <p className="text-white font-serif font-semibold text-[11px] tracking-wide uppercase flex items-center gap-1">
+              🚀 ¿Desplegando en Vercel?
+            </p>
+            <p className="leading-relaxed">
+              Para que el acceso con Google funcione en <strong>Vercel</strong>, debes configurar los redireccionamientos permitidos en Supabase:
+            </p>
+            <ul className="list-decimal list-inside space-y-1 text-tinta-apagada/90 pl-1">
+              <li>Entra al panel de <strong>Supabase</strong> de tu proyecto.</li>
+              <li>Ve a <strong>Authentication</strong> &rarr; <strong>URL Configuration</strong>.</li>
+              <li>Añade la URL de Vercel (ej: <code className="bg-zinc-800 text-amber-200 px-1 py-0.5 rounded font-mono">https://tu-proyecto.vercel.app/**</code>) en la sección de <strong>Redirect URLs</strong>.</li>
+              <li>Asegúrate de configurar los Secrets <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_URL</code> y <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_ANON_KEY</code> en la configuración de variables de Vercel.</li>
+            </ul>
+          </div>
 
           <div className="relative flex py-1.5 items-center">
             <div className="flex-grow border-t border-linea/30"></div>

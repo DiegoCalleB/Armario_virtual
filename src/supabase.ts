@@ -2,8 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 import { Rostro, Prenda, HistorialLook } from "./types";
 
 // Check if keys are set in environmental or window variables
-const supabaseUrl = (window as any).VITE_SUPABASE_URL || (import.meta as any).env.VITE_SUPABASE_URL;
-const supabaseAnonKey = (window as any).VITE_SUPABASE_ANON_KEY || (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+// @ts-ignore
+const supabaseUrl = (window as any).VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
+// @ts-ignore
+const supabaseAnonKey = (window as any).VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let isConfigured = false;
 let supabaseClient = null;

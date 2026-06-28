@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Rostro, Prenda, HistorialLook, PerfilEstilo } from "./types";
+import { Rostro, Prenda, HistorialLook, PerfilEstilo, Look } from "./types";
 import TuEspejo from "./components/TuEspejo";
 import TuArmario from "./components/TuArmario";
 import AsesoramientoLooks from "./components/AsesoramientoLooks";
@@ -89,6 +89,33 @@ export default function App() {
       return () => {
         subscription.unsubscribe();
       };
+    }
+  }, []);
+
+  // Handle automatic closure and synchronization if this is an OAuth popup window
+  useEffect(() => {
+    const isOAuthPopup = window.opener && (
+      window.name === "supabase_oauth_popup" ||
+      window.location.hash.includes("access_token=") ||
+      window.location.hash.includes("id_token=") ||
+      window.location.hash.includes("error_description=") ||
+      window.location.search.includes("code=")
+    );
+
+    if (isOAuthPopup) {
+      console.log("OAuth popup detected. Syncing session and self-closing...");
+      const timer = setTimeout(() => {
+        try {
+          window.opener.postMessage("supabase-oauth-success", "*");
+          window.close();
+        } catch (err) {
+          console.error("Failed to post message or close popup:", err);
+          try {
+            window.close();
+          } catch (_) {}
+        }
+      }, 1200);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -382,35 +409,67 @@ export default function App() {
     }
   };
 
-  const handleUpdateLookImg = async (lookTitle: string, imageUrl: string, ocasionValue: string, climaValue: string, isFullBody?: boolean) => {
-    const updated = historial.map((item) => {
-      if (
-        item.ocasion === ocasionValue &&
-        item.clima === climaValue &&
-        item.look.titulo === lookTitle
-      ) {
-        return {
-          ...item,
-          look: {
-            ...item.look,
-            [isFullBody ? "simulatedFullBodyImageUrl" : "simulatedImageUrl"]: imageUrl
-          }
-        };
-      }
-      return item;
-    });
-    setHistorial(updated);
+  const handleUpdateLookImg = async (updatedLook: Look, ocasionValue: string, climaValue: string, isFullBody?: boolean) => {
+    const oVal = ocasionValue || "Uso Diario / Casual";
+    const cVal = climaValue || "Templado";
+    const lookTitle = updatedLook.titulo;
 
-    if (user) {
-      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
-      if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
-        const matchedItem = historial.find((item) => 
-          item.ocasion === ocasionValue &&
-          item.clima === climaValue &&
-          item.look.titulo === lookTitle
-        );
-        if (matchedItem) {
-          await updateUserHistorialItemImage(user.id, matchedItem.id, !!isFullBody, imageUrl);
+    const matchedIdx = historial.findIndex((item) => 
+      item.ocasion === oVal &&
+      item.clima === cVal &&
+      item.look.titulo === lookTitle
+    );
+
+    let updatedHistorial = [...historial];
+
+    if (matchedIdx !== -1) {
+      const existingItem = updatedHistorial[matchedIdx];
+      const nextLook = {
+        ...existingItem.look,
+        ...updatedLook
+      };
+      
+      updatedHistorial[matchedIdx] = {
+        ...existingItem,
+        look: nextLook
+      };
+      setHistorial(updatedHistorial);
+
+      if (user) {
+        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updatedHistorial));
+        if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+          const imgUrl = isFullBody ? nextLook.simulatedFullBodyImageUrl : nextLook.simulatedImageUrl;
+          if (imgUrl) {
+            await updateUserHistorialItemImage(user.id, existingItem.id, !!isFullBody, imgUrl);
+          }
+        }
+      }
+    } else {
+      // It does not exist yet (e.g. they projected an instant look!). Create on the fly!
+      const fechaActual = new Date().toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      const newItem: HistorialLook = {
+        id: `look_${Date.now()}_instant_${Math.floor(Math.random() * 1000)}`,
+        fecha: fechaActual,
+        ocasion: oVal,
+        clima: cVal,
+        look: updatedLook,
+        favorito: false
+      };
+
+      updatedHistorial = [newItem, ...updatedHistorial];
+      setHistorial(updatedHistorial);
+
+      if (user) {
+        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updatedHistorial));
+        if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+          await saveMultipleUserHistorialItems(user.id, [newItem]);
         }
       }
     }

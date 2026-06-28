@@ -105,7 +105,7 @@ interface AsesoramientoLooksProps {
   rostro: Rostro | null;
   selectedHistorialItem?: HistorialLook | null;
   onLooksGenerados?: (looks: Look[], ocasion: string, clima: string) => void;
-  onUpdateLookImg?: (lookTitle: string, imageUrl: string, ocasion: string, clima: string, isFullBody?: boolean) => void;
+  onUpdateLookImg?: (updatedLook: Look, ocasion: string, clima: string, isFullBody?: boolean) => void;
   perfilEstilo?: PerfilEstilo | null;
 }
 
@@ -236,6 +236,31 @@ export default function AsesoramientoLooks({
   const [customFullBodyPhoto, setCustomFullBodyPhoto] = useState<string | null>(null);
   const [customFullBodyFile, setCustomFullBodyFile] = useState<File | null>(null);
 
+  // Load custom full body photo from localStorage on mount or when rostro changes
+  useEffect(() => {
+    const key = rostro?.clave ? `espejo_cuerpo_${rostro.clave}` : "espejo_cuerpo_guest";
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      setCustomFullBodyPhoto(cached);
+    } else {
+      setCustomFullBodyPhoto(null);
+    }
+  }, [rostro]);
+
+  const handleSetCustomFullBodyPhoto = (photo: string | null) => {
+    setCustomFullBodyPhoto(photo);
+    const key = rostro?.clave ? `espejo_cuerpo_${rostro.clave}` : "espejo_cuerpo_guest";
+    if (photo) {
+      try {
+        localStorage.setItem(key, photo);
+      } catch (e) {
+        console.warn("Storage quota exceeded or storage unavailable, falling back to local memory simulation", e);
+      }
+    } else {
+      localStorage.removeItem(key);
+    }
+  };
+
   const triggerGeneradorLooks = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ocasion.trim() || !clima.trim()) return;
@@ -287,7 +312,11 @@ export default function AsesoramientoLooks({
 
   // Trigger the face and beard simulation on demand
   const triggerSimulation = async (lookIndex: number, look: Look, fullBody: boolean = false) => {
-    if (!rostro?.imageSrc) return;
+    const hasImage = fullBody ? (customFullBodyPhoto || rostro?.imageSrc) : rostro?.imageSrc;
+    if (!hasImage) {
+      setSimulationError("Por favor, sube tu foto de rostro en 'Tu espejo' o tu foto de cuerpo completo primero.");
+      return;
+    }
 
     setSimulationError(null);
     setSimulating(true);
@@ -313,7 +342,7 @@ export default function AsesoramientoLooks({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          faceImage: rostro.imageSrc,
+          faceImage: rostro?.imageSrc || undefined,
           estiloCabello: look.pelo_sugerido,
           estiloBarba: look.barba_sugerida,
           fullBody,
@@ -330,17 +359,21 @@ export default function AsesoramientoLooks({
 
       const parsed = await res.json();
       if (parsed.imageUrl) {
+        // Construct the updated look on the fly
+        const updatedNextLook = {
+          ...look,
+          [fullBody ? "simulatedFullBodyImageUrl" : "simulatedImageUrl"]: parsed.imageUrl,
+        };
+
         // Safe updates 
         setLooks((oldLooks) => {
           const raw = [...oldLooks];
-          raw[lookIndex] = {
-            ...raw[lookIndex],
-            [fullBody ? "simulatedFullBodyImageUrl" : "simulatedImageUrl"]: parsed.imageUrl,
-          };
+          raw[lookIndex] = updatedNextLook;
           return raw;
         });
+
         if (onUpdateLookImg) {
-          onUpdateLookImg(look.titulo, parsed.imageUrl, ocasion, clima, fullBody);
+          onUpdateLookImg(updatedNextLook, ocasion, clima, fullBody);
         }
       } else {
         throw new Error("No se obtuvo URL de simulación válida.");
@@ -359,6 +392,121 @@ export default function AsesoramientoLooks({
   };
 
   const selectedLook = looks[activeLookIndex];
+
+  // Interactive wardrobe try-on positions
+  const [cuerpoMode, setCuerpoMode] = useState<"interactivo" | "ia">("interactivo");
+  const [garmentPositions, setGarmentPositions] = useState<Record<string, {
+    id: string;
+    x: number;
+    y: number;
+    scale: number;
+    scaleX?: number;
+    scaleY?: number;
+    rotation: number;
+    zIndex: number;
+    flip: boolean;
+    visible: boolean;
+    blendMode?: "normal" | "multiply" | "screen" | "darken";
+    brightness?: number;
+    contrast?: number;
+    opacity?: number;
+  }>>({});
+  const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null);
+  const [lockAspectRatio, setLockAspectRatio] = useState(true);
+
+  // Auto-initialize standard body coordinates when active look or wardrobe changes
+  useEffect(() => {
+    if (!selectedLook) return;
+    const matching = getResilientMatchingGarments(selectedLook.id_prendas, armario);
+    const newPositions: Record<string, {
+      id: string;
+      x: number;
+      y: number;
+      scale: number;
+      scaleX?: number;
+      scaleY?: number;
+      rotation: number;
+      zIndex: number;
+      flip: boolean;
+      visible: boolean;
+      blendMode?: "normal" | "multiply" | "screen" | "darken";
+      brightness?: number;
+      contrast?: number;
+      opacity?: number;
+    }> = {};
+
+    matching.forEach((garment, idx) => {
+      let defaultY = 40;
+      let defaultScale = 100;
+
+      switch (garment.categoria) {
+        case "top":
+          defaultY = 32;
+          defaultScale = 110;
+          break;
+        case "pantalon":
+          defaultY = 62;
+          defaultScale = 110;
+          break;
+        case "calzado":
+          defaultY = 85;
+          defaultScale = 75;
+          break;
+        case "accesorio":
+          defaultY = 18;
+          defaultScale = 45;
+          break;
+      }
+
+      newPositions[garment.id] = {
+        id: garment.id,
+        x: 50,
+        y: defaultY,
+        scale: defaultScale,
+        scaleX: 100,
+        scaleY: 100,
+        rotation: 0,
+        zIndex: 10 + idx,
+        flip: false,
+        visible: true,
+        // Set multiply by default so white background clothing photos automatically strip out white boxes
+        blendMode: "multiply",
+        brightness: 100,
+        contrast: 100,
+        opacity: 100
+      };
+    });
+
+    setGarmentPositions(newPositions);
+    if (matching.length > 0) {
+      setSelectedGarmentId(matching[0].id);
+    } else {
+      setSelectedGarmentId(null);
+    }
+  }, [activeLookIndex, looks, armario, selectedLook]);
+
+  // Dragging and touch movement logic
+  const [draggedGarmentId, setDraggedGarmentId] = useState<string | null>(null);
+
+  const handleCanvasPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggedGarmentId || !garmentPositions[draggedGarmentId]) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentX = ((e.clientX - rect.left) / rect.width) * 100;
+    const currentY = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setGarmentPositions(prev => ({
+      ...prev,
+      [draggedGarmentId]: {
+        ...prev[draggedGarmentId],
+        x: Math.min(100, Math.max(0, parseFloat(currentX.toFixed(1)))),
+        y: Math.min(100, Math.max(0, parseFloat(currentY.toFixed(1))))
+      }
+    }));
+  };
+
+  const handlePointerUp = () => {
+    setDraggedGarmentId(null);
+  };
 
   return (
     <section id="asesoramiento-looks-sección" className="border-t border-linea pt-8 pb-12">
@@ -800,7 +948,7 @@ export default function AsesoramientoLooks({
                                     <span className="text-[9px] uppercase text-tinta-apagada font-medium font-bold block">Original</span>
                                     <div className="aspect-square bg-fondo border border-linea rounded overflow-hidden">
                                       <img
-                                        src={rostro.imageSrc}
+                                        src={rostro?.imageSrc}
                                         alt="Original face retrato"
                                         className="w-full h-full object-cover scale-x-[-1]"
                                         referrerPolicy="no-referrer"
@@ -852,9 +1000,35 @@ export default function AsesoramientoLooks({
                             /* CUERPO COMPLETO SIMULATION */
                             <div className="space-y-4 text-left">
                               <div className="p-3 bg-[#1e1a13] border border-linea/60 rounded-lg space-y-3">
-                                <span className="text-[10px] text-[#C9A35B] font-bold uppercase tracking-wider block">Probador Virtual Personalizado</span>
+                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                  <span className="text-[10px] text-[#C9A35B] font-bold uppercase tracking-wider block">Probador de Sastrería Digital</span>
+                                  
+                                  {/* Custom Switcher between Interactive and AI modes */}
+                                  <div className="flex gap-1 bg-fondo p-0.5 rounded border border-linea">
+                                    <button
+                                      type="button"
+                                      onClick={() => setCuerpoMode("interactivo")}
+                                      className={`px-2 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded transition ${
+                                        cuerpoMode === "interactivo" ? "bg-laton text-fondo" : "text-tinta-apagada hover:text-tinta"
+                                      }`}
+                                    >
+                                      ✨ Interactivo
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCuerpoMode("ia")}
+                                      className={`px-2 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded transition ${
+                                        cuerpoMode === "ia" ? "bg-laton text-fondo" : "text-tinta-apagada hover:text-tinta"
+                                      }`}
+                                    >
+                                      🤖 Neural IA
+                                    </button>
+                                  </div>
+                                </div>
                                 <p className="text-[11px] text-tinta-apagada leading-normal">
-                                  ¿Deseas probar la ropa sobre tu propio cuerpo? Sube una foto tuya de cuerpo completo de pie. Si no subes ninguna, la IA vestirá un modelo clásico con tu fisonomía facial.
+                                  {cuerpoMode === "interactivo" 
+                                    ? "Coloca, escala y ajusta las prendas reales de tu armario directamente sobre tu silueta en tiempo real para un control total."
+                                    : "Genera una sesión fotográfica editorial completa vistiendo este look con retoque fotorrealista de inteligencia artificial."}
                                 </p>
 
                                 {/* Custom body file picker */}
@@ -879,7 +1053,7 @@ export default function AsesoramientoLooks({
                                           const rawB64 = await fileToBase64(file);
                                           // Resize custom body picture nicely
                                           const resized = await resizeImage(rawB64, 768);
-                                          setCustomFullBodyPhoto(resized);
+                                          handleSetCustomFullBodyPhoto(resized);
                                         }
                                       }}
                                     />
@@ -889,14 +1063,14 @@ export default function AsesoramientoLooks({
                                         onClick={() => document.getElementById("input-cuerpo-completo-usuario")?.click()}
                                         className="px-2.5 py-1 text-[9.5px] border border-linea hover:border-laton bg-tarjeta text-tinta font-semibold rounded uppercase tracking-wider transition"
                                       >
-                                        {customFullBodyPhoto ? "Cambiar foto" : "Subir mi foto"}
+                                        {customFullBodyPhoto ? "Cambiar foto de cuerpo" : "Subir mi foto de cuerpo"}
                                       </button>
                                       {customFullBodyPhoto && (
                                         <button
                                           type="button"
                                           onClick={() => {
                                             setCustomFullBodyFile(null);
-                                            setCustomFullBodyPhoto(null);
+                                            handleSetCustomFullBodyPhoto(null);
                                           }}
                                           className="px-2 py-0.5 text-[9.5px] border border-red-950 hover:bg-red-950/20 text-red-100 rounded uppercase tracking-wider transition"
                                         >
@@ -908,80 +1082,596 @@ export default function AsesoramientoLooks({
                                 </div>
                               </div>
 
-                              {!selectedLook.simulatedFullBodyImageUrl ? (
-                                <div className="space-y-3">
-                                  <button
-                                    type="button"
-                                    id="boton-simular-cuerpo"
-                                    onClick={() => {
-                                      setSimulationTab("cuerpo");
-                                      triggerSimulation(activeLookIndex, selectedLook, true);
-                                    }}
-                                    className="button-press w-full py-2.5 bg-tarjeta border border-laton text-laton hover:bg-laton hover:text-fondo text-xs font-bold uppercase tracking-widest rounded flex items-center justify-center gap-1.5 transition active:scale-97"
-                                  >
-                                    <Sparkles size={12} /> Proyectar sobre {customFullBodyPhoto ? "mi cuerpo" : "silueta clásica"} con IA
-                                  </button>
-                                </div>
-                              ) : (
+                              {cuerpoMode === "interactivo" ? (
+                                /* INTERACTIVE DRESSING WORKBENCH */
                                 <div className="space-y-4">
-                                  <div className="grid grid-cols-12 gap-3 items-center">
-                                    <div className="col-span-12 sm:col-span-5 space-y-1 text-left">
-                                      <span className="text-[9px] uppercase text-tinta-apagada font-medium font-bold block">Tu Referencia</span>
-                                      <div className="aspect-[3/4] bg-fondo border border-linea rounded overflow-hidden">
-                                        <img
-                                          src={customFullBodyPhoto || rostro.imageSrc}
-                                          alt="Original face or body"
-                                          className="w-full h-full object-cover scale-x-[-1]"
-                                          referrerPolicy="no-referrer"
-                                        />
+                                  {/* Absolute Placement Canvas in 3:4 */}
+                                  <div 
+                                    className="relative w-full max-w-[320px] mx-auto aspect-[3/4] bg-tarjeta border border-laton/40 rounded-lg overflow-hidden shadow-2xl shadow-black/90 select-none cursor-crosshair touch-none"
+                                    onPointerMove={handleCanvasPointerMove}
+                                    onPointerUp={handlePointerUp}
+                                    onPointerLeave={handlePointerUp}
+                                  >
+                                    {/* Canvas Background Image (Your body photo, or beautiful high-fashion template outline) */}
+                                    {customFullBodyPhoto ? (
+                                      <img 
+                                        src={customFullBodyPhoto} 
+                                        alt="Cuerpo de fondo" 
+                                        className="w-full h-full object-cover pointer-events-none select-none"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-[#1E1A13]/90 to-[#16130E] relative pointer-events-none">
+                                        {/* Vector sketch mannequin background */}
+                                        <svg className="absolute inset-0 w-full h-full opacity-15" viewBox="0 0 100 100" fill="none" stroke="#C9A35B" strokeWidth="0.5">
+                                          <circle cx="50" cy="18" r="8" />
+                                          <line x1="50" y1="26" x2="50" y2="75" />
+                                          <line x1="30" y1="36" x2="70" y2="36" />
+                                          <line x1="30" y1="36" x2="25" y2="60" />
+                                          <line x1="70" y1="36" x2="75" y2="60" />
+                                          <line x1="42" y1="75" x2="38" y2="92" />
+                                          <line x1="58" y1="75" x2="62" y2="92" />
+                                          <path d="M 20 10 L 80 90 M 80 10 L 20 90" strokeWidth="0.1" strokeDasharray="2,2" />
+                                        </svg>
+                                        <Camera size={26} className="text-laton-apagado/40 mb-2" />
+                                        <p className="font-serif italic text-xs text-tinta-apagada">Modo Silueta Base</p>
+                                        <p className="text-[10px] text-tinta-apagada/60 mt-2 max-w-[180px]">
+                                          Sube una foto tuya de cuerpo de pie arriba para ver tus prendas reales puestas sobre tu verdadera imagen física.
+                                        </p>
                                       </div>
-                                      <div className="text-[8px] text-tinta-apagada/70 font-mono truncate">
-                                        {customFullBodyPhoto ? "CUERPO SUBIDO" : `ID: ${rostro.forma_cara}`}
+                                    )}
+
+                                    {/* Viewfinder corner brackets for professional design look */}
+                                    <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-laton/45 pointer-events-none" />
+                                    <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-laton/45 pointer-events-none" />
+                                    <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-laton/45 pointer-events-none" />
+                                    <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-laton/45 pointer-events-none" />
+
+                                    {/* Gentle crosshairs centering guidelines */}
+                                    <div className="absolute top-1/2 left-0 w-full h-[0.5px] border-t border-dashed border-laton/15 pointer-events-none" />
+                                    <div className="absolute top-0 left-1/2 w-[0.5px] h-full border-l border-dashed border-laton/15 pointer-events-none" />
+
+                                    {/* Overlaid Garments of current Look */}
+                                    {getResilientMatchingGarments(selectedLook.id_prendas, armario).map((garment) => {
+                                      const pos = garmentPositions[garment.id];
+                                      if (!pos || !pos.visible) return null;
+                                      
+                                      const bVal = pos.brightness ?? 100;
+                                      const cVal = pos.contrast ?? 100;
+                                      const oVal = (pos.opacity ?? 100) / 100;
+                                      // Soft shadow + customizable filters
+                                      const filterStyle = `brightness(${bVal}%) contrast(${cVal}%) opacity(${oVal})`;
+                                      
+                                      const bMode = pos.blendMode ?? "multiply";
+                                      
+                                      const sSpace = pos.scale / 100;
+                                      const sX = (pos.scaleX ?? 100) / 100;
+                                      const sY = (pos.scaleY ?? 100) / 100;
+
+                                      return (
+                                        <div
+                                          key={garment.id}
+                                          style={{
+                                            position: "absolute",
+                                            left: `${pos.x}%`,
+                                            top: `${pos.y}%`,
+                                            zIndex: pos.zIndex,
+                                            transform: `translate(-50%, -50%) rotate(${pos.rotation}deg) scaleX(${(pos.flip ? -1 : 1) * sX * sSpace}) scaleY(${sY * sSpace})`,
+                                            touchAction: "none"
+                                          }}
+                                          onPointerDown={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedGarmentId(garment.id);
+                                            setDraggedGarmentId(garment.id);
+                                          }}
+                                          className={`absolute cursor-move select-none p-1 transition-shadow ${
+                                            selectedGarmentId === garment.id
+                                              ? "ring-2 ring-laton rounded bg-laton/5"
+                                              : "hover:ring-1 hover:ring-laton/30"
+                                          }`}
+                                        >
+                                          <img
+                                            src={garment.imageSrc}
+                                            alt={garment.nombre}
+                                            style={{
+                                              mixBlendMode: bMode as any,
+                                              filter: filterStyle
+                                            }}
+                                            className="max-h-[160px] max-w-[160px] object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.65)] pointer-events-none"
+                                            draggable={false}
+                                            referrerPolicy="no-referrer"
+                                          />
+                                          {selectedGarmentId === garment.id && (
+                                            <div className="absolute top-0 right-0 -mt-1 -mr-1 bg-laton text-fondo text-[7px] font-bold px-1 rounded uppercase tracking-wider">
+                                              ACTIVA
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                    
+                                    <div className="absolute bottom-2 left-2 bg-black/75 px-2 py-0.5 rounded text-[8px] text-[#A89C82] font-mono tracking-widest select-none uppercase">
+                                      PROBADOR REAL
+                                    </div>
+                                  </div>
+
+                                  <p className="text-[10px] text-tinta-apagada/80 font-mono text-center cursor-default uppercase tracking-wide">
+                                    💡 Arrastra las prendas o pulsa una para seleccionarla y editarla abajo
+                                  </p>
+
+                                  {/* Garment Selector Row */}
+                                  <div className="grid grid-cols-2 xs:grid-cols-4 gap-2">
+                                    {getResilientMatchingGarments(selectedLook.id_prendas, armario).map((garment) => (
+                                      <button
+                                        key={garment.id}
+                                        type="button"
+                                        onClick={() => setSelectedGarmentId(garment.id)}
+                                        className={`p-1.5 rounded-lg border flex items-center gap-2 transition text-left ${
+                                          selectedGarmentId === garment.id ? "border-laton bg-laton/10" : "border-linea hover:border-laton-apagado bg-fondo"
+                                        }`}
+                                      >
+                                        <div className="w-8 h-8 rounded overflow-hidden bg-fondo2 shrink-0 border border-linea">
+                                          <img src={garment.imageSrc} alt="" className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="min-w-0 pr-1 flex-1">
+                                          <p className="text-[9px] font-bold text-laton truncate leading-tight uppercase font-mono">{garment.categoria}</p>
+                                          <p className="text-[9.5px] text-tinta truncate leading-none font-medium">{garment.nombre}</p>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+
+                                  {/* Adjustment Sliders and Layer Actions */}
+                                  {selectedGarmentId && garmentPositions[selectedGarmentId] && (
+                                    <div className="bg-[#1e1a14] p-3.5 rounded-lg border border-linea/80 space-y-4 font-sans text-tinta shadow-lg">
+                                      <div className="flex justify-between items-center border-b border-linea/40 pb-2 flex-wrap gap-2">
+                                        <div className="flex flex-col">
+                                          <span className="text-[10px] uppercase text-laton font-bold tracking-widest font-mono">Taller de Sastrería Digital</span>
+                                          <span className="text-[8px] text-tinta-apagada font-mono uppercase mt-0.5">Prenda: {armario.find(p => p.id === selectedGarmentId)?.nombre || "Cargada"}</span>
+                                        </div>
+                                        <div className="flex gap-1.5 flex-wrap">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], flip: !prev[selectedGarmentId!].flip }
+                                              }));
+                                            }}
+                                            className={`px-2 py-0.5 text-[8px] uppercase font-bold rounded border tracking-wider transition ${
+                                              garmentPositions[selectedGarmentId!].flip ? "border-laton bg-laton text-fondo" : "border-linea/80 text-tinta-apagada hover:text-tinta bg-fondo"
+                                            }`}
+                                          >
+                                            Invertir
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], zIndex: (prev[selectedGarmentId!]?.zIndex || 10) + 1 }
+                                              }));
+                                            }}
+                                            className="px-2 py-0.5 text-[8px] uppercase font-bold rounded border border-linea/80 text-tinta-apagada hover:text-tinta bg-fondo transition"
+                                          >
+                                            Bajar Capa
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], zIndex: Math.max(1, (prev[selectedGarmentId!]?.zIndex || 10) - 1) }
+                                              }));
+                                            }}
+                                            className="px-2 py-0.5 text-[8px] uppercase font-bold rounded border border-linea/80 text-tinta-apagada hover:text-tinta bg-fondo transition"
+                                          >
+                                            Subir Capa
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const g = armario.find(p => p.id === selectedGarmentId!);
+                                              let defaultY = 40;
+                                              let defaultScale = 100;
+                                              if (g) {
+                                                if (g.categoria === "top") { defaultY = 32; defaultScale = 110; }
+                                                else if (g.categoria === "pantalon") { defaultY = 62; defaultScale = 110; }
+                                                else if (g.categoria === "calzado") { defaultY = 85; defaultScale = 75; }
+                                                else { defaultY = 18; defaultScale = 45; }
+                                              }
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: {
+                                                  ...prev[selectedGarmentId!],
+                                                  x: 50,
+                                                  y: defaultY,
+                                                  scale: defaultScale,
+                                                  scaleX: 100,
+                                                  scaleY: 100,
+                                                  rotation: 0,
+                                                  flip: false,
+                                                  blendMode: "multiply",
+                                                  brightness: 100,
+                                                  contrast: 100,
+                                                  opacity: 100
+                                                }
+                                              }));
+                                            }}
+                                            className="px-2 py-0.5 text-[8px] uppercase font-bold rounded border border-linea/60 text-tinta-apagada hover:text-red-300 hover:border-red-500 bg-fondo transition"
+                                          >
+                                            Reset
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Blend & Transparancy options (Remover Fondos) */}
+                                      <div className="space-y-1.5">
+                                        <div className="flex justify-between items-baseline">
+                                          <span className="text-[9px] text-[#A89C82] font-mono uppercase tracking-wider">Acople de Fondo (Fusión Inteligente)</span>
+                                          <span className="text-[8px] text-laton font-mono uppercase">
+                                            {(garmentPositions[selectedGarmentId].blendMode === "multiply") ? "Limpia fondo blanco" : (garmentPositions[selectedGarmentId].blendMode === "screen") ? "Limpia fondo negro" : "Fondo original"}
+                                          </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-fondo rounded-md border border-linea/40">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], blendMode: "multiply" }
+                                              }));
+                                            }}
+                                            className={`py-1 text-[8.5px] uppercase font-bold rounded tracking-wide transition-all ${
+                                              (garmentPositions[selectedGarmentId].blendMode ?? "multiply") === "multiply"
+                                                ? "bg-laton text-fondo shadow-inner"
+                                                : "text-tinta-apagada hover:text-tinta"
+                                            }`}
+                                          >
+                                            Quitar Blanco
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], blendMode: "screen" }
+                                              }));
+                                            }}
+                                            className={`py-1 text-[8.5px] uppercase font-bold rounded tracking-wide transition-all ${
+                                              garmentPositions[selectedGarmentId].blendMode === "screen"
+                                                ? "bg-laton text-fondo shadow-inner"
+                                                : "text-tinta-apagada hover:text-tinta"
+                                            }`}
+                                          >
+                                            Quitar Negro
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], blendMode: "normal" }
+                                              }));
+                                            }}
+                                            className={`py-1 text-[8.5px] uppercase font-bold rounded tracking-wide transition-all ${
+                                              garmentPositions[selectedGarmentId].blendMode === "normal"
+                                                ? "bg-laton text-fondo shadow-inner"
+                                                : "text-tinta-apagada hover:text-tinta"
+                                            }`}
+                                          >
+                                            Fondo Normal
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Position controls */}
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-1 border-t border-linea/40">
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                            <span>Mover Horizontal (X)</span>
+                                            <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].x}%</span>
+                                          </div>
+                                          <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="0.5"
+                                            value={garmentPositions[selectedGarmentId].x}
+                                            onChange={(e) => {
+                                              const val = parseFloat(e.target.value);
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], x: val }
+                                              }));
+                                            }}
+                                            className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-ew-resize"
+                                          />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                            <span>Mover Vertical (Y)</span>
+                                            <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].y}%</span>
+                                          </div>
+                                          <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="0.5"
+                                            value={garmentPositions[selectedGarmentId].y}
+                                            onChange={(e) => {
+                                              const val = parseFloat(e.target.value);
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], y: val }
+                                              }));
+                                            }}
+                                            className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-ns-resize"
+                                          />
+                                        </div>
+
+                                        {/* Aspect ratio control toggles */}
+                                        <div className="sm:col-span-2 flex items-center justify-between py-1 border-b border-linea/30">
+                                          <span className="text-[9px] text-[#A89C82] font-mono uppercase tracking-wider">Dimensiones de Prenda</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => setLockAspectRatio(!lockAspectRatio)}
+                                            className="flex items-center gap-1.5 text-[8.5px] uppercase font-bold tracking-wider text-laton bg-fondo hover:bg-laton/10 border border-laton/20 px-2 py-0.5 rounded transition"
+                                          >
+                                            <span>{lockAspectRatio ? "🔒 Aspecto Bloqueado" : "🔓 Aspecto Libre"}</span>
+                                          </button>
+                                        </div>
+
+                                        {lockAspectRatio ? (
+                                          <div className="sm:col-span-2 space-y-1">
+                                            <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                              <span>Avanzado: Escala / Tamaño Completo</span>
+                                              <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].scale}%</span>
+                                            </div>
+                                            <input
+                                              type="range"
+                                              min="30"
+                                              max="250"
+                                              step="1"
+                                              value={garmentPositions[selectedGarmentId].scale}
+                                              onChange={(e) => {
+                                                const val = parseInt(e.target.value, 10);
+                                                setGarmentPositions(prev => ({
+                                                  ...prev,
+                                                  [selectedGarmentId!]: { 
+                                                    ...prev[selectedGarmentId!], 
+                                                    scale: val,
+                                                    scaleX: 100,
+                                                    scaleY: 100
+                                                  }
+                                                }));
+                                              }}
+                                              className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-pointer"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <div className="space-y-1">
+                                              <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                                <span>Ajustar Ancho (Hombro/Cintura)</span>
+                                                <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].scaleX ?? 100}%</span>
+                                              </div>
+                                              <input
+                                                type="range"
+                                                min="30"
+                                                max="250"
+                                                step="1"
+                                                value={garmentPositions[selectedGarmentId].scaleX ?? 100}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value, 10);
+                                                  setGarmentPositions(prev => ({
+                                                    ...prev,
+                                                    [selectedGarmentId!]: { ...prev[selectedGarmentId!], scaleX: val }
+                                                  }));
+                                                }}
+                                                className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-pointer"
+                                              />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                              <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                                <span>Ajustar Alto (Manga/Pierna)</span>
+                                                <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].scaleY ?? 100}%</span>
+                                              </div>
+                                              <input
+                                                type="range"
+                                                min="30"
+                                                max="250"
+                                                step="1"
+                                                value={garmentPositions[selectedGarmentId].scaleY ?? 100}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value, 10);
+                                                  setGarmentPositions(prev => ({
+                                                    ...prev,
+                                                    [selectedGarmentId!]: { ...prev[selectedGarmentId!], scaleY: val }
+                                                  }));
+                                                }}
+                                                className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-pointer"
+                                              />
+                                            </div>
+                                          </>
+                                        )}
+
+                                        <div className="space-y-1 border-t border-linea/20 pt-2 sm:col-span-2">
+                                          <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                            <span>Rotar Prenda (Orientación / Ángulo)</span>
+                                            <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].rotation}°</span>
+                                          </div>
+                                          <input
+                                            type="range"
+                                            min="-180"
+                                            max="180"
+                                            step="1"
+                                            value={garmentPositions[selectedGarmentId].rotation}
+                                            onChange={(e) => {
+                                              const val = parseInt(e.target.value, 10);
+                                              setGarmentPositions(prev => ({
+                                                ...prev,
+                                                [selectedGarmentId!]: { ...prev[selectedGarmentId!], rotation: val }
+                                              }));
+                                            }}
+                                            className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded"
+                                          />
+                                        </div>
+
+                                        {/* Photographic tuning filters */}
+                                        <div className="sm:col-span-2 pt-2 border-t border-linea/40">
+                                          <span className="text-[9px] text-[#A89C82] font-mono uppercase tracking-wider block mb-2">Integración Fotográfica (Ajustes de Luz)</span>
+                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <div className="space-y-1">
+                                              <div className="flex justify-between text-[8px] text-tinta-apagada font-mono">
+                                                <span>BRILLO / LUZ</span>
+                                                <span>{garmentPositions[selectedGarmentId].brightness ?? 100}%</span>
+                                              </div>
+                                              <input
+                                                type="range"
+                                                min="60"
+                                                max="140"
+                                                step="1"
+                                                value={garmentPositions[selectedGarmentId].brightness ?? 100}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value, 10);
+                                                  setGarmentPositions(prev => ({
+                                                    ...prev,
+                                                    [selectedGarmentId!]: { ...prev[selectedGarmentId!], brightness: val }
+                                                  }));
+                                                }}
+                                                className="w-full accent-[#C9A35B] h-1 bg-fondo rounded cursor-pointer"
+                                              />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                              <div className="flex justify-between text-[8px] text-tinta-apagada font-mono">
+                                                <span>CONTRASTE</span>
+                                                <span>{garmentPositions[selectedGarmentId].contrast ?? 100}%</span>
+                                              </div>
+                                              <input
+                                                type="range"
+                                                min="60"
+                                                max="140"
+                                                step="1"
+                                                value={garmentPositions[selectedGarmentId].contrast ?? 100}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value, 10);
+                                                  setGarmentPositions(prev => ({
+                                                    ...prev,
+                                                    [selectedGarmentId!]: { ...prev[selectedGarmentId!], contrast: val }
+                                                  }));
+                                                }}
+                                                className="w-full accent-[#C9A35B] h-1 bg-fondo rounded cursor-pointer"
+                                              />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                              <div className="flex justify-between text-[8px] text-tinta-apagada font-mono">
+                                                <span>OPACIDAD</span>
+                                                <span>{garmentPositions[selectedGarmentId].opacity ?? 100}%</span>
+                                              </div>
+                                              <input
+                                                type="range"
+                                                min="20"
+                                                max="100"
+                                                step="1"
+                                                value={garmentPositions[selectedGarmentId].opacity ?? 100}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value, 10);
+                                                  setGarmentPositions(prev => ({
+                                                    ...prev,
+                                                    [selectedGarmentId!]: { ...prev[selectedGarmentId!], opacity: val }
+                                                  }));
+                                                }}
+                                                className="w-full accent-[#C9A35B] h-1 bg-fondo rounded cursor-pointer"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+
                                       </div>
                                     </div>
+                                  )}
+                                </div>
+                              ) : (
+                                /* IA DRESSING OPTION */
+                                !selectedLook.simulatedFullBodyImageUrl ? (
+                                  <div className="space-y-3">
+                                    <button
+                                      type="button"
+                                      id="boton-simular-cuerpo"
+                                      onClick={() => {
+                                        setSimulationTab("cuerpo");
+                                        triggerSimulation(activeLookIndex, selectedLook, true);
+                                      }}
+                                      className="button-press w-full py-2.5 bg-tarjeta border border-laton text-laton hover:bg-laton hover:text-fondo text-xs font-bold uppercase tracking-widest rounded flex items-center justify-center gap-1.5 transition active:scale-97"
+                                    >
+                                      <Sparkles size={12} /> Proyectar sobre {customFullBodyPhoto ? "mi cuerpo" : "silueta clásica"} con IA
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    <div className="grid grid-cols-12 gap-3 items-center">
+                                      <div className="col-span-12 sm:col-span-5 space-y-1 text-left">
+                                        <span className="text-[9px] uppercase text-tinta-apagada font-medium font-bold block">Tu Referencia</span>
+                                        <div className="aspect-[3/4] bg-fondo border border-linea rounded overflow-hidden">
+                                          <img
+                                            src={customFullBodyPhoto || rostro?.imageSrc}
+                                            alt="Original face or body"
+                                            className="w-full h-full object-cover scale-x-[-1]"
+                                            referrerPolicy="no-referrer"
+                                          />
+                                        </div>
+                                        <div className="text-[8px] text-tinta-apagada/70 font-mono truncate">
+                                          {customFullBodyPhoto ? "CUERPO SUBIDO" : `ID: ${rostro?.forma_cara || 'Retrato'}`}
+                                        </div>
+                                      </div>
 
-                                    <div className="col-span-12 sm:col-span-7 space-y-1 text-left">
-                                      <span className="text-[9px] uppercase text-laton font-medium font-bold block">Vestidor Virtual IA</span>
-                                      <div className="aspect-[3/4] bg-fondo border border-laton rounded overflow-hidden relative shadow-lg shadow-black/80">
-                                        <img
-                                          src={selectedLook.simulatedFullBodyImageUrl}
-                                          alt="Simulated body outfit"
-                                          className="w-full h-full object-cover"
-                                          referrerPolicy="no-referrer"
-                                        />
-                                        <div className="absolute bottom-1 right-1 bg-laton text-fondo text-[8px] font-bold py-0.5 px-1.5 rounded uppercase">
-                                          VIRTUAL FIT
+                                      <div className="col-span-12 sm:col-span-7 space-y-1 text-left">
+                                        <span className="text-[9px] uppercase text-laton font-medium font-bold block">Vestidor Virtual IA</span>
+                                        <div className="aspect-[3/4] bg-fondo border border-laton rounded overflow-hidden relative shadow-lg shadow-black/80">
+                                          <img
+                                            src={selectedLook.simulatedFullBodyImageUrl}
+                                            alt="Simulated body outfit"
+                                            className="w-full h-full object-cover"
+                                            referrerPolicy="no-referrer"
+                                          />
+                                          <div className="absolute bottom-1 right-1 bg-laton text-fondo text-[8px] font-bold py-0.5 px-1.5 rounded uppercase">
+                                            VIRTUAL FIT
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
-                                  </div>
 
-                                  {selectedLook.simulatedFullBodyImageUrl?.startsWith("data:image/svg+xml") && (
-                                    <div className="p-3 bg-[#1e1a13] border border-laton/20 rounded-md text-left text-[11px] font-sans">
-                                      <div className="flex items-center gap-1.5 text-[#C9A35B] font-bold uppercase tracking-wider text-[9.5px] mb-1.5">
-                                        <AlertCircle size={12} className="shrink-0 text-laton" />
-                                        <span>BOCETO EDITORIAL ACTIVO (MODO DE RESERVA)</span>
+                                    {selectedLook.simulatedFullBodyImageUrl?.startsWith("data:image/svg+xml") && (
+                                      <div className="p-3 bg-[#1e1a13] border border-laton/20 rounded-md text-left text-[11px] font-sans">
+                                        <div className="flex items-center gap-1.5 text-[#C9A35B] font-bold uppercase tracking-wider text-[9.5px] mb-1.5">
+                                          <AlertCircle size={12} className="shrink-0 text-laton" />
+                                          <span>BOCETO EDITORIAL ACTIVO (MODO DE RESERVA)</span>
+                                        </div>
+                                        <p className="text-tinta-apagada leading-relaxed text-[10.5px]">
+                                          Esta vista previa utiliza nuestro diseño de Sastrería Boutique AI para ilustrar la combinación: tu foto original se mantiene a la izquierda ("Referencia Base") y el maniquí a la derecha ("Fitting Sartorial") **se viste digitalmente con los colores y los cortes sugeridos de tu look**.
+                                        </p>
+                                        <p className="text-tinta-apagada/80 leading-relaxed text-[10px] mt-1.5 border-t border-linea/20 pt-1.5">
+                                          Para realizar una proyección fotorrealista directa que modifique y reemplace visualmente la ropa de tu foto real mediante inteligencia artificial generativa, se requiere autorizar la cuota en el panel de AI Studio (Dressing-credits flow).
+                                        </p>
                                       </div>
-                                      <p className="text-tinta-apagada leading-relaxed text-[10.5px]">
-                                        Esta vista previa utiliza nuestro diseño de sastrería boutique para ilustrar la combinación: tu foto original se mantiene a la izquierda ("Referencia Base") y el maniquí a la derecha ("Fitting Sartorial") **se viste digitalmente con los colores exactos y los cortes sugeridos de tu look**.
-                                      </p>
-                                      <p className="text-tinta-apagada/80 leading-relaxed text-[10px] mt-1.5 border-t border-linea/20 pt-1.5">
-                                        Para realizar una proyección fotorrealista directa sobre tu cuerpo que reemplace visualmente la ropa en tu foto real mediante inteligencia artificial generativa, se requiere autorizar la cuota en el panel de AI Studio (Dressing-credits flow).
-                                      </p>
-                                    </div>
-                                  )}
+                                    )}
 
-                                  <div className="flex justify-between items-center bg-fondo border border-linea rounded p-2.5">
-                                    <span className="text-[10px] text-tinta-apagada leading-none">¿Te convence este Dressing?</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => triggerSimulation(activeLookIndex, selectedLook, true)}
-                                      className="text-[10px] text-[#C9A35B] hover:underline font-bold"
-                                    >
-                                      Volver a Proyectar Look
-                                    </button>
+                                    <div className="flex justify-between items-center bg-fondo border border-linea rounded p-2.5">
+                                      <span className="text-[10px] text-tinta-apagada leading-none">¿Te convence este Dressing?</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => triggerSimulation(activeLookIndex, selectedLook, true)}
+                                        className="text-[10px] text-[#C9A35B] hover:underline font-bold"
+                                      >
+                                        Volver a Proyectar Look con IA
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+                                )
                               )}
                             </div>
                           )}
@@ -1003,7 +1693,7 @@ export default function AsesoramientoLooks({
                             {/* Background/Backdrop simulated image */}
                             <div className="absolute inset-0 z-0 opacity-80 overflow-hidden">
                               <img
-                                src={simulationTab === "cuerpo" ? (selectedLook.simulatedFullBodyImageUrl || selectedLook.simulatedImageUrl || rostro.imageSrc) : (selectedLook.simulatedImageUrl || rostro.imageSrc)}
+                                src={simulationTab === "cuerpo" ? (selectedLook.simulatedFullBodyImageUrl || selectedLook.simulatedImageUrl || rostro?.imageSrc) : (selectedLook.simulatedImageUrl || rostro?.imageSrc)}
                                 alt="Magazine Model"
                                 className="w-full h-full object-cover"
                                 referrerPolicy="no-referrer"
@@ -1040,7 +1730,7 @@ export default function AsesoramientoLooks({
                               <div className="flex justify-between items-end border-t border-[#3A3225]/40 pt-1.5 w-full text-[7.5px] text-[#A89C82]">
                                 <div className="space-y-0.5 text-left bg-[#16130E]/40 p-1 rounded-sm">
                                   <p className="font-bold text-[#F3ECDD] uppercase tracking-[0.05em] text-[7px]">FISIOLOGÍA REVELADA</p>
-                                  <p>Forma de rostro: <span className="text-[#C9A35B]">{rostro.forma_cara}</span></p>
+                                  <p>Forma de rostro: <span className="text-[#C9A35B]">{rostro?.forma_cara || "Clásico"}</span></p>
                                   <p>Corte: <span className="text-[#C9A35B] truncate max-w-[80px] inline-block align-bottom">{selectedLook.pelo_sugerido}</span></p>
                                 </div>
                                 <div className="text-right bg-[#16130E]/40 p-1 rounded-sm">
@@ -1073,7 +1763,7 @@ export default function AsesoramientoLooks({
                             <button
                               type="button"
                               onClick={() => {
-                                const targetUrl = simulationTab === "cuerpo" ? (selectedLook.simulatedFullBodyImageUrl || rostro.imageSrc) : (selectedLook.simulatedImageUrl || rostro.imageSrc);
+                                const targetUrl = simulationTab === "cuerpo" ? (selectedLook.simulatedFullBodyImageUrl || rostro?.imageSrc) : (selectedLook.simulatedImageUrl || rostro?.imageSrc);
                                 if (!targetUrl) return;
                                 const link = document.createElement("a");
                                 link.href = targetUrl;

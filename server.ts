@@ -70,8 +70,8 @@ INSTRUCCIÓN CRUCIAL DE INTEGRACIÓN: Debes alinear al 100% tu análisis sastrer
 
 async function callGeminiWithRetry<T>(
   apiCallFn: () => Promise<T>,
-  retries = 4,
-  delayMs = 1500
+  retries = 5,
+  delayMs = 2000
 ): Promise<T> {
   let lastError: any = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -79,27 +79,62 @@ async function callGeminiWithRetry<T>(
       return await apiCallFn();
     } catch (error: any) {
       lastError = error;
-      const errorStr = String(error?.message || error || "");
-      const errorJson = error && typeof error === "object" ? JSON.stringify(error) : "";
+      const errorStr = String(error?.message || error || "").toUpperCase();
+      const errorJson = error && typeof error === "object" ? JSON.stringify(error).toUpperCase() : "";
+      const status = error?.status || error?.statusCode || 0;
       
+      // Si es un error de cuota definitivo o persistente (ej: límite 0 en free tier, falta de facturación),
+      // no debemos tratarlo como transitorio para evitar retrasos inútiles y fallas lentas.
+      const isPermanentQuota = 
+        errorStr.includes("LIMIT: 0") || 
+        errorStr.includes("PLAN AND BILLING") || 
+        errorStr.includes("CHECK YOUR PLAN") ||
+        errorStr.includes("EXCEEDED YOUR CURRENT QUOTA") ||
+        errorStr.includes("FREE_TIER_REQUESTS, LIMIT: 0") ||
+        errorJson.includes("LIMIT: 0") || 
+        errorJson.includes("PLAN AND BILLING") || 
+        errorJson.includes("CHECK YOUR PLAN") ||
+        errorJson.includes("EXCEEDED YOUR CURRENT QUOTA") ||
+        errorJson.includes("FREE_TIER_REQUESTS, LIMIT: 0");
+
       const isTransient =
-        error?.status === 503 ||
-        error?.status === 429 ||
-        error?.statusCode === 503 ||
-        error?.statusCode === 429 ||
-        errorStr.includes("503") ||
-        errorStr.includes("429") ||
-        errorStr.includes("UNAVAILABLE") ||
-        errorStr.includes("high demand") ||
-        errorJson.includes("503") ||
-        errorJson.includes("429") ||
-        errorJson.includes("UNAVAILABLE") ||
-        errorJson.includes("high demand");
+        !isPermanentQuota && (
+          status === 429 ||
+          status === 500 ||
+          status === 502 ||
+          status === 503 ||
+          status === 504 ||
+          errorStr.includes("503") ||
+          errorStr.includes("429") ||
+          errorStr.includes("500") ||
+          errorStr.includes("502") ||
+          errorStr.includes("504") ||
+          errorStr.includes("UNAVAILABLE") ||
+          errorStr.includes("HIGH DEMAND") ||
+          errorStr.includes("OVERLOADED") ||
+          errorStr.includes("OVERLIMIT") ||
+          errorStr.includes("EXHAUSTED") ||
+          errorStr.includes("QUOTA") ||
+          errorStr.includes("BUSY") ||
+          errorStr.includes("TIMEOUT") ||
+          errorStr.includes("FETCH FAILED") ||
+          errorStr.includes("CONNRESET") ||
+          errorJson.includes("503") ||
+          errorJson.includes("429") ||
+          errorJson.includes("500") ||
+          errorJson.includes("502") ||
+          errorJson.includes("504") ||
+          errorJson.includes("UNAVAILABLE") ||
+          errorJson.includes("HIGH DEMAND") ||
+          errorJson.includes("OVERLOADED") ||
+          errorJson.includes("EXHAUSTED") ||
+          errorJson.includes("QUOTA")
+        );
 
       if (isTransient && attempt < retries) {
-        const nextDelay = delayMs * Math.pow(2, attempt) + Math.random() * 400;
+        const nextDelay = delayMs * Math.pow(1.5, attempt) + Math.random() * 500;
         console.warn(
-          `[ESPEJO IA] Error temporal detectado (503/429/UNAVAILABLE). Intento ${attempt + 1}/${retries + 1}. Reintentando en ${Math.round(nextDelay)}ms...`
+          `[ESPEJO IA] Error temporal o de límite detectado (Status: ${status}). Intento ${attempt + 1}/${retries + 1}. Reintentando en ${Math.round(nextDelay)}ms... Detalle error: ${error?.message || error}`
         );
         await new Promise((resolve) => setTimeout(resolve, nextDelay));
       } else {
@@ -107,7 +142,7 @@ async function callGeminiWithRetry<T>(
       }
     }
   }
-  throw lastError || new Error("Servicio de IA temporalmente no disponible tras reintentos.");
+  throw lastError || new Error("El servicio de Espejo IA no está disponible temporalmente bajo alta demanda.");
 }
 
 // 1. ANALIZAR ROSTRO
@@ -621,29 +656,72 @@ Modify only his hair and beard to match these styling guides perfectly:
 Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and facial likeness from the original image. He should look neatly groomed, handsome, stylish, in a warm, dark, premium luxury barber shop interior backdrop with subtle brass and mahogany warm wood lighting. Output should be high quality, sharp, balanced contrast, as a clean editorial magazine portrait picture.`;
     }
 
-    const response = await callGeminiWithRetry(() =>
-      ai.models.generateContent({
-        model: "gemini-2.5-flash-image",
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data,
+    let response;
+    try {
+      console.log("Intentando generación de imagen en Espejo IA con gemini-2.5-flash-image...");
+      response = await callGeminiWithRetry(() =>
+        ai.models.generateContent({
+          model: "gemini-2.5-flash-image",
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  mimeType,
+                  data,
+                },
               },
-            },
-            {
-              text: promptText,
-            },
-          ],
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: aspectRatio,
+              {
+                text: promptText,
+              },
+            ],
           },
-        },
-      })
-    );
+          config: {
+            imageConfig: {
+              aspectRatio: aspectRatio,
+            },
+          },
+        })
+      );
+    } catch (imageErr: any) {
+      const errStrLower = String(imageErr?.message || imageErr || "").toLowerCase();
+      const isPermanentQuota = 
+        errStrLower.includes("limit: 0") || 
+        errStrLower.includes("plan and billing") || 
+        errStrLower.includes("check your plan") ||
+        errStrLower.includes("exceeded your current quota") ||
+        errStrLower.includes("free_tier_requests") ||
+        imageErr?.status === 429;
+
+      if (isPermanentQuota) {
+        console.warn("Fallo inmediato de cuota excedida detectado (plan/billing/limit 0). Saltando directo al fallback elegante.");
+        throw imageErr; // Lanza al catch externo para generar el fallback SVG inmediatamente sin retrasos
+      }
+
+      console.warn("Fallo con gemini-2.5-flash-image, intentando fallback de robustez con gemini-3.1-flash-image...", imageErr);
+      response = await callGeminiWithRetry(() =>
+        ai.models.generateContent({
+          model: "gemini-3.1-flash-image",
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  mimeType,
+                  data,
+                },
+              },
+              {
+                text: promptText,
+              },
+            ],
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: aspectRatio,
+            },
+          },
+        })
+      );
+    }
 
     let base64Output: string | null = null;
 
@@ -666,9 +744,10 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
     });
   } catch (error: any) {
     const { faceImage, estiloCabello, estiloBarba, fullBody, prendasTexto, customFullBodyImage, prendasDetalle } = req.body;
-    console.error("Error en generar-imagen, ejecutando fallback elegante:", error);
+    console.error("Error en generar-imagen, ejecutando fallback elegante de alta costura:", error);
     
-    // Si la gema de imagen falla por cuota o crédito, creamos un boceto sastrero de primera calidad que dibuja vectorialmente su atuendo coordinado
+    // Si la generación de imagen fotorrealista falla por cuota o créditos, realizamos un montaje fotográfico-vectorial
+    // de altísima calidad superponiendo las prendas reales del armario directamente sobre su silueta real (activeFallbackPhoto)
     try {
       const activeFallbackPhoto = (fullBody && customFullBodyImage) ? customFullBodyImage : faceImage;
       
@@ -678,9 +757,18 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
         return g && g.color ? g.color : defaultColor;
       };
 
+      const findGarmentByCategory = (category: string) => {
+        if (!prendasDetalle || !Array.isArray(prendasDetalle)) return null;
+        return prendasDetalle.find((p: any) => p.categoria === category) || null;
+      };
+
       const topColor = findColorByCategory("top", "#C9A35B");
       const pantColor = findColorByCategory("pantalon", "#3A3225");
       const shoeColor = findColorByCategory("calzado", "#8C7440");
+
+      const topGarment = findGarmentByCategory("top");
+      const pantGarment = findGarmentByCategory("pantalon");
+      const shoeGarment = findGarmentByCategory("calzado");
 
       let fallbackSvg = "";
       if (fullBody) {
@@ -693,71 +781,99 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
         0.272 0.534 0.131 0 0
         0.000 0.000 0.000 1 0" />
       <feComponentTransfer>
-        <feFuncR type="linear" slope="1.1" />
-        <feFuncG type="linear" slope="0.9" />
-        <feFuncB type="linear" slope="0.6" />
+        <feFuncR type="linear" slope="1.0" />
+        <feFuncG type="linear" slope="0.75" />
+        <feFuncB type="linear" slope="0.5" />
       </feComponentTransfer>
     </filter>
+    <linearGradient id="bottom-fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#16130E" stop-opacity="0" />
+      <stop offset="70%" stop-color="#16130E" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#16130E" stop-opacity="1.0" />
+    </linearGradient>
   </defs>
 
   <rect width="100%" height="100%" fill="#16130E" />
+  
+  <!-- FOTOGRAFÍA DEL USUARIO CON TONO SASTRERO COMO LIENZO PRINCIPAL -->
+  <image href="${activeFallbackPhoto}" x="0" y="0" width="450" height="600" preserveAspectRatio="xMidYMid slice" opacity="0.65" filter="url(#brass-duotone)" />
+  
+  <!-- DEGRADADO PARA LEGIBILIDAD DE INFORMACIÓN -->
+  <rect x="0" y="320" width="450" height="280" fill="url(#bottom-fade)" />
+  
+  <!-- RETÍCULA TÉCNICA DE ESCANEO -->
+  <circle cx="225" cy="220" r="160" fill="none" stroke="#C9A35B" stroke-opacity="0.1" stroke-dasharray="2,5" />
+  <circle cx="225" cy="220" r="8" fill="none" stroke="#C9A35B" stroke-opacity="0.2" />
+  <line x1="225" y1="40" x2="225" y2="400" stroke="#C9A35B" stroke-width="0.8" stroke-opacity="0.15" stroke-dasharray="3,3" />
+  <line x1="22" y1="220" x2="428" y2="220" stroke="#C9A35B" stroke-width="0.8" stroke-opacity="0.15" stroke-dasharray="3,3" />
+
+  <!-- MARCOS Y DETALLES DE BOUTIQUE -->
   <rect x="15" y="15" width="420" height="570" fill="none" stroke="#C9A35B" stroke-width="1.5" />
   <rect x="22" y="22" width="406" height="556" fill="none" stroke="#3A3225" stroke-width="0.5" />
 
-  <line x1="225" y1="22" x2="225" y2="440" stroke="#3A3225" stroke-width="1" stroke-dasharray="3,3" />
-  <line x1="22" y1="440" x2="428" y2="440" stroke="#C9A35B" stroke-width="1" />
+  <!-- GUÍA DE MANIQUÍ SARTORIAL SUTIL -->
+  <path d="M 225 110 Q 225 98 219 92 Q 225 86 231 92 Q 225 98 225 110" fill="none" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.4" />
+  <line x1="225" y1="110" x2="225" y2="520" stroke="#8C7440" stroke-width="1.2" stroke-opacity="0.3" />
+  <path d="M 185 520 L 225 500 L 265 520" fill="none" stroke="#C9A35B" stroke-width="1.5" stroke-opacity="0.4" />
 
-  <g transform="translate(45, 80)">
-    <text x="65" y="-15" font-family="'Outfit', sans-serif" font-size="10" fill="#C9A35B" font-weight="900" letter-spacing="2" text-anchor="middle">FOTOGRAFÍA BASE</text>
-    <rect width="130" height="150" fill="#1E1A13" stroke="#3A3225" stroke-width="1.5" />
-    <image href="${activeFallbackPhoto}" width="130" height="150" preserveAspectRatio="xMidYMid slice" filter="url(#brass-duotone)" />
-    <path d="M 0 10 L 0 0 L 10 0" fill="none" stroke="#C9A35B" stroke-width="1.5" />
-    <path d="M 120 0 L 130 0 L 130 10" fill="none" stroke="#C9A35B" stroke-width="1.5" />
-    <path d="M 0 140 L 0 150 L 10 150" fill="none" stroke="#C9A35B" stroke-width="1.5" />
-    <path d="M 120 150 L 130 150 L 130 140" fill="none" stroke="#C9A35B" stroke-width="1.5" />
+  <!-- SUPERPOSICIÓN COMPOSITIVA EN TIEMPO REAL CON PRENDAS REALES DEL ARMARIO -->
+  ${topGarment?.imageSrc ? `
+  <g transform="translate(0, 0)">
+    <!-- Prenda Superior Real -->
+    <image href="${topGarment.imageSrc}" x="100" y="100" width="250" height="230" preserveAspectRatio="xMidYMid contain" style="filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.75));" />
+    <!-- Línea conectora -->
+    <line x1="100" y1="210" x2="70" y2="210" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
+    <circle cx="100" cy="210" r="2.5" fill="#C9A35B" />
+    <text x="65" y="213" font-family="'Outfit', sans-serif" font-size="7" fill="#C9A35B" font-weight="bold" text-anchor="end">01. PRENDA SUPERIOR</text>
   </g>
+  ` : `
+  <path d="M 163 130 L 197 130 L 255 165 L 245 280 L 225 285 L 205 280 L 195 165 Z" fill="${topColor}" fill-opacity="0.85" stroke="#F3ECDD" stroke-width="1" />
+  `}
 
-  <!-- MANIQUÍ SARTORIAL CON ROPA DEL LOOK DETALLADA -->
-  <g transform="translate(255, 60)">
-    <text x="70" y="5" font-family="'Outfit', sans-serif" font-size="10" fill="#C9A35B" font-weight="900" letter-spacing="2" text-anchor="middle" stroke="none">FITTING SARTORIAL</text>
-    
-    <!-- Soporte y Percha del Maniquí -->
-    <path d="M 70 30 Q 70 18 64 12 Q 70 6 76 12 Q 70 18 70 30" fill="none" stroke="#C9A35B" stroke-width="1.5" />
-    <line x1="70" y1="30" x2="70" y2="330" stroke="#8C7440" stroke-width="1.5" stroke-opacity="0.6" />
-    <path d="M 45 330 L 70 315 L 95 330" fill="none" stroke="#C9A35B" stroke-width="2" />
-    
-    <!-- Parte Superior (Blazer / Jacket / Top) con color real -->
-    <path d="M 58 40 L 82 40 L 115 65 L 105 150 L 85 155 L 70 160 L 55 155 L 35 150 L 25 65 Z" fill="${topColor}" fill-opacity="0.9" stroke="#F3ECDD" stroke-width="1" stroke-opacity="0.7" />
-    <path d="M 58 40 L 70 95 L 82 40" fill="none" stroke="#C9A35B" stroke-width="1.5" />
-    <path d="M 70 95 L 70 155" fill="none" stroke="#C9A35B" stroke-width="1" stroke-dasharray="2,2" />
-    <circle cx="70" cy="115" r="2" fill="#F3ECDD" />
-    <circle cx="70" cy="130" r="2" fill="#F3ECDD" />
-
-    <!-- Parte Inferior (Pantalón / Pantalon) con color real -->
-    <path d="M 50 155 L 90 155 L 95 275 L 77 275 L 70 195 L 63 275 L 45 275 Z" fill="${pantColor}" fill-opacity="0.9" stroke="#F3ECDD" stroke-width="1" stroke-opacity="0.7" />
-    <line x1="70" y1="155" x2="70" y2="195" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
-    
-    <!-- Calzado (Zapatos / Calzado) con color real -->
-    <path d="M 45 275 L 35 290 L 52 292 L 55 275 Z" fill="${shoeColor}" fill-opacity="0.95" stroke="#C9A35B" stroke-width="0.8" />
-    <path d="M 95 275 L 105 290 L 88 292 L 85 275 Z" fill="${shoeColor}" fill-opacity="0.95" stroke="#C9A35B" stroke-width="0.8" />
+  ${pantGarment?.imageSrc ? `
+  <g transform="translate(0, 0)">
+    <!-- Prenda Inferior Real -->
+    <image href="${pantGarment.imageSrc}" x="125" y="270" width="200" height="230" preserveAspectRatio="xMidYMid contain" style="filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.75));" />
+    <!-- Línea conectora -->
+    <line x1="325" y1="380" x2="355" y2="380" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
+    <circle cx="325" cy="380" r="2.5" fill="#C9A35B" />
+    <text x="360" y="383" font-family="'Outfit', sans-serif" font-size="7" fill="#C9A35B" font-weight="bold" text-anchor="start">02. PRENDA INFERIOR</text>
   </g>
+  ` : `
+  <path d="M 200 280 L 250 280 L 255 450 L 235 450 L 225 320 L 215 450 L 195 450 Z" fill="${pantColor}" fill-opacity="0.85" stroke="#F3ECDD" stroke-width="1" />
+  `}
 
-  <g transform="translate(45, 465)">
-    <text x="0" y="5" font-family="'Outfit', sans-serif" font-size="9" fill="#8C7440" font-weight="bold" letter-spacing="3" text-anchor="start">ATUENDO COORDINADO</text>
-    <text x="0" y="28" font-family="'Fraunces', serif" font-size="11" fill="#F3ECDD" font-weight="bold" font-style="italic" text-anchor="start">
+  ${shoeGarment?.imageSrc ? `
+  <g transform="translate(0, 0)">
+    <!-- Calzado Real -->
+    <image href="${shoeGarment.imageSrc}" x="135" y="445" width="180" height="110" preserveAspectRatio="xMidYMid contain" style="filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.75));" />
+    <!-- Línea calzado -->
+    <line x1="135" y1="500" x2="105" y2="500" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
+    <circle cx="135" cy="500" r="2.5" fill="#C9A35B" />
+    <text x="100" y="503" font-family="'Outfit', sans-serif" font-size="7" fill="#C9A35B" font-weight="bold" text-anchor="end">03. CALZADO</text>
+  </g>
+  ` : `
+  <path d="M 195 450 L 185 470 L 202 472 L 205 450 Z" fill="${shoeColor}" />
+  <path d="M 255 450 L 265 470 L 248 472 L 245 450 Z" fill="${shoeColor}" />
+  `}
+
+  <!-- TEXTOS DESCRIPTIVOS DE LA COMPOSICIÓN -->
+  <g transform="translate(45, 490)">
+    <text x="0" y="5" font-family="'Outfit', sans-serif" font-size="9" fill="#8C7440" font-weight="bold" letter-spacing="3" text-anchor="start">MONTAJE DE SASTRERÍA DIGITAL</text>
+    <text x="0" y="24" font-family="'Fraunces', serif" font-size="11" fill="#F3ECDD" font-weight="bold" font-style="italic" text-anchor="start">
       ${(prendasTexto || "ESTILO SASTRERO DETALLADO").substring(0, 48)}
     </text>
-    <text x="0" y="50" font-family="'Outfit', sans-serif" font-size="10" fill="#A89C82" text-anchor="start">
-      Peinado: <tspan fill="#C9A35B" font-weight="bold">${estiloCabello}</tspan> | Barba: <tspan fill="#C9A35B" font-weight="bold">${estiloBarba}</tspan>
+    <text x="0" y="44" font-family="'Outfit', sans-serif" font-size="9" fill="#A89C82" text-anchor="start">
+      Corte: <tspan fill="#C9A35B" font-weight="bold">${estiloCabello}</tspan> | Barba: <tspan fill="#C9A35B" font-weight="bold">${estiloBarba}</tspan>
     </text>
     
-    <rect x="290" y="-10" width="70" height="70" fill="none" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.4" stroke-dasharray="2,2" transform="rotate(5, 305, 10)" />
-    <text x="325" y="20" font-family="'Fraunces', serif" font-size="8" fill="#C9A35B" font-weight="900" letter-spacing="1" text-anchor="middle" stroke="none" transform="rotate(5, 305, 10)" opacity="0.7">ESPEJO</text>
-    <text x="325" y="35" font-family="'Outfit', sans-serif" font-size="6" fill="#F3ECDD" letter-spacing="0.5" text-anchor="middle" stroke="none" transform="rotate(5, 305, 10)" opacity="0.6">COMPROBADO</text>
+    <rect x="290" y="-15" width="70" height="70" fill="none" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.4" stroke-dasharray="2,2" transform="rotate(5, 305, 10)" />
+    <text x="325" y="15" font-family="'Fraunces', serif" font-size="8" fill="#C9A35B" font-weight="900" letter-spacing="1" text-anchor="middle" stroke="none" transform="rotate(5, 305, 10)" opacity="0.7">ESPEJO</text>
+    <text x="325" y="30" font-family="'Outfit', sans-serif" font-size="6" fill="#F3ECDD" letter-spacing="0.5" text-anchor="middle" stroke="none" transform="rotate(5, 305, 10)" opacity="0.6">COMPROBADO</text>
   </g>
 
-  <text x="225" y="50" font-family="'Fraunces', serif" font-size="20" fill="#F3ECDD" font-weight="bold" letter-spacing="4" text-anchor="middle">ESPEJO EDITORIAL</text>
-  <text x="225" y="560" font-family="'Outfit', sans-serif" font-size="8" fill="#8C7440" letter-spacing="2" text-anchor="middle">PREVISUALIZACIÓN DE ALTA COSTURA • DISEÑO DIGITAL</text>
+  <text x="225" y="45" font-family="'Fraunces', serif" font-size="20" fill="#F3ECDD" font-weight="bold" letter-spacing="4" text-anchor="middle">ESPEJO EDITORIAL</text>
+  <text x="225" y="565" font-family="'Outfit', sans-serif" font-size="8" fill="#8C7440" letter-spacing="2" text-anchor="middle">PREVISUALIZACIÓN DE ALTA COSTURA • ACCESO DE RESERVA</text>
 </svg>`;
       } else {
         fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
@@ -769,44 +885,64 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
         0.272 0.534 0.131 0 0
         0.000 0.000 0.000 1 0" />
       <feComponentTransfer>
-        <feFuncR type="linear" slope="1.1" />
-        <feFuncG type="linear" slope="0.9" />
-        <feFuncB type="linear" slope="0.6" />
+        <feFuncR type="linear" slope="1.0" />
+        <feFuncG type="linear" slope="0.8" />
+        <feFuncB type="linear" slope="0.55" />
       </feComponentTransfer>
     </filter>
+    <linearGradient id="bottom-fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#16130E" stop-opacity="0" />
+      <stop offset="60%" stop-color="#16130E" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#16130E" stop-opacity="1.0" />
+    </linearGradient>
   </defs>
 
   <rect width="100%" height="100%" fill="#16130E" />
   
-  <g stroke="#3A3225" stroke-opacity="0.4" stroke-width="0.5">
+  <!-- RETRATO DEL USUARIO CON TONO SASTRERO COMO FONDO EDITORIAL -->
+  <image href="${faceImage || activeFallbackPhoto}" x="15" y="15" width="470" height="470" preserveAspectRatio="xMidYMid slice" opacity="0.65" filter="url(#brass-duotone)" />
+  
+  <rect x="0" y="200" width="500" height="300" fill="url(#bottom-fade)" />
+
+  <g stroke="#3A3225" stroke-opacity="0.3" stroke-width="0.5">
     <line x1="25" y1="0" x2="25" y2="500" />
     <line x1="475" y1="0" x2="475" y2="500" />
     <line x1="0" y1="25" x2="500" y2="25" />
     <line x1="0" y1="475" x2="500" y2="475" />
-    <circle cx="250" cy="250" r="210" fill="none" stroke="#C9A35B" stroke-opacity="0.15" stroke-dasharray="4,4" />
+    <circle cx="250" cy="200" r="140" fill="none" stroke="#C9A35B" stroke-opacity="0.1" stroke-dasharray="4,4" />
   </g>
 
+  <!-- MARCOS DE PRECISIÓN -->
   <rect x="15" y="15" width="470" height="470" fill="none" stroke="#C9A35B" stroke-width="1.5" />
   <rect x="22" y="22" width="456" height="456" fill="none" stroke="#3A3225" stroke-width="0.5" />
 
-  <g transform="translate(130, 80)">
-    <rect width="240" height="240" fill="#1E1A13" stroke="#3A3225" stroke-width="1" />
-    <image href="${faceImage}" width="240" height="240" preserveAspectRatio="xMidYMid slice" filter="url(#brass-duotone)" />
-    <path d="M 0 15 L 0 0 L 15 0" fill="none" stroke="#C9A35B" stroke-width="2" />
-    <path d="M 225 0 L 240 0 L 240 15" fill="none" stroke="#C9A35B" stroke-width="2" />
-    <path d="M 0 225 L 0 240 L 15 240" fill="none" stroke="#C9A35B" stroke-width="2" />
-    <path d="M 225 240 L 240 240 L 240 225" fill="none" stroke="#C9A35B" stroke-width="2" />
-  </g>
+  <!-- MARCADORES SARTORIALES FACIALES -->
+  <!-- Marcador de cabello sugerido -->
+  <rect x="150" y="60" width="200" height="110" fill="none" stroke="#C9A35B" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3,3" />
+  <line x1="150" y1="115" x2="110" y2="115" stroke="#C9A35B" stroke-opacity="0.6" stroke-width="1" />
+  <circle cx="150" cy="115" r="3" fill="#C9A35B" />
+  <text x="100" y="118" font-family="'Outfit', sans-serif" font-size="8" fill="#C9A35B" font-weight="bold" text-anchor="end">CORTE RECOMENDADO</text>
+  <text x="100" y="132" font-family="'Fraunces', serif" font-size="11" fill="#F3ECDD" font-weight="semibold" font-style="italic" text-anchor="end">${estiloCabello}</text>
 
+  <!-- Marcador de barba sugerida -->
+  <rect x="160" y="180" width="180" height="120" fill="none" stroke="#C9A35B" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3,3" />
+  <line x1="340" y1="240" x2="380" y2="240" stroke="#C9A35B" stroke-opacity="0.6" stroke-width="1" />
+  <circle cx="340" cy="240" r="3" fill="#C9A35B" />
+  <text x="390" y="243" font-family="'Outfit', sans-serif" font-size="8" fill="#C9A35B" font-weight="bold" text-anchor="start">DISEÑO DE BARBA</text>
+  <text x="390" y="257" font-family="'Fraunces', serif" font-size="11" fill="#F3ECDD" font-weight="semibold" font-style="italic" text-anchor="start">${estiloBarba}</text>
+
+  <!-- TITULARES Y SECCIÓN DE FIRMAS -->
   <text x="250" y="55" font-family="'Fraunces', serif" font-size="18" fill="#F3ECDD" font-weight="bold" letter-spacing="4" text-anchor="middle">ESPEJO BOUTIQUE</text>
-  <text x="250" y="350" font-family="'Outfit', sans-serif" font-size="10" fill="#C9A35B" font-weight="900" letter-spacing="3" text-anchor="middle">RECOMENDACIÓN DE GROOMING</text>
+  <text x="250" y="375" font-family="'Outfit', sans-serif" font-size="10" fill="#C9A35B" font-weight="900" letter-spacing="3" text-anchor="middle">ANÁLISIS DE FISONOMÍA IA</text>
   
-  <rect x="50" y="365" width="400" height="1" fill="#3A3225" />
+  <rect x="50" y="390" width="400" height="1" fill="#3A3225" />
 
-  <text x="250" y="390" font-family="'Fraunces', serif" font-size="14" fill="#F3ECDD" font-style="italic" text-anchor="middle">"${estiloCabello}"</text>
-  <text x="250" y="415" font-family="'Outfit', sans-serif" font-size="10" fill="#A89C82" letter-spacing="1" text-anchor="middle">Con barba sugerida: <tspan fill="#C9A35B" font-weight="bold">${estiloBarba}</tspan></text>
+  <text x="250" y="415" font-family="'Fraunces', serif" font-size="13" fill="#F3ECDD" font-weight="bold" text-anchor="middle">DISEÑO INTEGRAL DE IMAGEN</text>
+  <text x="250" y="435" font-family="'Outfit', sans-serif" font-size="9.5" fill="#A89C82" letter-spacing="0.5" text-anchor="middle">
+    Corte sugerido: <tspan fill="#C9A35B" font-weight="bold">${estiloCabello}</tspan> | Barba: <tspan fill="#C9A35B" font-weight="bold">${estiloBarba}</tspan>
+  </text>
   
-  <text x="250" y="450" font-family="'Outfit', sans-serif" font-size="8" fill="#8C7440" letter-spacing="2" text-anchor="middle">PREVISUALIZACIÓN DIGITAL • CORTE DE CABELLO</text>
+  <text x="250" y="465" font-family="'Outfit', sans-serif" font-size="8" fill="#8C7440" letter-spacing="2" text-anchor="middle">PREVISUALIZACIÓN DIGITAL • ACCESO DE RESERVA</text>
 </svg>`;
       }
 
@@ -1357,27 +1493,29 @@ Extrae y devuelve un objeto JSON estructurado con estas propiedades:
 
 Responde únicamente con el esquema JSON válido, sin delimitadores de código markdown de texto ordinario, con el formato de objeto puro de Gemini.`;
 
-    const chatResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            nombre: { type: Type.STRING },
-            categoria: { type: Type.STRING, enum: ["top", "pantalon", "calzado", "accesorio"] },
-            color: { type: Type.STRING },
-            formalidad: { type: Type.INTEGER },
-            temporada: { type: Type.STRING, enum: ["verano", "invierno", "otoño", "primavera", "todo"] },
-            tejido: { type: Type.STRING },
-            tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-            imageFoundUrl: { type: Type.STRING }
-          },
-          required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags"]
+    const chatResponse = await callGeminiWithRetry(() =>
+      ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              nombre: { type: Type.STRING },
+              categoria: { type: Type.STRING, enum: ["top", "pantalon", "calzado", "accesorio"] },
+              color: { type: Type.STRING },
+              formalidad: { type: Type.INTEGER },
+              temporada: { type: Type.STRING, enum: ["verano", "invierno", "otoño", "primavera", "todo"] },
+              tejido: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              imageFoundUrl: { type: Type.STRING }
+            },
+            required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags"]
+          }
         }
-      }
-    });
+      })
+    );
 
     const aiText = chatResponse.text;
     const extractedData = JSON.parse(aiText);
@@ -1434,8 +1572,42 @@ const startServer = async () => {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom",
     });
+
+    // Custom index.html serving route in development to inject active environment variables dynamically
+    app.get("*", async (req, res, next) => {
+      // Skip API requests and static assets
+      if (req.path.startsWith("/api") || req.path.includes(".")) {
+        return next();
+      }
+
+      try {
+        const fs = await import("fs");
+        const indexPath = path.join(process.cwd(), "index.html");
+        if (fs.existsSync(indexPath)) {
+          let html = fs.readFileSync(indexPath, "utf8");
+          // Apply Vite's built-in HTML transforms (HMR, preamble injection etc)
+          html = await vite.transformIndexHtml(req.originalUrl || req.url, html);
+
+          const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
+          const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
+          const scriptTag = `
+    <script>
+      window.VITE_SUPABASE_URL = ${JSON.stringify(supabaseUrl)};
+      window.VITE_SUPABASE_ANON_KEY = ${JSON.stringify(supabaseAnonKey)};
+    </script>
+`;
+          html = html.replace("<head>", `<head>${scriptTag}`);
+          res.status(200).set({ "Content-Type": "text/html" }).end(html);
+        } else {
+          res.status(404).send("Atelier file not found in workspace");
+        }
+      } catch (err) {
+        next(err);
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
