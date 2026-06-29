@@ -26,7 +26,7 @@ import {
   deleteUserHistorialItem,
   resetUserAllData
 } from "./supabase";
-import { Sparkles, LogOut, Cloud, CloudOff, RefreshCw, Database, Scissors, Shirt, History, ClipboardList, Briefcase, TrendingUp, Sliders, Menu } from "lucide-react";
+import { Sparkles, LogOut, Cloud, CloudOff, RefreshCw, Database, Scissors, Shirt, History, ClipboardList, Briefcase, TrendingUp, Sliders, Menu, AlertTriangle, X, Check, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 type ActiveTab = "espejo" | "armario" | "asesor" | "historial" | "auditoria" | "maleta" | "compras" | "diagnostico";
@@ -48,8 +48,27 @@ export default function App() {
   // Style Profile State
   const [perfilEstilo, setPerfilEstilo] = useState<PerfilEstilo | null>(null);
 
+  // Storage bucket RLS/error state
+  const [storageError, setStorageError] = useState<{ error: string; buckets: string[] } | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
+
   // Mobile drawer state
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+  // Listen to Supabase storage upload errors to notify RLS instructions
+  useEffect(() => {
+    const handleStorageError = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setStorageError({
+        error: customEvent.detail?.error || "Error desconocido",
+        buckets: customEvent.detail?.buckets || ["prendas", "prendas-imagenes"]
+      });
+    };
+    window.addEventListener("supabase-storage-error", handleStorageError);
+    return () => {
+      window.removeEventListener("supabase-storage-error", handleStorageError);
+    };
+  }, []);
 
   // Monitor Supabase connection and auth state changes
   useEffect(() => {
@@ -188,9 +207,15 @@ export default function App() {
             if (guestPrendas) {
               const parsedGuest = JSON.parse(guestPrendas);
               if (parsedGuest.length > 0) {
-                dbPrendas = parsedGuest;
-                for (const p of dbPrendas) {
-                  await saveUserPrenda(user.id, p).catch(e => console.error(e));
+                dbPrendas = [];
+                for (const p of parsedGuest) {
+                  try {
+                    const saved = await saveUserPrenda(user.id, p);
+                    dbPrendas.push(saved);
+                  } catch (e) {
+                    console.error("Migration error for garment:", e);
+                    dbPrendas.push(p);
+                  }
                 }
               }
             }
@@ -199,9 +224,14 @@ export default function App() {
           if (!dbRostro) {
             const guestRostro = localStorage.getItem("espejo_rostro_usr_guest");
             if (guestRostro) {
-              dbRostro = JSON.parse(guestRostro);
-              if (dbRostro) {
-                await saveUserRostro(user.id, dbRostro).catch(e => console.error(e));
+              const parsedRostro = JSON.parse(guestRostro);
+              if (parsedRostro) {
+                try {
+                  dbRostro = await saveUserRostro(user.id, parsedRostro);
+                } catch (e) {
+                  console.error("Migration error for rostro:", e);
+                  dbRostro = parsedRostro;
+                }
               }
             }
           }
@@ -319,7 +349,13 @@ export default function App() {
       // Local backup first (Always)
       localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(nuevoRostro));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
-        await saveUserRostro(user.id, nuevoRostro);
+        try {
+          const savedRostro = await saveUserRostro(user.id, nuevoRostro);
+          setRostro(savedRostro);
+          localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(savedRostro));
+        } catch (err) {
+          console.error("Error saving rostro:", err);
+        }
       }
     }
   };
@@ -338,6 +374,7 @@ export default function App() {
     const nuevas = Array.isArray(nuevaPrendaOrArray) ? nuevaPrendaOrArray : [nuevaPrendaOrArray];
     if (nuevas.length === 0) return;
 
+    // Primero agregamos localmente para visualización instantánea (Base64)
     setPrendas((prev) => {
       const filteredPrev = prev.filter(p => !nuevas.some(n => n.id === p.id));
       const updated = [...nuevas, ...filteredPrev];
@@ -348,13 +385,26 @@ export default function App() {
     });
 
     if (user && isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+      const updatedPrendasWithUrls: Prenda[] = [];
       for (const p of nuevas) {
         try {
-          await saveUserPrenda(user.id, p);
+          const saved = await saveUserPrenda(user.id, p);
+          updatedPrendasWithUrls.push(saved);
         } catch (dbErr) {
           console.error("Error guardando prenda en DB:", dbErr);
+          updatedPrendasWithUrls.push(p);
         }
       }
+
+      // Reemplazamos las prendas locales con la versión que tiene URL pública del Storage
+      setPrendas((prev) => {
+        const updated = prev.map(p => {
+          const matchingUpdated = updatedPrendasWithUrls.find(u => u.id === p.id);
+          return matchingUpdated ? matchingUpdated : p;
+        });
+        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
     }
   };
 
@@ -370,12 +420,26 @@ export default function App() {
   };
 
   const handlePrendaActualizada = async (prendaActualizada: Prenda) => {
-    const updated = prendas.map((p) => (p.id === prendaActualizada.id ? prendaActualizada : p));
-    setPrendas(updated);
-    if (user) {
-      localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
-      if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
-        await updateUserPrenda(user.id, prendaActualizada);
+    // Primero actualizamos localmente
+    setPrendas((prev) => {
+      const updated = prev.map((p) => (p.id === prendaActualizada.id ? prendaActualizada : p));
+      if (user) {
+        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (user && isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+      try {
+        const saved = await updateUserPrenda(user.id, prendaActualizada);
+        // Actualizamos de nuevo con la URL final del storage
+        setPrendas((prev) => {
+          const updated = prev.map((p) => (p.id === saved.id ? saved : p));
+          localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+          return updated;
+        });
+      } catch (err) {
+        console.error("Error updating prenda:", err);
       }
     }
   };
@@ -735,6 +799,95 @@ export default function App() {
               {activeTab === "diagnostico" && "Estudio de silueta, preferencias, colores activos y metas estéticas para sincronizar todo el atelier virtual."}
             </p>
           </motion.div>
+
+          {/* Storage Policy Helper Banner */}
+          {storageError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-red-950/20 border border-red-900/40 rounded-xl p-5 space-y-4 text-left shadow-lg overflow-hidden relative z-20"
+            >
+              <button
+                onClick={() => setStorageError(null)}
+                className="absolute top-4 right-4 text-tinta-apagada hover:text-white transition cursor-pointer"
+                title="Cerrar aviso"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="flex gap-3">
+                <span className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0 flex items-center justify-center h-10 w-10">
+                  <AlertTriangle size={20} />
+                </span>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-sm font-bold tracking-wider text-red-200 uppercase">
+                    Guía de Configuración: El Bucket requiere permisos para usuarios Autenticados
+                  </h3>
+                  <p className="text-[11px] text-tinta-apagada">
+                    Las imágenes de tus prendas no se pudieron guardar en el bucket <code className="bg-red-950/40 px-1 py-0.5 rounded text-red-300 font-mono">prendas_armario</code> debido a las políticas de seguridad de Supabase (RLS).
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-fondo/80 border border-linea/60 rounded-lg p-4 space-y-3 text-xs">
+                <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
+                  ¿Por qué ocurre esto?
+                </p>
+                <p className="text-tinta-apagada leading-relaxed text-[11px]">
+                  En tu política RLS has configurado <code className="bg-tarjeta px-1 py-0.5 rounded text-white font-mono">auth.role() = 'anon'</code>. Al iniciar sesión en ESPEJO con tu correo electrónico, tu rol activo de usuario pasa a ser <strong className="text-white font-medium">'authenticated'</strong>, por lo que la política te niega el permiso para subir fotos. 
+                </p>
+                <p className="text-tinta-apagada leading-relaxed text-[11px]">
+                  Para solucionar esto, debes permitir que los usuarios <strong className="text-white font-medium">autenticados</strong> también puedan subir fotos. Lo ideal es permitir tanto <code className="bg-tarjeta px-1 py-0.5 font-mono text-white">anon</code> como <code className="bg-tarjeta px-1 py-0.5 font-mono text-white">authenticated</code> quitando la restricción de rol.
+                </p>
+
+                <div className="space-y-2 pt-2 border-t border-linea/40">
+                  <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
+                    Instrucciones de corrección en el Panel de Supabase:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-tinta-apagada">
+                    <li>Ve al menú lateral <strong className="text-white">Storage</strong> en Supabase y selecciona tu bucket <strong className="text-white">prendas_armario</strong>.</li>
+                    <li>Haz clic en <strong className="text-white">Policies</strong>.</li>
+                    <li>Modifica tu política existente o crea una nueva con los permisos de <strong className="text-white">SELECT, INSERT, UPDATE, DELETE</strong> marcados.</li>
+                    <li>Sustituye la expresión de la política (Policy Definition) por la versión corregida de abajo que no restringe el rol, para que funcione tanto si estás conectado como si eres un invitado:</li>
+                  </ol>
+                </div>
+
+                <div className="relative mt-2">
+                  <pre className="bg-[#0b0c10] border border-linea/80 p-3 rounded font-mono text-[10px] text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
+                    {`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`}
+                  </pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`);
+                      setCopiedSql(true);
+                      setTimeout(() => setCopiedSql(false), 2000);
+                    }}
+                    className="absolute right-2 top-2 px-2.5 py-1.5 bg-tarjeta border border-linea hover:border-laton text-tinta hover:text-laton rounded flex items-center gap-1 cursor-pointer transition text-[9px] uppercase tracking-wider font-bold"
+                  >
+                    {copiedSql ? (
+                      <>
+                        <Check size={10} className="text-emerald-400" /> ¡Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={10} /> Copiar SQL
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-1">
+                <button
+                  onClick={() => setStorageError(null)}
+                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest text-tinta-apagada hover:text-white rounded border border-linea/60 cursor-pointer transition font-bold"
+                >
+                  Entendido, ya lo he actualizado
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           {/* Section Render - Conditionally switch based on activeTab with clean micro-animations */}
           <div className="relative min-h-[300px]">

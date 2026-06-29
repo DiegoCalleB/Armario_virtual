@@ -25,6 +25,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
+  const [showGoogleHelp, setShowGoogleHelp] = useState(false);
 
   const [forceLocalDemo, setForceLocalDemo] = useState(false);
   const [isIframe, setIsIframe] = useState(false);
@@ -217,6 +218,39 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     }
   };
 
+  const handleMagicLink = async () => {
+    if (!email) {
+      setErrorMsg("Por favor, introduce tu Correo Electrónico arriba primero.");
+      return;
+    }
+    setErrorMsg(null);
+    setInfoMsg(null);
+    setIsLoading(true);
+
+    const useRealSupabase = isSupabaseConfigured && !forceLocalDemo;
+
+    try {
+      if (useRealSupabase && supabase) {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (error) throw error;
+        setInfoMsg(`¡Enlace enviado! Hemos enviado un correo de acceso seguro a ${email}. Revisa tu bandeja de entrada o carpeta de correo no deseado (spam) y haz clic en el botón o enlace para iniciar sesión instantáneamente.`);
+      } else {
+        // Mock magic link flow
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        setInfoMsg(`[MODO DEMO] Se simuló el envío de un enlace de acceso a ${email}. Inicia sesión con cualquier contraseña o pulsa Entrar como Invitado.`);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "No se pudo enviar el enlace de acceso por email.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGuestLogin = () => {
     onLoginSuccess({
       id: "usr_guest",
@@ -399,6 +433,75 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             ⚠️ <strong>Entorno Seguro Iframe:</strong> Si este botón no abre la ventana de Google, se debe a restricciones del simulador de AI Studio. Permite las <strong>ventanas emergentes (popups)</strong> en la barra de tu navegador, o abre la app en una <strong>Pestaña Nueva</strong> desde el botón superior derecho. ¡O usa el registro manual con contraseña abajo sin trabas!
           </p>
 
+          {/* Toggleable Google Credentials Step-by-Step Guide */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowGoogleHelp(!showGoogleHelp)}
+              className="text-xs text-[#C9A35B] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
+            >
+              🔑 {showGoogleHelp ? "Ocultar guía de configuración" : "¿Cómo configurar el acceso con Google paso a paso?"}
+            </button>
+          </div>
+
+          {showGoogleHelp && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-neutral-900 border border-linea/60 rounded p-4 text-[11px] text-tinta-apagada space-y-3.5 text-left leading-relaxed"
+            >
+              <p className="text-white font-serif font-semibold text-[11.5px] tracking-wide uppercase border-b border-linea/20 pb-1.5 flex items-center justify-between">
+                <span>🛠️ GUÍA RÁPIDA DE CONFIGURACIÓN</span>
+                <span className="text-[9px] text-[#C9A35B] font-mono lowercase">google cloud &supabase</span>
+              </p>
+              
+              <div className="space-y-3 text-tinta-apagada/90">
+                <div>
+                  <p className="text-white font-semibold">1. Pantalla de Consentimiento (OAuth Consent Screen)</p>
+                  <p className="mt-0.5">
+                    Ve a <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-[#C9A35B] underline">Google Cloud Console</a>. Selecciona o crea un proyecto arriba, busca <strong>"OAuth consent screen"</strong> en el buscador de arriba y:
+                  </p>
+                  <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[10.5px]">
+                    <li>Elige el tipo de usuario <strong>Externo (External)</strong> y haz clic en <i>Crear</i>.</li>
+                    <li>Completa solo lo mínimo requerido: <b>Nombre de app</b>, tu <b>correo</b> de soporte y tu <b>correo</b> de contacto de desarrollador abajo del todo.</li>
+                    <li>Guarda y avanza hasta el final del asistente (no necesitas agregar "scopes" ni "test users").</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-white font-semibold">2. Obtener Client ID & Client Secret</p>
+                  <p className="mt-0.5">
+                    Haz clic en <strong>"Credenciales" (Credentials)</strong> en el panel izquierdo de Google Cloud:
+                  </p>
+                  <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[10.5px]">
+                    <li>Haz clic en <strong>"+ Crear credenciales"</strong> en la parte superior y elige <strong>"ID de cliente de OAuth"</strong>.</li>
+                    <li>En <i>Tipo de aplicación</i> selecciona <strong>Aplicación web (Web application)</strong>.</li>
+                    <li>En la sección <b>"URI de redireccionamiento autorizados"</b>, añade la URL que te proporciona Supabase.</li>
+                    <li className="text-amber-200/90 list-none mt-1 pl-1 font-mono text-[9.5px] bg-zinc-950/60 p-1.5 rounded border border-linea/30">
+                      💡 Copia esta URL desde tu panel de Supabase en <i>Authentication &rarr; Providers &rarr; Google &rarr; Redirect URI</i>.
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-white font-semibold">3. Activar en Supabase</p>
+                  <p className="mt-0.5">
+                    Una vez guardado en Google Cloud, se te mostrará una ventana flotante con tu <strong>ID de cliente (Client ID)</strong> y <strong>Secreto de cliente (Client Secret)</strong>:
+                  </p>
+                  <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[10.5px]">
+                    <li>Copia ambos códigos y ve a tu proyecto en <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#C9A35B] underline">Supabase</a>.</li>
+                    <li>Entra en <strong>Authentication &rarr; Providers &rarr; Google</strong>.</li>
+                    <li>Activa la casilla <strong>"Enable Google Provider"</strong>, pega el <i>Client ID</i> y el <i>Client Secret</i>, y haz clic en <strong>Save</strong>.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-amber-950/20 border border-amber-920/30 p-2 rounded text-[10px] text-amber-200/90">
+                🔒 <strong>¿Prefieres omitir esto?</strong> Si no deseas configurar Google Cloud, puedes usar el <strong>Enlace de Acceso Rápido (Magic Link)</strong> abajo escribiendo tu correo, ¡o registrarte con una contraseña sencilla en 2 segundos!
+              </div>
+            </motion.div>
+          )}
+
           {/* Vercel Guidance Card */}
           <div className="bg-zinc-950/50 border border-linea/60 rounded p-3 text-[10.5px] text-tinta-apagada space-y-2 text-left">
             <p className="text-white font-serif font-semibold text-[11px] tracking-wide uppercase flex items-center gap-1">
@@ -490,6 +593,20 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               </>
             )}
           </button>
+
+          {!isSignUp && (
+            <div className="text-center pt-1 border-t border-linea/20 mt-3">
+              <span className="text-[10px] text-tinta-apagada">¿Prefieres no usar contraseña?</span>
+              <button
+                type="button"
+                onClick={handleMagicLink}
+                disabled={isLoading}
+                className="block w-full text-center text-[11px] text-[#C9A35B] hover:underline font-bold mt-1"
+              >
+                🪄 Enviar Enlace de Acceso Rápido a tu Gmail
+              </button>
+            </div>
+          )}
         </form>
 
         {/* Footer actions of Login card */}

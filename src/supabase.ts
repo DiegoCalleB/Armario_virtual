@@ -34,6 +34,115 @@ if (
 export const isSupabaseConfigured = isConfigured;
 export const supabase = supabaseClient;
 
+/**
+ * Convierte un Base64 a un ArrayBuffer y lo sube al Bucket de Supabase Storage.
+ * Retorna la URL pública si la subida es exitosa; de lo contrario, el Base64 original.
+ */
+export async function uploadBase64ToStorage(
+  userId: string,
+  base64Data: string,
+  bucketName: string = "prendas_armario"
+): Promise<string> {
+  if (!isSupabaseConfigured || !supabase || !base64Data) {
+    return base64Data;
+  }
+
+  // Si no es un Base64 de tipo data:image, lo devolvemos tal cual (ya es una URL o similar)
+  if (!base64Data.startsWith("data:")) {
+    return base64Data;
+  }
+
+  try {
+    // 1. Convertir Base64 a Blob utilizando fetch (el método más confiable y nativo del navegador)
+    let blob: Blob;
+    try {
+      const response = await fetch(base64Data);
+      blob = await response.blob();
+    } catch (fetchErr) {
+      console.warn("[Supabase Storage] Falló fetch para convertir Base64 a Blob, intentando método binario manual:", fetchErr);
+      const matches = base64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.*)$/);
+      if (!matches || matches.length < 3) {
+        return base64Data;
+      }
+      const contentType = matches[1];
+      const rawBase64 = matches[2];
+      const binaryString = atob(rawBase64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      blob = new Blob([bytes], { type: contentType });
+    }
+
+    // Para adaptarnos a la política estricta del usuario:
+    // 1. LOWER((storage.foldername(name))[1]) = 'public' -> El primer nivel de carpeta debe ser "public"
+    // 2. storage."extension"(name) = 'jpg' -> La extensión debe ser estrictamente "jpg"
+    const finalContentType = "image/jpeg";
+    const fileExt = "jpg";
+    const fileName = `public/${userId}/${Date.now()}-${Math.floor(Math.random() * 100000)}.${fileExt}`;
+
+    // Intentamos subir al bucket preferido. Si falla, probamos con otros buckets por resiliencia.
+    const bucketsToTry = Array.from(new Set([bucketName, "prendas_armario", "prendas-imagenes", "prendas"]));
+
+    let lastError: any = null;
+    let successfulBucket: string | null = null;
+
+    for (const currentBucket of bucketsToTry) {
+      try {
+        const { data, error } = await supabase.storage
+          .from(currentBucket)
+          .upload(fileName, blob, {
+            contentType: finalContentType,
+            upsert: true,
+          });
+
+        if (error) {
+          lastError = error;
+          console.warn(`[Supabase Storage] Intento fallido en bucket "${currentBucket}": ${error.message}`);
+        } else if (data) {
+          successfulBucket = currentBucket;
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`[Supabase Storage] Error de red o permisos en bucket "${currentBucket}":`, err);
+      }
+    }
+
+    if (!successfulBucket) {
+      const errorMsg = lastError?.message || String(lastError || "Error desconocido");
+      console.error(
+        `[Supabase Storage] Error definitivo: No se pudo subir el archivo a ninguno de los buckets ${JSON.stringify(bucketsToTry)}. ` +
+        `Último error: ${errorMsg}`
+      );
+
+      // Lanzamos un evento global para que la interfaz pueda capturarlo e informar
+      // al usuario detalladamente sobre las políticas de seguridad RLS requeridas.
+      const storageErrorEvent = new CustomEvent("supabase-storage-error", {
+        detail: {
+          error: errorMsg,
+          buckets: bucketsToTry
+        }
+      });
+      window.dispatchEvent(storageErrorEvent);
+
+      return base64Data;
+    }
+
+    // Obtener la URL pública del archivo subido en el bucket que funcionó
+    const { data: urlData } = supabase.storage
+      .from(successfulBucket)
+      .getPublicUrl(fileName);
+
+    console.log(`[Supabase Storage] Imagen subida exitosamente al bucket "${successfulBucket}":`, urlData.publicUrl);
+    return urlData.publicUrl;
+  } catch (err) {
+    console.error("[Supabase Storage] Error crítico al procesar la subida del archivo:", err);
+    return base64Data;
+  }
+}
+
 // ==========================================
 // SUPABASE DATABASE SYNC HELPERS (CRUD)
 // ==========================================
@@ -70,26 +179,34 @@ export async function fetchUserRostro(userId: string): Promise<Rostro | null> {
   }
 }
 
-export async function saveUserRostro(userId: string, rostro: Rostro): Promise<void> {
+export async function saveUserRostro(userId: string, rostro: Rostro): Promise<Rostro> {
   if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
-    return;
+    return rostro;
   }
   try {
+    let finalImageUrl = rostro.imageSrc;
+    if (rostro.imageSrc && rostro.imageSrc.startsWith("data:")) {
+      finalImageUrl = await uploadBase64ToStorage(userId, rostro.imageSrc, "prendas_armario");
+    }
+
     const { error } = await supabase.from("rostro").upsert({
       user_id: userId,
       forma_cara: rostro.forma_cara,
       pelo_actual: rostro.pelo_actual,
       barba_actual: rostro.barba_actual,
       clave: rostro.clave,
-      image_src: rostro.imageSrc || "",
+      image_src: finalImageUrl || "",
       updated_at: new Date().toISOString(),
     });
 
     if (error) {
       console.error("Error saving user rostro to Supabase:", error);
     }
+
+    return { ...rostro, imageSrc: finalImageUrl };
   } catch (err) {
     console.error("Critical error in saveUserRostro:", err);
+    return rostro;
   }
 }
 
@@ -148,11 +265,16 @@ export async function fetchUserPrendas(userId: string): Promise<Prenda[]> {
   }
 }
 
-export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<void> {
+export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<Prenda> {
   if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
-    return;
+    return prenda;
   }
   try {
+    let finalImageUrl = prenda.imageSrc;
+    if (prenda.imageSrc && prenda.imageSrc.startsWith("data:")) {
+      finalImageUrl = await uploadBase64ToStorage(userId, prenda.imageSrc, "prendas_armario");
+    }
+
     const { error } = await supabase.from("prendas").insert({
       id: prenda.id,
       user_id: userId,
@@ -161,7 +283,7 @@ export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<vo
       color: prenda.color,
       formalidad: prenda.formalidad,
       temporada: prenda.temporada,
-      image_src: prenda.imageSrc,
+      image_src: finalImageUrl,
       descripcion: prenda.descripcion || null,
       tejido: prenda.tejido || null,
       tags: prenda.tags || [],
@@ -171,16 +293,24 @@ export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<vo
     if (error) {
       console.error("Error inserting prenda into Supabase:", error);
     }
+
+    return { ...prenda, imageSrc: finalImageUrl };
   } catch (err) {
     console.error("Critical error in saveUserPrenda:", err);
+    return prenda;
   }
 }
 
-export async function updateUserPrenda(userId: string, prenda: Prenda): Promise<void> {
+export async function updateUserPrenda(userId: string, prenda: Prenda): Promise<Prenda> {
   if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
-    return;
+    return prenda;
   }
   try {
+    let finalImageUrl = prenda.imageSrc;
+    if (prenda.imageSrc && prenda.imageSrc.startsWith("data:")) {
+      finalImageUrl = await uploadBase64ToStorage(userId, prenda.imageSrc, "prendas_armario");
+    }
+
     const { error } = await supabase
       .from("prendas")
       .update({
@@ -189,7 +319,7 @@ export async function updateUserPrenda(userId: string, prenda: Prenda): Promise<
         color: prenda.color,
         formalidad: prenda.formalidad,
         temporada: prenda.temporada,
-        image_src: prenda.imageSrc,
+        image_src: finalImageUrl,
         descripcion: prenda.descripcion || null,
         tejido: prenda.tejido || null,
         tags: prenda.tags || [],
@@ -200,8 +330,11 @@ export async function updateUserPrenda(userId: string, prenda: Prenda): Promise<
     if (error) {
       console.error("Error updating prenda in Supabase:", error);
     }
+
+    return { ...prenda, imageSrc: finalImageUrl };
   } catch (err) {
     console.error("Critical error in updateUserPrenda:", err);
+    return prenda;
   }
 }
 
