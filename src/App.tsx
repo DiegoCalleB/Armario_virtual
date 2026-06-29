@@ -51,6 +51,7 @@ export default function App() {
   // Storage bucket RLS/error state
   const [storageError, setStorageError] = useState<{ error: string; buckets: string[] } | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
+  const [copiedSecureSql, setCopiedSecureSql] = useState(false);
 
   // Mobile drawer state
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -822,59 +823,110 @@ export default function App() {
                 </span>
                 <div className="space-y-1">
                   <h3 className="font-serif text-sm font-bold tracking-wider text-red-200 uppercase">
-                    Guía de Configuración: El Bucket requiere permisos para usuarios Autenticados
+                    Guía de Privacidad y Seguridad: El Bucket requiere permisos para usuarios Autenticados
                   </h3>
                   <p className="text-[11px] text-tinta-apagada">
-                    Las imágenes de tus prendas no se pudieron guardar en el bucket <code className="bg-red-950/40 px-1 py-0.5 rounded text-red-300 font-mono">prendas_armario</code> debido a las políticas de seguridad de Supabase (RLS).
+                    Las imágenes de tus prendas se intentaron guardar en el bucket <code className="bg-red-950/40 px-1 py-0.5 rounded text-red-300 font-mono">prendas_armario</code>, pero falló por las políticas RLS. Además, ¡vamos a asegurar tu privacidad para que nadie más pueda ver tus prendas!
                   </p>
                 </div>
               </div>
 
               <div className="bg-fondo/80 border border-linea/60 rounded-lg p-4 space-y-3 text-xs">
                 <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
-                  ¿Por qué ocurre esto?
+                  🔒 PRIVACIDAD AL 100%: ¿Cómo evitar que otros vean tus prendas?
                 </p>
                 <p className="text-tinta-apagada leading-relaxed text-[11px]">
-                  En tu política RLS has configurado <code className="bg-tarjeta px-1 py-0.5 rounded text-white font-mono">auth.role() = 'anon'</code>. Al iniciar sesión en ESPEJO con tu correo electrónico, tu rol activo de usuario pasa a ser <strong className="text-white font-medium">'authenticated'</strong>, por lo que la política te niega el permiso para subir fotos. 
+                  En tu política RLS actual has configurado <code className="bg-tarjeta px-1 py-0.5 rounded text-white font-mono">auth.role() = 'anon'</code>. Al iniciar sesión en ESPEJO con tu correo electrónico, tu rol pasa a ser <strong className="text-white font-medium">'authenticated'</strong>.
                 </p>
                 <p className="text-tinta-apagada leading-relaxed text-[11px]">
-                  Para solucionar esto, debes permitir que los usuarios <strong className="text-white font-medium">autenticados</strong> también puedan subir fotos. Lo ideal es permitir tanto <code className="bg-tarjeta px-1 py-0.5 font-mono text-white">anon</code> como <code className="bg-tarjeta px-1 py-0.5 font-mono text-white">authenticated</code> quitando la restricción de rol.
+                  Para que las imágenes se guarden de forma <strong>completamente privada y exclusiva</strong> (de manera que un usuario <strong>solo</strong> pueda ver, editar o borrar sus propias fotos y nunca las de los demás), debes configurar una política que restrinja el acceso a la carpeta de cada usuario (el segundo nivel del path de almacenamiento).
                 </p>
 
                 <div className="space-y-2 pt-2 border-t border-linea/40">
                   <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
-                    Instrucciones de corrección en el Panel de Supabase:
+                    Elige una de estas opciones para tu política en el Panel de Supabase (Storage &gt; prendas_armario &gt; Policies):
                   </p>
-                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-tinta-apagada">
-                    <li>Ve al menú lateral <strong className="text-white">Storage</strong> en Supabase y selecciona tu bucket <strong className="text-white">prendas_armario</strong>.</li>
-                    <li>Haz clic en <strong className="text-white">Policies</strong>.</li>
-                    <li>Modifica tu política existente o crea una nueva con los permisos de <strong className="text-white">SELECT, INSERT, UPDATE, DELETE</strong> marcados.</li>
-                    <li>Sustituye la expresión de la política (Policy Definition) por la versión corregida de abajo que no restringe el rol, para que funcione tanto si estás conectado como si eres un invitado:</li>
-                  </ol>
+
+                  {/* Opción A: Ultra Segura */}
+                  <div className="p-3 bg-emerald-950/25 border border-emerald-900/40 rounded-lg space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-emerald-400 text-[10px] uppercase tracking-wider">
+                        Opción A: Máxima Privacidad (Aislado por Usuario) 🔒
+                      </span>
+                      <span className="text-[10px] text-emerald-500 italic">Recomendado</span>
+                    </div>
+                    <p className="text-[10.5px] text-tinta-apagada">
+                      Esta política comprueba que el ID de la carpeta coincida exactamente con el ID del usuario autenticado (<code className="font-mono text-white">auth.uid()</code>). Nadie más podrá ver ni manipular tus imágenes.
+                    </p>
+                    <div className="relative mt-1">
+                      <pre className="bg-[#0b0c10] border border-linea/80 p-2.5 rounded font-mono text-[9.5px] text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
+                        {`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public' AND (storage.foldername(name))[2] = (auth.uid())::text`}
+                      </pre>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public' AND (storage.foldername(name))[2] = (auth.uid())::text`);
+                          setCopiedSecureSql(true);
+                          setTimeout(() => setCopiedSecureSql(false), 2000);
+                        }}
+                        className="absolute right-2 top-2 px-2 py-1 bg-tarjeta border border-linea hover:border-laton text-tinta hover:text-laton rounded flex items-center gap-1 cursor-pointer transition text-[8.5px] uppercase tracking-wider font-bold"
+                      >
+                        {copiedSecureSql ? (
+                          <>
+                            <Check size={9} className="text-emerald-400" /> ¡Copiado!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={9} /> Copiar SQL
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Opción B: Acceso general */}
+                  <div className="p-3 bg-amber-950/25 border border-amber-900/40 rounded-lg space-y-2">
+                    <span className="font-bold text-amber-400 text-[10px] uppercase tracking-wider block">
+                      Opción B: Acceso general para Invitados y Autenticados (Fácil Desarrollo) ⚙️
+                    </span>
+                    <p className="text-[10.5px] text-tinta-apagada">
+                      Permite que cualquier usuario (incluso invitados sin cuenta) guarden fotos bajo la carpeta general public. Útil para desarrollo rápido, pero sin aislamiento por usuario.
+                    </p>
+                    <div className="relative mt-1">
+                      <pre className="bg-[#0b0c10] border border-linea/80 p-2.5 rounded font-mono text-[9.5px] text-amber-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
+                        {`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`}
+                      </pre>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`);
+                          setCopiedSql(true);
+                          setTimeout(() => setCopiedSql(false), 2000);
+                        }}
+                        className="absolute right-2 top-2 px-2 py-1 bg-tarjeta border border-linea hover:border-laton text-tinta hover:text-laton rounded flex items-center gap-1 cursor-pointer transition text-[8.5px] uppercase tracking-wider font-bold"
+                      >
+                        {copiedSql ? (
+                          <>
+                            <Check size={9} className="text-emerald-400" /> ¡Copiado!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={9} /> Copiar SQL
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="relative mt-2">
-                  <pre className="bg-[#0b0c10] border border-linea/80 p-3 rounded font-mono text-[10px] text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
-                    {`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`}
-                  </pre>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`);
-                      setCopiedSql(true);
-                      setTimeout(() => setCopiedSql(false), 2000);
-                    }}
-                    className="absolute right-2 top-2 px-2.5 py-1.5 bg-tarjeta border border-linea hover:border-laton text-tinta hover:text-laton rounded flex items-center gap-1 cursor-pointer transition text-[9px] uppercase tracking-wider font-bold"
-                  >
-                    {copiedSql ? (
-                      <>
-                        <Check size={10} className="text-emerald-400" /> ¡Copiado!
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={10} /> Copiar SQL
-                      </>
-                    )}
-                  </button>
+                <div className="space-y-1.5 pt-2 border-t border-linea/40 text-[11px] text-tinta-apagada">
+                  <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
+                    Pasos para aplicar la opción elegida:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Entra en <strong className="text-white">Supabase Console &gt; Storage &gt; prendas_armario</strong>.</li>
+                    <li>Haz clic en la pestaña <strong className="text-white">Policies</strong>.</li>
+                    <li>Modifica tu política de subida existente (o crea una nueva) con los permisos de <strong className="text-white">SELECT, INSERT, UPDATE, DELETE</strong> marcados.</li>
+                    <li>Sustituye la expresión por el bloque de SQL que hayas copiado arriba y haz clic en <strong className="text-white">Review</strong> y <strong className="text-white">Save</strong>.</li>
+                  </ol>
                 </div>
               </div>
 
