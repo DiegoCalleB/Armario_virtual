@@ -75,7 +75,7 @@ export async function uploadBase64ToStorage(
       blob = new Blob([bytes], { type: contentType });
     }
 
-    // Para adaptarnos a la política estricta del usuario:
+    // Para adaptarnos estrictamente a la política del usuario:
     // 1. LOWER((storage.foldername(name))[1]) = 'public' -> El primer nivel de carpeta debe ser "public"
     // 2. storage."extension"(name) = 'jpg' -> La extensión debe ser estrictamente "jpg"
     const finalContentType = "image/jpeg";
@@ -94,7 +94,7 @@ export async function uploadBase64ToStorage(
           .from(currentBucket)
           .upload(fileName, blob, {
             contentType: finalContentType,
-            upsert: true,
+            upsert: false, // Desactivar upsert para no requerir permisos de SELECT ni UPDATE en el RLS
           });
 
         if (error) {
