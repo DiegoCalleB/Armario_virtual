@@ -416,14 +416,13 @@ app.post("/api/analizar-prenda", async (req, res) => {
     const { mimeType, data } = parseDataUri(image);
     const ai = getGenAI();
     const isMultiModeEnabled = isMulti === true || isMulti === "true";
-
-    // We distinguish between single garment and multi-garment analysis
     const promptText = isMultiModeEnabled
       ? `Analiza detalladamente esta imagen de armario masculino o prenda de vestir. 
 Identifica CADA una de las prendas de vestir o calzado de hombre visibles de forma independiente.
 
 - DETECCIÓN INDEPENDIENTE OBLIGATORIA: Si la imagen muestra a una persona vestida, un maniquí o un grupo de prendas juntas (ej: armario o ropa colgada), DEBES desglosar e identificar CADA una de las prendas por separado (ej: la chaqueta por un lado como 'top', la camisa por otro como 'top', los pantalones o vaqueros por otro como 'pantalon', los zapatos por otro como 'calzado'). Es de suma importancia que NO los agrupes en una sola prenda de armario.
 - REGLA CRÍTICA EXCLUSIÓN DE ACCESORIOS: Queda estrictamente PROHIBIDO detectar o extraer cualquier tipo de accesorio (tales como relojes, pulseras, joyas, gafas de sol o de vista, gorras, sombreros, cinturones, bolsos, mochilas, corbatas, bufandas, o pañuelos). No los incluyas bajo ningún concepto. Los accesorios se deben registrar de forma independiente por el usuario.
+- NO INVENTAR PRENDAS: Si un elemento de ropa (como pantalones o zapatos) NO está realmente en la imagen, NO lo inventes ni lo agregues a la respuesta. Solo detecta lo que realmente existe en la foto.
 - Si la imagen contiene un único artículo de vestir o calzado aislado, lístalo como un único elemento en el array.
 
 Para cada prenda de ropa o calzado identificada de forma independiente, determina:
@@ -435,6 +434,16 @@ Para cada prenda de ropa o calzado identificada de forma independiente, determin
 6. Tejido o material (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa", "Seda", "Punto/Knit").
 7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estilo Oxford", "Básico"]).
 8. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0 a 1000 (donde box_ymin es el borde superior, box_xmin el borde izquierdo, box_ymax el borde inferior y box_xmax el borde derecho de la prenda, ej: una camisa puede ser box_ymin: 150, box_xmin: 250, box_ymax: 550, box_xmax: 750).
+
+DIRECTRICES CRÍTICAS PARA LAS COORDENADAS (box_ymin, box_xmin, box_ymax, box_xmax):
+- Cada prenda que identifiques DEBE tener una caja delimitadora (bounding box) extremadamente precisa y realista, que corresponda ÚNICAMENTE al área real de esa prenda en la foto.
+- NUNCA utilices coordenadas idénticas o casi idénticas para diferentes prendas.
+- Por ejemplo, si en la foto hay una persona vestida de cuerpo entero, un maniquí con outfit completo, o prendas dispuestas en vertical (ej. una percha con camiseta arriba y pantalones abajo):
+  * Los pantalones o bermudas ("pantalon") están en la mitad INFERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser significativamente mayor (por ejemplo, entre 450 y 650) and su "box_ymax" debe terminar cerca del borde inferior (por ejemplo, entre 850 y 1000). Jamás asignes una caja delimitadora en la mitad superior de la imagen a un pantalón.
+  * La camiseta, camisa, abrigo o chaqueta ("top") está en la mitad SUPERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser baja (por ejemplo, entre 0 y 250) y su "box_ymax" de final vertical debe estar en la mitad o torso medio (por ejemplo, entre 450 y 650).
+  * El calzado o zapatos ("calzado") están en la zona más BAJA de todas, por lo que su coordenada vertical "box_ymin" debe estar por encima de 850 o 900.
+- Si las prendas están dispuestas una al lado de la otra horizontalmente (ej: ropa doblada en una mesa o perchas paralelas), asegúrate de darles rangos horizontales de coordenadas ("box_xmin" y "box_xmax") claramente diferenciados y separados para que el recorte sea perfecto para cada prenda.
+- PROHIBIDO DEFINITIVO: No devuelvas las mismas coordenadas o las coordenadas de toda la imagen (0, 0, 1000, 1000) para más de una prenda. Si haces eso, el recorte de los pantalones saldrá con la foto de las camisetas, lo cual es incorrecto y confunde al usuario. Cada prenda debe tener su propia caja delimitadora exclusiva e impecable.
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
       : `Analiza este artículo de ropa o calzado de hombre de la imagen de forma individual. 
@@ -608,6 +617,61 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
         
         return true;
       });
+
+      // Server-side duplicate and overlap crop filter
+      const uniquePrendas: any[] = [];
+      for (const item of parsedResponse.prendas) {
+        let isDuplicate = false;
+        const ymin = Number(item.box_ymin !== undefined && item.box_ymin !== null ? item.box_ymin : 0);
+        const xmin = Number(item.box_xmin !== undefined && item.box_xmin !== null ? item.box_xmin : 0);
+        const ymax = Number(item.box_ymax !== undefined && item.box_ymax !== null ? item.box_ymax : 1000);
+        const xmax = Number(item.box_xmax !== undefined && item.box_xmax !== null ? item.box_xmax : 1000);
+
+        for (const existing of uniquePrendas) {
+          const exYMin = Number(existing.box_ymin !== undefined && existing.box_ymin !== null ? existing.box_ymin : 0);
+          const exXMin = Number(existing.box_xmin !== undefined && existing.box_xmin !== null ? existing.box_xmin : 0);
+          const exYMax = Number(existing.box_ymax !== undefined && existing.box_ymax !== null ? existing.box_ymax : 1000);
+          const exXMax = Number(existing.box_xmax !== undefined && existing.box_xmax !== null ? existing.box_xmax : 1000);
+
+          // Calculate area of each box
+          const area1 = (xmax - xmin) * (ymax - ymin);
+          const area2 = (exXMax - exXMin) * (exYMax - exYMin);
+
+          // Intersection box
+          const ixMin = Math.max(xmin, exXMin);
+          const iyMin = Math.max(ymin, exYMin);
+          const ixMax = Math.min(xmax, exXMax);
+          const iyMax = Math.min(ymax, exYMax);
+
+          const iWidth = Math.max(0, ixMax - ixMin);
+          const iHeight = Math.max(0, iyMax - iyMin);
+          const intersectionArea = iWidth * iHeight;
+
+          const overlap1 = area1 > 0 ? intersectionArea / area1 : 0;
+          const overlap2 = area2 > 0 ? intersectionArea / area2 : 0;
+
+          // If intersection area covers more than 75% of BOTH boxes, they are essentially the same crop.
+          if (overlap1 > 0.75 && overlap2 > 0.75) {
+            isDuplicate = true;
+            const itemKeywords = String(item.nombre || "").toLowerCase();
+            const existingKeywords = String(existing.nombre || "").toLowerCase();
+            
+            const topKeywords = ["camiseta", "camisa", "jersey", "chaqueta", "sudadera", "top", "t-shirt", "shirt", "blazer", "polo", "suéter", "sweater"];
+            const hasTopKeywordItem = topKeywords.some(kw => itemKeywords.includes(kw));
+            const hasTopKeywordExisting = topKeywords.some(kw => existingKeywords.includes(kw));
+
+            if (hasTopKeywordItem && !hasTopKeywordExisting) {
+              // Replace existing entry since this one has explicit top keyword
+              Object.assign(existing, item);
+            }
+            break;
+          }
+        }
+        if (!isDuplicate) {
+          uniquePrendas.push(item);
+        }
+      }
+      parsedResponse.prendas = uniquePrendas;
     }
 
     res.json(parsedResponse);
