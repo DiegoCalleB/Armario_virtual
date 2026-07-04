@@ -19,7 +19,8 @@ const cropGarmentImage = (
   ymin: number,
   xmin: number,
   ymax: number,
-  xmax: number
+  xmax: number,
+  categoria?: string
 ): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -51,6 +52,64 @@ const cropGarmentImage = (
           xmaxScale = xmaxScale * 1000;
         }
 
+        // Validate the crop coordinates or apply smart fallback coordinates if suspicious/hallucinated
+        const widthPercent = Math.abs(xmaxScale - xminScale);
+        const heightPercent = Math.abs(ymaxScale - yminScale);
+        const areaPercent = widthPercent * heightPercent; // scale of 0 to 1,000,000
+
+        let isSuspicious = false;
+
+        // 1. If coordinates cover almost the whole image (e.g. >80% area)
+        if (areaPercent >= 800000) {
+          isSuspicious = true;
+          console.warn(`[CROP] El area de recorte es casi la imagen completa (${areaPercent / 10000}%). Sospechoso. Categoria: ${categoria}`);
+        }
+
+        // 2. If coordinates are NaN or extremely small
+        if (isNaN(yminScale) || isNaN(xminScale) || isNaN(ymaxScale) || isNaN(xmaxScale) || widthPercent < 15 || heightPercent < 15) {
+          isSuspicious = true;
+        }
+
+        // 3. Physical anomaly heuristics (e.g. pants in upper body, shoes in upper body)
+        if (categoria) {
+          const cat = String(categoria).toLowerCase();
+          if (cat === "pantalon") {
+            // Pants cannot be purely in the upper 45% of the image
+            if (Math.max(yminScale, ymaxScale) < 450) {
+              isSuspicious = true;
+              console.warn(`[CROP] Sospechoso: pantalones ubicados completamente en la mitad superior.`);
+            }
+          } else if (cat === "calzado") {
+            // Shoes cannot be purely in the upper 65% of the image
+            if (Math.max(yminScale, ymaxScale) < 650) {
+              isSuspicious = true;
+              console.warn(`[CROP] Sospechoso: calzado ubicado en la mitad superior/media.`);
+            }
+          }
+        }
+
+        // Apply smart crop fallback according to garment category if suspicious coordinates are detected
+        if (isSuspicious && categoria) {
+          const cat = String(categoria).toLowerCase();
+          console.log(`[CROP] Aplicando recorte heuristico inteligente para la categoria: ${cat}`);
+          if (cat === "top") {
+            yminScale = 50;   // 5% top
+            xminScale = 200;  // 20% left
+            ymaxScale = 650;  // 65% top
+            xmaxScale = 800;  // 80% left
+          } else if (cat === "pantalon") {
+            yminScale = 450;  // 45% top
+            xminScale = 200;  // 20% left
+            ymaxScale = 880;  // 88% top
+            xmaxScale = 800;  // 80% left
+          } else if (cat === "calzado") {
+            yminScale = 750;  // 75% top
+            xminScale = 200;  // 20% left
+            ymaxScale = 1000; // 100% top
+            xmaxScale = 800;  // 80% left
+          }
+        }
+
         // Normalize coordinates to ensure start is always <= end
         const normYMin = Math.min(yminScale, ymaxScale);
         const normYMax = Math.max(yminScale, ymaxScale);
@@ -67,7 +126,7 @@ const cropGarmentImage = (
         let cropH = yEnd - yStart;
 
         if (isNaN(cropW) || isNaN(cropH) || cropW <= 10 || cropH <= 10) {
-          console.warn("Rango de recorte inválido, NaN o muy pequeño de la IA, devolviendo original:", { ymin, xmin, ymax, xmax });
+          console.warn("Rango de recorte invalido, devolviendo original:", { ymin, xmin, ymax, xmax });
           resolve(base64Src);
           return;
         }
@@ -85,7 +144,7 @@ const cropGarmentImage = (
         const finalCropH = paddedYEnd - paddedYStart;
 
         if (isNaN(finalCropW) || isNaN(finalCropH) || finalCropW <= 5 || finalCropH <= 5) {
-          console.warn("Ancho/alto de recorte final inválido o muy pequeño, devolviendo original.");
+          console.warn("Ancho/alto de recorte final invalido, devolviendo original.");
           resolve(base64Src);
           return;
         }
@@ -399,7 +458,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 yminVal,
                 xminVal,
                 ymaxVal,
-                xmaxVal
+                xmaxVal,
+                item.categoria
               );
             } catch (cropErr) {
               console.error("No se pudo recortar la prenda, usando imagen base:", cropErr);
@@ -508,7 +568,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     yminVal,
                     xminVal,
                     ymaxVal,
-                    xmaxVal
+                    xmaxVal,
+                    item.categoria
                   );
                 } catch (cropErr) {
                   console.error("No se pudo recortar la prenda, usando imagen base:", cropErr);
@@ -693,7 +754,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     yminVal,
                     xminVal,
                     ymaxVal,
-                    xmaxVal
+                    xmaxVal,
+                    item.categoria
                   );
                 } catch (cropErr) {
                   console.error("Error al recortar captura:", cropErr);
