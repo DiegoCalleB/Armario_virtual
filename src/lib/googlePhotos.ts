@@ -46,24 +46,45 @@ export interface GooglePhotoItem {
   baseUrl: string;
   filename: string;
   mimeType: string;
+  description?: string;
 }
 
-export const fetchGooglePhotos = async (nextPageToken?: string): Promise<{ items: GooglePhotoItem[]; nextPageToken?: string }> => {
+export const fetchGooglePhotos = async (
+  nextPageToken?: string,
+  categories?: string[]
+): Promise<{ items: GooglePhotoItem[]; nextPageToken?: string }> => {
   const token = getGooglePhotosToken();
   if (!token) {
     throw new Error("No autenticado en Google Fotos.");
   }
 
-  let url = "https://photoslibrary.googleapis.com/v1/mediaItems?pageSize=20";
-  if (nextPageToken) {
-    url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
-  }
+  const hasCategories = categories && categories.length > 0;
+  // Use the search endpoint if filtering by category, otherwise the standard list endpoint
+  const url = hasCategories
+    ? "https://photoslibrary.googleapis.com/v1/mediaItems:search"
+    : `https://photoslibrary.googleapis.com/v1/mediaItems?pageSize=50${nextPageToken ? `&pageToken=${encodeURIComponent(nextPageToken)}` : ""}`;
 
-  const res = await fetch(url, {
+  const fetchOptions: RequestInit = {
+    method: hasCategories ? "POST" : "GET",
     headers: {
       Authorization: `Bearer ${token}`,
+      ...(hasCategories ? { "Content-Type": "application/json" } : {}),
     },
-  });
+  };
+
+  if (hasCategories) {
+    fetchOptions.body = JSON.stringify({
+      pageSize: 50,
+      pageToken: nextPageToken,
+      filters: {
+        contentFilter: {
+          includedContentCategories: categories,
+        },
+      },
+    });
+  }
+
+  const res = await fetch(url, fetchOptions);
 
   if (!res.ok) {
     if (res.status === 401) {
@@ -83,6 +104,7 @@ export const fetchGooglePhotos = async (nextPageToken?: string): Promise<{ items
       baseUrl: item.baseUrl,
       filename: item.filename,
       mimeType: item.mimeType,
+      description: item.description || "",
     }));
 
   return {

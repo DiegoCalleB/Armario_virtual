@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import fs from "fs";
 import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
@@ -144,6 +145,141 @@ async function callGeminiWithRetry<T>(
   }
   throw lastError || new Error("El servicio de Espejo IA no está disponible temporalmente bajo alta demanda.");
 }
+
+// GOOGLE PHOTOS OAUTH POPUP ROUTE
+app.get("/auth/google-photos", (req, res) => {
+  let firebaseConfig = "{}";
+  try {
+    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+    if (fs.existsSync(configPath)) {
+      firebaseConfig = fs.readFileSync(configPath, "utf8");
+    }
+  } catch (err) {
+    console.error("Error reading firebase-applet-config.json:", err);
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Conectando con Google Fotos...</title>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #f3f4f6;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    .loader {
+      border: 3.5px solid rgba(255,255,255,0.08);
+      border-radius: 50%;
+      border-top: 3.5px solid #C9A35B;
+      width: 44px;
+      height: 44px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    button {
+      background-color: #C9A35B;
+      color: #0b0f19;
+      border: none;
+      padding: 11px 22px;
+      font-size: 13.5px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background-color: #e2ba71;
+      transform: scale(1.02);
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    .error {
+      color: #f87171;
+      margin-top: 18px;
+      font-size: 13px;
+      max-width: 85%;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="loader"></div>
+  <h2 style="font-weight: 600; font-size: 19px; margin: 0 0 10px 0; color: #ffffff; letter-spacing: 0.02em;">CONECTAR GOOGLE FOTOS</h2>
+  <p id="status-text" style="color: #9ca3af; font-size: 13px; margin: 0; max-width: 80%; line-height: 1.4;">Iniciando conexión segura...</p>
+  <button id="auth-btn" style="display: none;">Vincular cuenta</button>
+  <div id="error-text" class="error"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = ${firebaseConfig};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const provider = new GoogleAuthProvider();
+    provider.addScope("https://www.googleapis.com/auth/photoslibrary.readonly");
+
+    const statusText = document.getElementById("status-text");
+    const errorText = document.getElementById("error-text");
+    const authBtn = document.getElementById("auth-btn");
+
+    async function doSignIn() {
+      statusText.innerText = "Por favor, completa la autenticación en la ventana de Google...";
+      errorText.innerText = "";
+      authBtn.style.display = "none";
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (!credential || !credential.accessToken) {
+          throw new Error("No se pudo obtener el token de acceso de Google.");
+        }
+        
+        statusText.innerText = "¡Conectado con éxito! Transfiriendo credenciales...";
+        if (window.opener) {
+          window.opener.postMessage({ type: "GOOGLE_PHOTOS_TOKEN", token: credential.accessToken }, "*");
+          setTimeout(() => {
+            window.close();
+          }, 1200);
+        } else {
+          statusText.innerText = "Autenticado con éxito. Puedes cerrar esta ventana.";
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        errorText.innerText = "Error de conexión: " + (err.message || err.toString());
+        statusText.innerText = "Se requiere acción manual para continuar.";
+        authBtn.style.display = "inline-block";
+      }
+    }
+
+    authBtn.addEventListener("click", doSignIn);
+    
+    // Start flow
+    doSignIn();
+  </script>
+</body>
+</html>`;
+
+  res.send(html);
+});
 
 // PROXY IMAGE FOR GOOGLE PHOTOS (CORS BYPASS)
 app.get("/api/proxy-image", async (req, res) => {

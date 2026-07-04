@@ -6,7 +6,7 @@ import {
   fetchGooglePhotos, 
   GooglePhotoItem 
 } from "../lib/googlePhotos";
-import { Image, LogOut, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, X, Sparkles } from "lucide-react";
+import { Image, LogOut, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, X, Sparkles, Search } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface GooglePhotosPickerProps {
@@ -24,6 +24,19 @@ const GoogleLogomark = () => (
   </svg>
 );
 
+const CATEGORY_PRESETS = [
+  { id: "PEOPLE_SELFIES", label: "Yo (Retratos / Selfies)", categories: ["PORTRAITS", "SELFIES", "PEOPLE"] },
+  { id: "FASHION", label: "Moda y Ropa", categories: ["FASHION"] },
+  { id: "ALL", label: "Todas las fotos", categories: [] },
+  { id: "TRAVEL", label: "Viajes y Paisajes", categories: ["TRAVEL", "LANDSCAPES"] },
+  { id: "WEDDINGS", label: "Eventos y Fiestas", categories: ["WEDDINGS", "BIRTHDAYS"] }
+];
+
+const getActiveCategoriesForPreset = (presetId: string): string[] => {
+  const preset = CATEGORY_PRESETS.find(p => p.id === presetId);
+  return preset ? preset.categories : [];
+};
+
 export default function GooglePhotosPicker({ 
   onPhotoSelected, 
   triggerButtonText = "Importar de Google Fotos",
@@ -40,27 +53,19 @@ export default function GooglePhotosPicker({
   const [prevPageTokens, setPrevPageTokens] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [selectedCategoryPreset, setSelectedCategoryPreset] = useState<string>("PEOPLE_SELFIES");
+  const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     setIsConnected(!!getGooglePhotosToken());
   }, []);
 
-  const handleOpen = () => {
-    setIsOpen(true);
-    setError(null);
-    const token = getGooglePhotosToken();
-    if (token) {
-      setIsConnected(true);
-      loadPhotos();
-    } else {
-      setIsConnected(false);
-    }
-  };
-
-  const loadPhotos = async (pageToken?: string, isNext = true) => {
+  const loadPhotos = async (pageToken?: string, isNext = true, categoriesOverride?: string[]) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchGooglePhotos(pageToken);
+      const activeCats = categoriesOverride !== undefined ? categoriesOverride : getActiveCategoriesForPreset(selectedCategoryPreset);
+      const data = await fetchGooglePhotos(pageToken, activeCats);
       setPhotos(data.items);
       
       if (pageToken) {
@@ -88,18 +93,71 @@ export default function GooglePhotosPicker({
     }
   };
 
+  const handleCategoryChange = (presetId: string) => {
+    setSelectedCategoryPreset(presetId);
+    setSearchQuery("");
+    const activeCats = getActiveCategoriesForPreset(presetId);
+    loadPhotos(undefined, true, activeCats);
+  };
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const origin = event.origin;
+      if (!origin.endsWith(".run.app") && !origin.includes("localhost") && !origin.includes("127.0.0.1")) {
+        return;
+      }
+      if (event.data?.type === "GOOGLE_PHOTOS_TOKEN" && event.data?.token) {
+        sessionStorage.setItem("google_photos_token", event.data.token);
+        setIsConnected(true);
+        const activeCats = getActiveCategoriesForPreset(selectedCategoryPreset);
+        loadPhotos(undefined, true, activeCats);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [selectedCategoryPreset]);
+
+  const handleOpen = () => {
+    setIsOpen(true);
+    setError(null);
+    const token = getGooglePhotosToken();
+    if (token) {
+      setIsConnected(true);
+      const activeCats = getActiveCategoriesForPreset(selectedCategoryPreset);
+      loadPhotos(undefined, true, activeCats);
+    } else {
+      setIsConnected(false);
+    }
+  };
+
   const handleConnect = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setError(null);
     setLoading(true);
     try {
-      await signInWithGooglePhotos();
-      setIsConnected(true);
-      loadPhotos();
+      const width = 500;
+      const height = 650;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      const popup = window.open(
+        "/auth/google-photos",
+        "google_photos_popup",
+        `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+      );
+      if (!popup) {
+        setError("El navegador bloqueó la ventana emergente de autenticación. Por favor, permite ventanas emergentes.");
+        setLoading(false);
+        return;
+      }
+      const interval = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(interval);
+          setLoading(false);
+        }
+      }, 1000);
     } catch (err: any) {
       console.error(err);
       setError("No se pudo iniciar sesión con Google o autorizar el acceso a Google Fotos.");
-    } finally {
       setLoading(false);
     }
   };
@@ -139,14 +197,24 @@ export default function GooglePhotosPicker({
 
   const handleNextPage = () => {
     if (nextPageToken) {
-      loadPhotos(nextPageToken, true);
+      const activeCats = getActiveCategoriesForPreset(selectedCategoryPreset);
+      loadPhotos(nextPageToken, true, activeCats);
     }
   };
 
   const handlePrevPage = () => {
     const prevToken = prevPageTokens[prevPageTokens.length - 2]; // the token before current
-    loadPhotos(prevToken, false);
+    const activeCats = getActiveCategoriesForPreset(selectedCategoryPreset);
+    loadPhotos(prevToken, false, activeCats);
   };
+
+  const filteredPhotos = photos.filter(photo => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const filenameMatch = photo.filename.toLowerCase().includes(query);
+    const descMatch = photo.description?.toLowerCase().includes(query) || false;
+    return filenameMatch || descMatch;
+  });
 
   return (
     <>
@@ -178,7 +246,7 @@ export default function GooglePhotosPicker({
                   </div>
                   <div>
                     <h3 className="font-serif text-base font-bold text-white uppercase tracking-wide">Google Fotos</h3>
-                    <p className="text-[10px] text-tinta-apagada font-mono">IMPORTACIÓN CONFIDENCIAL</p>
+                    <p className="text-[10px] text-tinta-apagada font-mono">IMPORTACIÓN INTELIGENTE Y SEGURA</p>
                   </div>
                 </div>
                 <button
@@ -228,7 +296,7 @@ export default function GooglePhotosPicker({
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between text-xs text-tinta-apagada">
-                        <span>Página {currentPage}</span>
+                        <span className="font-medium">Filtrar Galería con IA de Google</span>
                         <button
                           type="button"
                           onClick={handleDisconnect}
@@ -238,20 +306,65 @@ export default function GooglePhotosPicker({
                         </button>
                       </div>
 
+                      {/* IA Categories Filters */}
+                      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin border-b border-linea/40">
+                        {CATEGORY_PRESETS.map((preset) => {
+                          const isSelected = selectedCategoryPreset === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => handleCategoryChange(preset.id)}
+                              className={`px-3 py-1.5 text-[10px] uppercase tracking-wider font-semibold rounded-lg transition-all flex-shrink-0 border cursor-pointer ${
+                                isSelected 
+                                  ? "bg-laton/20 border-laton text-laton font-bold" 
+                                  : "bg-tarjeta border-linea hover:border-tinta-apagada text-tinta-apagada hover:text-white"
+                              }`}
+                            >
+                              {preset.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Live Text Search input */}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Buscar por nombre de archivo o descripción..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-12 py-2 bg-fondo/60 border border-linea focus:border-laton rounded-lg text-xs text-white placeholder-tinta-apagada/70 transition font-sans focus:outline-none focus:ring-1 focus:ring-laton/40"
+                        />
+                        <Search size={14} className="absolute left-3 top-2.5 text-tinta-apagada" />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-3 top-2 text-[10px] text-laton hover:text-white font-mono bg-laton/10 px-1.5 py-0.5 rounded border border-laton/20 transition"
+                          >
+                            LIMPIAR
+                          </button>
+                        )}
+                      </div>
+
                       {loading ? (
                         <div className="flex flex-col items-center justify-center py-12">
                           <RefreshCw size={24} className="text-laton animate-spin mb-2" />
                           <p className="text-xs text-tinta-apagada font-mono uppercase tracking-wider animate-pulse">
-                            Cargando galería...
+                            Filtrando galería...
                           </p>
                         </div>
-                      ) : photos.length === 0 ? (
-                        <div className="text-center py-12 border border-dashed border-linea/50 rounded-lg">
-                          <p className="text-xs text-tinta-apagada">No se encontraron imágenes en tu cuenta de Google Fotos.</p>
+                      ) : filteredPhotos.length === 0 ? (
+                        <div className="text-center py-12 border border-dashed border-linea/50 rounded-lg flex flex-col items-center justify-center space-y-2">
+                          <p className="text-xs text-tinta-apagada">No se encontraron imágenes en esta categoría.</p>
+                          <p className="text-[10px] text-tinta-apagada/65 max-w-sm leading-relaxed">
+                            Prueba seleccionando la categoría <span className="text-laton">"Todas las fotos"</span> o borrando tu filtro de búsqueda actual.
+                          </p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {photos.map((photo) => (
+                          {filteredPhotos.map((photo) => (
                             <div
                               key={photo.id}
                               onClick={() => !importing && handleSelectPhoto(photo)}
@@ -287,13 +400,13 @@ export default function GooglePhotosPicker({
                 </div>
 
                 {/* Pagination (Only visible when connected and not loading) */}
-                {isConnected && !loading && photos.length > 0 && (
+                {isConnected && !loading && filteredPhotos.length > 0 && (
                   <div className="flex justify-between items-center mt-6 pt-4 border-t border-linea/60 bg-fondo/20 px-1">
                     <button
                       type="button"
                       onClick={handlePrevPage}
                       disabled={prevPageTokens.length === 0}
-                      className="px-3 py-1.5 border border-linea text-tinta-apagada hover:text-white disabled:opacity-30 disabled:pointer-events-none rounded transition text-xs flex items-center gap-1"
+                      className="px-3 py-1.5 border border-linea text-tinta-apagada hover:text-white disabled:opacity-30 disabled:pointer-events-none rounded transition text-xs flex items-center gap-1 cursor-pointer"
                     >
                       <ChevronLeft size={14} /> Anterior
                     </button>
@@ -302,7 +415,7 @@ export default function GooglePhotosPicker({
                       type="button"
                       onClick={handleNextPage}
                       disabled={!nextPageToken}
-                      className="px-3 py-1.5 border border-linea text-tinta-apagada hover:text-white disabled:opacity-30 disabled:pointer-events-none rounded transition text-xs flex items-center gap-1"
+                      className="px-3 py-1.5 border border-linea text-tinta-apagada hover:text-white disabled:opacity-30 disabled:pointer-events-none rounded transition text-xs flex items-center gap-1 cursor-pointer"
                     >
                       Siguiente <ChevronRight size={14} />
                     </button>
