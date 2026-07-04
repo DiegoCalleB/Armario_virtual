@@ -1308,8 +1308,10 @@ ${inventoryText}
 
 Identifica de forma meticulosa e inteligente:
 1. 'basicos_faltantes': De 2 a 3 prendas de vestir básicas o de fondo de armario que el usuario no tiene y que multiplicarían exponencialmente sus combinaciones ("multiplicadores de armario"), enfocados 100% en complementar lo que realmente necesita según su perfil.
+   Para cada básico faltante, genera también 2 o 3 opciones reales o simuladas de marcas reconocidas disponibles en plataformas multimarca (como Zalando, ASOS, Zara, Massimo Dutti, Mango Man) con marcas de calidad, precios aproximados, y el término de búsqueda exacto idóneo para encontrarlos.
 2. 'analisis_capsula': Un análisis editorial de 1-2 párrafos que asigne un "estilo de tendencia de alta gama" idóneo para su perfil actual (como Quiet Luxury, Neo-Sartorial core, Athletic Preppy, o Heritage Workwear) detallando qué siluetas debería buscar y por qué encaja con su personalidad.
 3. 'proxima_compra_estrella': Una sola sugerencia sumamente detallada e ideal para su próxima adquisición estrella que resolvería su vestimenta para alcanzar su Estilo Objetivo.
+   Para esta compra estrella, genera también 2 o 3 opciones recomendadas de marcas reconocidas disponibles en plataformas multimarca (Zalando, ASOS, etc.) con sus precios aproximados y términos de búsqueda exactos.
 
 Responde estrictamente con el formato JSON definido en el esquema.`;
 
@@ -1331,8 +1333,22 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
                     categoria: { type: Type.STRING },
                     por_que_es_clave: { type: Type.STRING },
                     rango_color_sugerido: { type: Type.STRING },
+                    propuestas_tiendas: {
+                      type: Type.ARRAY,
+                      description: "Propuestas de marcas reales o simuladas que venden esta prenda en plataformas como Zalando, ASOS o Massimo Dutti.",
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          marca: { type: Type.STRING, description: "Marca (ej: Selected Homme, Massimo Dutti, Polo Ralph Lauren, Wood Wood)" },
+                          modelo: { type: Type.STRING, description: "Modelo específico de la prenda" },
+                          precio_aproximado: { type: Type.STRING, description: "Precio estimado en euros, ej: '49,99 €'" },
+                          termino_busqueda: { type: Type.STRING, description: "Término de búsqueda óptimo para Zalando/tiendas, ej: 'Selected Homme camisa oxford blanca'" }
+                        },
+                        required: ["marca", "modelo", "precio_aproximado", "termino_busqueda"]
+                      }
+                    }
                   },
-                  required: ["nombre_prenda", "categoria", "por_que_es_clave", "rango_color_sugerido"],
+                  required: ["nombre_prenda", "categoria", "por_que_es_clave", "rango_color_sugerido", "propuestas_tiendas"],
                 },
               },
               analisis_capsula: {
@@ -1347,8 +1363,22 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
                   descripcion_detallada: { type: Type.STRING, description: "Descripción refinada de calidades, materiales y silueta." },
                   potencial_combinaciones_explicado: { type: Type.STRING, description: "Qué looks de su armario actual mejoraría sustancialmente." },
                   rango_precio_estimado_en_euros: { type: Type.STRING, description: "Estimación (ej: '150€ - 280€')." },
+                  propuestas_tiendas: {
+                    type: Type.ARRAY,
+                    description: "Propuestas de marcas reales o de calidad que venden este artículo estrella en Zalando, ASOS o tiendas premium.",
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        marca: { type: Type.STRING },
+                        modelo: { type: Type.STRING },
+                        precio_aproximado: { type: Type.STRING },
+                        termino_busqueda: { type: Type.STRING }
+                      },
+                      required: ["marca", "modelo", "precio_aproximado", "termino_busqueda"]
+                    }
+                  }
                 },
-                required: ["item", "tipo", "descripcion_detallada", "potencial_combinaciones_explicado", "rango_precio_estimado_en_euros"],
+                required: ["item", "tipo", "descripcion_detallada", "potencial_combinaciones_explicado", "rango_precio_estimado_en_euros", "propuestas_tiendas"],
               },
             },
             required: ["basicos_faltantes", "analisis_capsula", "proxima_compra_estrella"],
@@ -1371,6 +1401,20 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
           categoria: "top",
           por_que_es_clave: "Actúa como un conector universal que reduce el ruido en combinaciones de chaquetas y cazadoras.",
           rango_color_sugerido: "Blanco óptico o azul celeste",
+          propuestas_tiendas: [
+            {
+              marca: "Selected Homme",
+              modelo: "Camisa Oxford de algodón orgánico regular",
+              precio_aproximado: "49,99 €",
+              termino_busqueda: "Selected Homme camisa oxford blanca"
+            },
+            {
+              marca: "Massimo Dutti",
+              modelo: "Camisa sarga 100% algodón sastre",
+              precio_aproximado: "59,95 €",
+              termino_busqueda: "Massimo Dutti camisa blanca"
+            }
+          ]
         }
       ],
       analisis_capsula: "Tu armario tiene un excelente potencial smart-casual. Sugerimos aproximarlo al estilo 'Quiet Luxury', donde la calidad del tejido y la atemporalidad del color predominen sobre cualquier logotipo.",
@@ -1380,6 +1424,20 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
         descripcion_detallada: "Americana ultra-ligera tejida en mezcla de lana-lino, sin hombreras, que ofrece la silueta y porte de un sastre formal combinada con la comodidad de un cárdigan de punto.",
         potencial_combinaciones_explicado: "Elevará instantáneamente cualquiera de tus pantalones chinos o vaqueros diarios, aportando autoridad sastrera con espíritu relajado.",
         rango_precio_estimado_en_euros: "120€ - 240€",
+        propuestas_tiendas: [
+          {
+            marca: "Massimo Dutti",
+            modelo: "Americana de lino desestructurada slim fit",
+            precio_aproximado: "149,00 €",
+            termino_busqueda: "Massimo Dutti americana lino desestructurada"
+          },
+          {
+            marca: "Selected Homme",
+            modelo: "Blazer lino-lana melange",
+            precio_aproximado: "119,99 €",
+            termino_busqueda: "Selected Homme blazer lino"
+          }
+        ]
       },
     });
   }

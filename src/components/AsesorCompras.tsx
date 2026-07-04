@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Prenda, CategoriaPrenda, PerfilEstilo } from "../types";
-import { Sparkles, ShoppingBag, TrendingUp, HelpCircle, Scissors, CheckCircle, Tag, DollarSign, ArrowRight, Lightbulb } from "lucide-react";
+import { Sparkles, ShoppingBag, TrendingUp, HelpCircle, Scissors, CheckCircle, Tag, DollarSign, ArrowRight, Lightbulb, ExternalLink, Search, ShoppingCart, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface AsesorComprasProps {
@@ -8,11 +8,19 @@ interface AsesorComprasProps {
   perfilEstilo?: PerfilEstilo | null;
 }
 
+interface PropuestaTienda {
+  marca: string;
+  modelo: string;
+  precio_aproximado: string;
+  termino_busqueda: string;
+}
+
 interface MissingBasic {
   nombre_prenda: string;
   categoria: string;
   por_que_es_clave: string;
   rango_color_sugerido: string;
+  propuestas_tiendas?: PropuestaTienda[];
 }
 
 interface StarPurchase {
@@ -21,6 +29,7 @@ interface StarPurchase {
   descripcion_detallada: string;
   potencial_combinaciones_explicado: string;
   rango_precio_estimado_en_euros: string;
+  propuestas_tiendas?: PropuestaTienda[];
 }
 
 interface ComprasResult {
@@ -29,10 +38,23 @@ interface ComprasResult {
   proxima_compra_estrella: StarPurchase;
 }
 
+const getZalandoSearchUrl = (query: string) => {
+  return `https://www.zalando.es/catalogo/?q=${encodeURIComponent(query)}`;
+};
+
+const getAsosSearchUrl = (query: string) => {
+  return `https://www.asos.com/es/search/?q=${encodeURIComponent(query)}`;
+};
+
+const getGoogleShoppingUrl = (query: string) => {
+  return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
+};
+
 export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ComprasResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeStoreTab, setActiveStoreTab] = useState<string>("zalando");
 
   const handleAnalizarCompras = async () => {
     if (armario.length === 0) {
@@ -71,13 +93,13 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
       <div className="mb-6 text-center">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#1e1a13] text-[#C9A35B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
           <TrendingUp size={11} className="text-laton" />
-          <span>Personal Shopper & Trend Spotter</span>
+          <span>Personal Shopper & Multi-Brand Connector</span>
         </div>
         <h2 className="font-serif text-2xl font-bold tracking-tight text-white animate-fade-in">
           Asesor de Compras y Tendencias
         </h2>
         <p className="text-xs text-tinta-apagada max-w-xl mx-auto mt-1 leading-relaxed">
-          Nuestra Inteligencia Artificial analiza el volumen, colores y materiales de tu ropero actual, identifica qué vacíos impiden armar más looks y traza tus próximas adquisiciones estelares de alta costura.
+          Nuestra Inteligencia Artificial analiza tu ropero actual, identifica qué vacíos impiden armar más looks y los conecta con propuestas de marcas reales en Zalando, ASOS y más para adquirirlos al instante.
         </p>
       </div>
 
@@ -95,7 +117,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
             </div>
             <h3 className="font-serif text-base font-bold text-white">¿Qué básicos faltan en tu armario?</h3>
             <p className="text-xs text-tinta-apagada leading-relaxed max-w-sm">
-              Conectar tu armario actual con Gemini permite simular un escáner de combinaciones. Descubrirás de 2 a 3 prendas conectoras clave y obtendrás una reseña del estilo sastrero ideal para ti.
+              Conectar tu armario actual con Gemini permite simular un escáner de combinaciones. Descubrirás prendas conectoras clave y obtendrás enlaces de búsqueda directos a las mejores tiendas de moda.
             </p>
 
             {error && (
@@ -127,7 +149,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
             </div>
             <h4 className="font-serif text-sm font-semibold text-white">Hilvanando Análisis de Tendencias</h4>
             <p className="text-xs text-tinta-apagada max-w-xs leading-relaxed mt-1">
-              Escaneando la composición cromática... Calculando huecos de formalidad sastrera... Redactando veredicto de Slow Fashion en el Gemini Master-3.5 engine...
+              Escaneando la composición cromática... Buscando alternativas en catálogos multimarca de Zalando y ASOS... Redactando veredicto de Slow Fashion...
             </p>
           </motion.div>
         ) : (
@@ -159,7 +181,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                   {/* Decorative gold background shine overlay */}
                   <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-laton/5 filter blur-xl pointer-events-none" />
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between relative z-10">
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-laton/20 text-laton text-[9px] font-bold uppercase tracking-widest border border-laton/30">
                       <Lightbulb size={10} className="text-laton" />
                       <span>PRÓXIMA ADQUISICIÓN CLAVE</span>
@@ -169,7 +191,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                     </span>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 relative z-10">
                     <span className="text-[9.5px] font-bold uppercase tracking-wider text-laton/80 block">
                       {result.proxima_compra_estrella.tipo}
                     </span>
@@ -178,16 +200,16 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                     </h4>
                   </div>
 
-                  <p className="text-xs text-tinta leading-relaxed">
+                  <p className="text-xs text-tinta leading-relaxed relative z-10">
                     {result.proxima_compra_estrella.descripcion_detallada}
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-laton/10 text-[11px]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-laton/10 text-[11px] relative z-10">
                     <div>
                       <span className="text-[8px] uppercase tracking-wider text-laton/80 block font-bold">Rango de Coste Sugerido</span>
                       <p className="text-white font-mono font-medium flex items-center mt-0.5 gap-0.5">
                         <DollarSign size={11} className="text-laton" />
-                        {result.proxima_compra_estrella.rango_price_estimado_en_euros || result.proxima_compra_estrella.rango_precio_estimado_en_euros}
+                        {result.proxima_compra_estrella.rango_precio_estimado_en_euros}
                       </p>
                     </div>
 
@@ -198,6 +220,64 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                       </p>
                     </div>
                   </div>
+
+                  {/* Multi-Brand Store Integration for Star Purchase */}
+                  {result.proxima_compra_estrella.propuestas_tiendas && result.proxima_compra_estrella.propuestas_tiendas.length > 0 && (
+                    <div className="pt-3 border-t border-laton/10 relative z-10">
+                      <span className="text-[8.5px] uppercase tracking-wider text-laton font-bold block mb-2">
+                        🛍️ Opciones disponibles en tiendas de marca:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {result.proxima_compra_estrella.propuestas_tiendas.map((prop, idx) => (
+                          <div key={idx} className="bg-black/40 border border-linea rounded p-2.5 flex flex-col justify-between space-y-2">
+                            <div>
+                              <div className="flex justify-between items-start gap-1">
+                                <span className="text-[9.5px] font-mono text-laton font-bold bg-[#1e1a13] px-1.5 py-0.5 rounded border border-laton/10">
+                                  {prop.marca}
+                                </span>
+                                <span className="text-[10px] font-mono text-white">{prop.precio_aproximado}</span>
+                              </div>
+                              <p className="text-[10.5px] text-white font-medium mt-1 line-clamp-1">{prop.modelo}</p>
+                            </div>
+                            
+                            <div className="flex gap-1 pt-1.5 border-t border-white/5">
+                              <a
+                                href={getZalandoSearchUrl(prop.termino_busqueda)}
+                                target="_blank"
+                                referrerPolicy="no-referrer"
+                                rel="noopener noreferrer"
+                                className="flex-1 py-1 px-1 bg-white hover:bg-[#FF6900]/10 hover:border-[#FF6900]/30 border border-transparent rounded text-[9px] text-fondo font-bold text-center flex items-center justify-center gap-0.5 hover:text-[#FF6900] transition-colors"
+                                title="Ver en Zalando"
+                              >
+                                <ShoppingCart size={8} />
+                                <span>Zalando</span>
+                              </a>
+                              <a
+                                href={getAsosSearchUrl(prop.termino_busqueda)}
+                                target="_blank"
+                                referrerPolicy="no-referrer"
+                                rel="noopener noreferrer"
+                                className="py-1 px-1.5 hover:bg-white hover:text-fondo rounded text-[9px] text-tinta-apagada font-bold text-center flex items-center justify-center gap-0.5 border border-linea/60 transition-colors"
+                                title="Ver en ASOS"
+                              >
+                                <span>ASOS</span>
+                              </a>
+                              <a
+                                href={getGoogleShoppingUrl(prop.termino_busqueda)}
+                                target="_blank"
+                                referrerPolicy="no-referrer"
+                                rel="noopener noreferrer"
+                                className="py-1 px-1.5 hover:bg-white hover:text-fondo rounded text-[9px] text-tinta-apagada font-bold text-center flex items-center justify-center gap-0.5 border border-linea/60 transition-colors"
+                                title="Google Shopping"
+                              >
+                                <Globe size={8} />
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -215,11 +295,11 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {result?.basicos_faltantes.map((missing, idx) => (
                     <div
                       key={idx}
-                      className="p-3.5 bg-fondo2/40 border border-linea/60 rounded space-y-2 relative"
+                      className="p-3.5 bg-fondo2/40 border border-linea/60 rounded space-y-3 relative"
                     >
                       <div className="flex items-start justify-between">
                         <h4 className="font-serif text-xs font-bold text-white leading-tight max-w-[180px]">
@@ -238,6 +318,55 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                         <span className="font-bold text-laton/80 uppercase">Paleta Recomendada:</span>
                         <span className="text-tinta font-medium">{missing.rango_color_sugerido}</span>
                       </div>
+
+                      {/* Multi-Brand Store Integration for Basics */}
+                      {missing.propuestas_tiendas && missing.propuestas_tiendas.length > 0 && (
+                        <div className="pt-2 border-t border-linea/20 space-y-2">
+                          <span className="text-[8px] uppercase tracking-wider text-laton/70 font-bold block">
+                            🛒 Comprar en Tiendas Asociadas:
+                          </span>
+                          <div className="space-y-1.5">
+                            {missing.propuestas_tiendas.map((prop, sIdx) => (
+                              <div key={sIdx} className="bg-black/20 hover:bg-black/40 border border-linea/40 hover:border-laton/30 p-2 rounded transition-all flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[8px] font-mono text-laton font-semibold uppercase">{prop.marca}</span>
+                                    <span className="text-[9px] text-white/40">•</span>
+                                    <span className="text-[9px] text-tinta-apagada font-mono font-bold">{prop.precio_aproximado}</span>
+                                  </div>
+                                  <p className="text-[9.5px] text-white truncate max-w-[170px]" title={prop.modelo}>
+                                    {prop.modelo}
+                                  </p>
+                                </div>
+                                
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <a
+                                    href={getZalandoSearchUrl(prop.termino_busqueda)}
+                                    target="_blank"
+                                    referrerPolicy="no-referrer"
+                                    rel="noopener noreferrer"
+                                    className="p-1 px-1.5 bg-white text-fondo hover:text-[#FF6900] hover:bg-[#FF6900]/10 border border-transparent hover:border-[#FF6900]/30 rounded text-[8px] font-bold flex items-center gap-0.5 transition-all"
+                                    title="Buscar en Zalando España"
+                                  >
+                                    <span>Zalando</span>
+                                    <ExternalLink size={7} />
+                                  </a>
+                                  <a
+                                    href={getAsosSearchUrl(prop.termino_busqueda)}
+                                    target="_blank"
+                                    referrerPolicy="no-referrer"
+                                    rel="noopener noreferrer"
+                                    className="p-1 hover:bg-white hover:text-fondo text-tinta-apagada border border-linea/60 rounded text-[8px] font-semibold transition-all"
+                                    title="Buscar en ASOS"
+                                  >
+                                    <span>ASOS</span>
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -261,3 +390,4 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
     </div>
   );
 }
+
