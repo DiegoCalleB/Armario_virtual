@@ -1,33 +1,4 @@
-import { initializeApp, getApp, getApps } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import firebaseConfig from "../../firebase-applet-config.json";
-
-// Reuse existing firebase app if already initialized
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-
-const provider = new GoogleAuthProvider();
-// Add the google photos scope
-provider.addScope("https://www.googleapis.com/auth/photoslibrary.readonly");
-
 let cachedToken: string | null = null;
-
-export const signInWithGooglePhotos = async (): Promise<string> => {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error("No se pudo obtener el token de acceso de Google.");
-    }
-    cachedToken = credential.accessToken;
-    // Also save in session storage so it survives page refresh during active session, but not permanently
-    sessionStorage.setItem("google_photos_token", cachedToken);
-    return cachedToken;
-  } catch (error) {
-    console.error("Error signing in with Google Photos:", error);
-    throw error;
-  }
-};
 
 export const getGooglePhotosToken = (): string | null => {
   if (!cachedToken) {

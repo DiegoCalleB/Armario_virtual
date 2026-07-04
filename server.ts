@@ -264,7 +264,34 @@ app.get("/auth/google-photos", (req, res) => {
         }
       } catch (err) {
         console.error("Auth error:", err);
-        errorText.innerText = "Error de conexión: " + (err.message || err.toString());
+        const errMsg = err.message || err.toString();
+        
+        if (errMsg.includes("auth/unauthorized-domain") || err.code === "auth/unauthorized-domain") {
+          const currentHost = window.location.hostname;
+          errorText.innerHTML = [
+            '<div style="text-align: left; background-color: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.3); padding: 16px; border-radius: 8px; margin-top: 15px;">',
+              '<p style="margin: 0 0 10px 0; font-weight: bold; color: #fca5a5; font-size: 14px;">⚠️ Dominio no autorizado en Firebase Auth</p>',
+              '<p style="margin: 0 0 12px 0; font-size: 12.5px; color: #d1d5db; line-height: 1.5;">',
+                'Para permitir el inicio de sesión desde este entorno, debes agregar el dominio de esta aplicación a la lista de dominios autorizados de tu proyecto Firebase.',
+              '</p>',
+              '<p style="margin: 0 0 8px 0; font-size: 12px; color: #9ca3af; font-family: monospace; background: #111827; padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); user-select: all;">',
+                currentHost,
+              '</p>',
+              '<p style="margin: 12px 0 0 0; font-size: 12.5px; color: #d1d5db; line-height: 1.5;">',
+                '<strong>Pasos para solucionarlo:</strong>',
+                '<ol style="margin: 6px 0 0 0; padding-left: 20px; font-size: 12px; color: #9ca3af; line-height: 1.5;">',
+                  '<li>Abre la consola de Firebase en: <a href="https://console.firebase.google.com/u/0/project/armariovirtual-500816/authentication/settings" target="_blank" style="color: #C9A35B; text-decoration: underline; font-weight: 600;">Consola de Firebase (Auth Settings)</a></li>',
+                  '<li>Ve a la pestaña <strong>Dominios autorizados</strong> (Authorized domains).</li>',
+                  '<li>Haz clic en <strong>Agregar dominio</strong> e ingresa el dominio copiado arriba (sin http ni subpáginas).</li>',
+                  '<li>Una vez agregado, haz clic en el botón de abajo para reintentar.</li>',
+                '</ol>',
+              '</p>',
+            '</div>'
+          ].join("");
+        } else {
+          errorText.innerText = "Error de conexión: " + errMsg;
+        }
+        
         statusText.innerText = "Se requiere acción manual para continuar.";
         authBtn.style.display = "inline-block";
       }
