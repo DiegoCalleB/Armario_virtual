@@ -25,12 +25,11 @@ const GoogleLogomark = () => (
 );
 
 const CATEGORY_PRESETS = [
-  { id: "YO_PRENDAS", label: "👕 Yo con Prendas (Outfits)", categories: ["PORTRAITS", "SELFIES", "FASHION"] },
-  { id: "PEOPLE_SELFIES", label: "👤 Yo (Retratos / Selfies)", categories: ["PORTRAITS", "SELFIES", "PEOPLE"] },
-  { id: "FASHION", label: "👔 Moda y Ropa", categories: ["FASHION"] },
-  { id: "ALL", label: "🖼️ Todas las fotos", categories: [] },
-  { id: "TRAVEL", label: "✈️ Viajes", categories: ["TRAVEL"] },
-  { id: "WEDDINGS", label: "✨ Eventos y Fiestas", categories: ["WEDDINGS", "BIRTHDAYS"] }
+  { id: "PEOPLE_SELFIES", label: "Yo (Retratos / Selfies)", categories: ["PORTRAITS", "SELFIES", "PEOPLE"] },
+  { id: "FASHION", label: "Moda y Ropa", categories: ["FASHION"] },
+  { id: "ALL", label: "Todas las fotos", categories: [] },
+  { id: "TRAVEL", label: "Viajes y Paisajes", categories: ["TRAVEL", "LANDSCAPES"] },
+  { id: "WEDDINGS", label: "Eventos y Fiestas", categories: ["WEDDINGS", "BIRTHDAYS"] }
 ];
 
 const getActiveCategoriesForPreset = (presetId: string): string[] => {
@@ -54,7 +53,7 @@ export default function GooglePhotosPicker({
   const [prevPageTokens, setPrevPageTokens] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedCategoryPreset, setSelectedCategoryPreset] = useState<string>("YO_PRENDAS");
+  const [selectedCategoryPreset, setSelectedCategoryPreset] = useState<string>("PEOPLE_SELFIES");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -151,31 +150,11 @@ export default function GooglePhotosPicker({
         return;
       }
       const interval = setInterval(() => {
-        try {
-          const syncToken = localStorage.getItem("google_photos_token_sync") || sessionStorage.getItem("google_photos_token_sync");
-          if (syncToken) {
-            sessionStorage.setItem("google_photos_token", syncToken);
-            localStorage.removeItem("google_photos_token_sync");
-            sessionStorage.removeItem("google_photos_token_sync");
-            setIsConnected(true);
-            const activeCats = getActiveCategoriesForPreset(selectedCategoryPreset);
-            loadPhotos(undefined, true, activeCats);
-            clearInterval(interval);
-            try {
-              popup.close();
-            } catch (e) {}
-            setLoading(false);
-            return;
-          }
-        } catch (storageErr) {
-          console.warn("Error checking storage sync:", storageErr);
-        }
-
         if (popup.closed) {
           clearInterval(interval);
           setLoading(false);
         }
-      }, 500);
+      }, 1000);
     } catch (err: any) {
       console.error(err);
       setError("No se pudo iniciar sesión con Google o autorizar el acceso a Google Fotos.");

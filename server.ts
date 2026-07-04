@@ -254,22 +254,14 @@ app.get("/auth/google-photos", (req, res) => {
         }
         
         statusText.innerText = "¡Conectado con éxito! Transfiriendo credenciales...";
-        
-        // Write the token to local and session storage for robust polling-based fallback sync
-        try {
-          localStorage.setItem("google_photos_token_sync", credential.accessToken);
-          sessionStorage.setItem("google_photos_token_sync", credential.accessToken);
-        } catch (e) {
-          console.warn("Storage sync failed:", e);
-        }
-
         if (window.opener) {
           window.opener.postMessage({ type: "GOOGLE_PHOTOS_TOKEN", token: credential.accessToken }, "*");
+          setTimeout(() => {
+            window.close();
+          }, 1200);
+        } else {
+          statusText.innerText = "Autenticado con éxito. Puedes cerrar esta ventana.";
         }
-        
-        setTimeout(() => {
-          window.close();
-        }, 1200);
       } catch (err) {
         console.error("Auth error:", err);
         errorText.innerText = "Error de conexión: " + (err.message || err.toString());

@@ -1,9 +1,10 @@
 {
-  "projectId": "project-07368933-6d33-47ad-a5a",
-  "appId": "1:750437913096:web:14a7404a25cef7c4d3b7bd",
-  "apiKey": "AIzaSyDwSpngGby57wBFsLfVwM1pVR59vRGNJAI",
-  "authDomain": "project-07368933-6d33-47ad-a5a.firebaseapp.com",
-  "storageBucket": "project-07368933-6d33-47ad-a5a.firebasestorage.app",
-  "messagingSenderId": "750437913096",
+  "projectId": "armariovirtual-500816",
+  "appId": "1:22999845032:web:f1d02b38a3a5395aa51a9d",
+  "apiKey": "AIzaSyAGPYYiEFn9048ZFJ3pzms1uBSK8vZmpBQ",
+  "authDomain": "armariovirtual-500816.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-espejo-eb88693f-5cba-47ee-b8f6-cd1007f139da",
+  "storageBucket": "armariovirtual-500816.firebasestorage.app",
+  "messagingSenderId": "22999845032",
   "measurementId": ""
 }
