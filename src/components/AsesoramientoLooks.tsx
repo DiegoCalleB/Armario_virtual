@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Prenda, Rostro, Look, EventoConfig, HistorialLook, PerfilEstilo } from "../types";
-import { Sparkles, Compass, Thermometer, ChevronRight, CheckCircle2, RotateCcw, HelpCircle, Eye, AlertCircle, Camera } from "lucide-react";
+import { Sparkles, Compass, Thermometer, ChevronRight, CheckCircle2, RotateCcw, HelpCircle, Eye, AlertCircle, Camera, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { fileToBase64, resizeImage } from "../utils";
 
@@ -506,6 +506,31 @@ export default function AsesoramientoLooks({
 
   const handlePointerUp = () => {
     setDraggedGarmentId(null);
+  };
+
+  const handleSwapGarment = (oldId: string, newId: string) => {
+    setLooks(prev => {
+      const updated = [...prev];
+      const currentLook = { ...updated[activeLookIndex] };
+      if (currentLook && currentLook.id_prendas) {
+        currentLook.id_prendas = currentLook.id_prendas.map(id => String(id) === String(oldId) ? newId : id);
+        updated[activeLookIndex] = currentLook;
+      }
+      return updated;
+    });
+
+    if (garmentPositions[oldId]) {
+      setGarmentPositions(prev => {
+        const copy = { ...prev };
+        copy[newId] = {
+          ...copy[oldId],
+          id: newId
+        };
+        delete copy[oldId];
+        return copy;
+      });
+    }
+    setSelectedGarmentId(newId);
   };
 
   const matchingGarments = selectedLook ? getResilientMatchingGarments(selectedLook.id_prendas, armario) : [];
@@ -1349,6 +1374,43 @@ export default function AsesoramientoLooks({
                                           </button>
                                         </div>
                                       </div>
+
+                                      {/* REPLACEMENT SELECTOR */}
+                                      {(() => {
+                                        const currentGarment = armario.find(p => p.id === selectedGarmentId);
+                                        if (!currentGarment) return null;
+                                        const alternatives = armario.filter(p => p.categoria === currentGarment.categoria && p.id !== currentGarment.id);
+                                        if (alternatives.length === 0) return null;
+                                        return (
+                                          <div className="w-full bg-fondo/60 border border-linea/50 rounded-lg p-2.5 space-y-2 mt-1">
+                                            <div className="flex items-center gap-1.5 text-[10px] text-[#C9A35B] font-bold uppercase tracking-wider">
+                                              <RefreshCw size={11} className="text-laton animate-spin-slow" />
+                                              <span>Sustituir prenda ({currentGarment.categoria})</span>
+                                            </div>
+                                            <p className="text-[8.5px] text-tinta-apagada">
+                                              Sustituye esta prenda por otra de la misma categoría en tu armario. Se heredarán las posiciones para un encaje inmediato.
+                                            </p>
+                                            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
+                                              {alternatives.map(alt => (
+                                                <button
+                                                  key={alt.id}
+                                                  type="button"
+                                                  onClick={() => handleSwapGarment(selectedGarmentId, alt.id)}
+                                                  className="flex items-center gap-2 px-2.5 py-1.5 bg-tarjeta/80 border border-linea hover:border-laton rounded-md text-left shrink-0 transition"
+                                                >
+                                                  <div className="w-6 h-6 rounded overflow-hidden bg-black/20 shrink-0 border border-linea/60">
+                                                    <img src={alt.imageSrc} alt="" className="w-full h-full object-cover" />
+                                                  </div>
+                                                  <div className="min-w-0">
+                                                    <p className="text-[9.5px] text-white font-medium truncate max-w-[120px]">{alt.nombre}</p>
+                                                    <span className="text-[7px] text-tinta-apagada uppercase tracking-wide block leading-none font-mono">{alt.tejido || "Textil"} · {alt.color}</span>
+                                                  </div>
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
 
                                       {/* Blend & Transparancy options (Remover Fondos) */}
                                       <div className="space-y-1.5">

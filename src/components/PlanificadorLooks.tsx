@@ -28,6 +28,43 @@ const CLIMAS_INFO = {
   frio: { icon: Thermometer, color: "text-teal-300", bg: "bg-teal-500/10", label: "Frío Extremo", desc: "Temperaturas bajo mínimos. Prioriza lana merina, abrigos estructurados gruesos y bufandas." }
 };
 
+export const getClimaDia = (ciudad: string, index: number) => {
+  const baseCity = CIUDADES_PRESETS.find(c => c.nombre === ciudad) || CIUDADES_PRESETS[0];
+  const tempOffsets = [0, 2, -1, -3, 1, 3, 2];
+  const conds: ("soleado" | "nublado" | "lluvioso" | "tormenta" | "frio")[] = 
+    ["soleado", "soleado", "nublado", "lluvioso", "soleado", "soleado", "nublado"];
+
+  let finalTemp = baseCity.baseTemp + tempOffsets[index % 7];
+  let finalCond = conds[index % 7];
+
+  if (ciudad === "Barcelona") {
+    const offsets = [0, 1, -2, -1, 2, 1, 0];
+    const c: typeof finalCond[] = ["nublado", "soleado", "soleado", "lluvioso", "nublado", "soleado", "soleado"];
+    finalTemp = baseCity.baseTemp + offsets[index % 7];
+    finalCond = c[index % 7];
+  } else if (ciudad === "Londres") {
+    const offsets = [0, -2, -1, -3, 1, 0, -2];
+    const c: typeof finalCond[] = ["lluvioso", "nublado", "lluvioso", "tormenta", "nublado", "lluvioso", "frio"];
+    finalTemp = baseCity.baseTemp + offsets[index % 7];
+    finalCond = c[index % 7];
+  } else if (ciudad === "París") {
+    const offsets = [0, 1, -2, -3, 0, 2, -1];
+    const c: typeof finalCond[] = ["nublado", "lluvioso", "nublado", "soleado", "soleado", "nublado", "frio"];
+    finalTemp = baseCity.baseTemp + offsets[index % 7];
+    finalCond = c[index % 7];
+  } else if (ciudad === "Buenos Aires") {
+    const offsets = [0, 3, 1, -2, 4, 2, -1];
+    const c: typeof finalCond[] = ["soleado", "soleado", "tormenta", "nublado", "soleado", "soleado", "nublado"];
+    finalTemp = baseCity.baseTemp + offsets[index % 7];
+    finalCond = c[index % 7];
+  }
+
+  return {
+    temp: finalTemp,
+    condicion: finalCond
+  };
+};
+
 export default function PlanificadorLooks({
   armario,
   historial,
@@ -52,7 +89,6 @@ export default function PlanificadorLooks({
   const getDaysOfWeek = () => {
     const days = [];
     const today = new Date();
-    // Get starting Monday of current week
     const currentDay = today.getDay();
     const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
     const monday = new Date(today);
@@ -79,16 +115,14 @@ export default function PlanificadorLooks({
 
   const diasSemana = getDaysOfWeek();
 
-  const handleOpenAddModal = (fecha: string) => {
+  const handleOpenAddModal = (fecha: string, temp: number, clima: "soleado" | "nublado" | "lluvioso" | "tormenta" | "frio") => {
     setModalDate(fecha);
     setModalTitle("");
     setSelectedPrendasIds([]);
     
-    // Auto-detect preset city weather
-    const cityPreset = CIUDADES_PRESETS.find(c => c.nombre === selectedCity) || CIUDADES_PRESETS[0];
-    setModalCiudad(cityPreset.nombre);
-    setModalClima(cityPreset.clima as any);
-    setModalTemp(cityPreset.baseTemp + Math.floor(Math.random() * 5) - 2);
+    setModalCiudad(selectedCity);
+    setModalClima(clima);
+    setModalTemp(temp);
     
     setShowModal(true);
   };
@@ -255,9 +289,11 @@ export default function PlanificadorLooks({
 
       {/* THE WEEK VIEW GRID */}
       <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-        {diasSemana.map((dia) => {
+        {diasSemana.map((dia, index) => {
           const planesDia = planificaciones.filter(p => p.fecha === dia.fechaStr);
           const isToday = new Date().toISOString().split("T")[0] === dia.fechaStr;
+          const climaDia = getClimaDia(selectedCity, index);
+          const ClimaIcon = CLIMAS_INFO[climaDia.condicion]?.icon || Sun;
 
           return (
             <div
@@ -285,17 +321,10 @@ export default function PlanificadorLooks({
 
                   {/* Weather badge simulated */}
                   <div className="text-right">
-                    {(() => {
-                      const cityPreset = CIUDADES_PRESETS.find(c => c.nombre === selectedCity) || CIUDADES_PRESETS[0];
-                      const weatherKey = cityPreset.clima as keyof typeof CLIMAS_INFO;
-                      const ClimaIcon = CLIMAS_INFO[weatherKey]?.icon || Sun;
-                      return (
-                        <div className={`p-1 rounded ${CLIMAS_INFO[weatherKey]?.bg || "bg-white/5"}`} title={CLIMAS_INFO[weatherKey]?.label}>
-                          <ClimaIcon size={12} className={CLIMAS_INFO[weatherKey]?.color} />
-                          <span className="text-[8.5px] font-mono text-white block mt-0.5">{cityPreset.baseTemp}°C</span>
-                        </div>
-                      );
-                    })()}
+                    <div className={`p-1 rounded ${CLIMAS_INFO[climaDia.condicion]?.bg || "bg-white/5"}`} title={CLIMAS_INFO[climaDia.condicion]?.label}>
+                      <ClimaIcon size={12} className={CLIMAS_INFO[climaDia.condicion]?.color} />
+                      <span className="text-[8.5px] font-mono text-white block mt-0.5">{climaDia.temp}°C</span>
+                    </div>
                   </div>
                 </div>
 
@@ -303,7 +332,7 @@ export default function PlanificadorLooks({
                 <div className="mt-3.5 space-y-2">
                   {planesDia.length === 0 ? (
                     <button
-                      onClick={() => handleOpenAddModal(dia.fechaStr)}
+                      onClick={() => handleOpenAddModal(dia.fechaStr, climaDia.temp, climaDia.condicion)}
                       className="w-full py-2 border border-dashed border-linea/80 hover:border-laton/50 rounded flex flex-col items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-tinta-apagada hover:text-white transition duration-150"
                     >
                       <Plus size={10} className="text-laton" />
