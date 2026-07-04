@@ -420,14 +420,15 @@ app.post("/api/analizar-prenda", async (req, res) => {
     // We distinguish between single garment and multi-garment analysis
     const promptText = isMultiModeEnabled
       ? `Analiza detalladamente esta imagen de armario masculino o prenda de vestir. 
-Identifica CADA una de las prendas, calzado o accesorios de hombre visibles de forma independiente.
+Identifica CADA una de las prendas de vestir o calzado de hombre visibles de forma independiente.
 
-- DETECCIÓN INDEPENDIENTE OBLIGATORIA: Si la imagen muestra a una persona vestida, un maniquí o un grupo de prendas juntas (ej: armario o ropa colgada), DEBES desglosar e identificar CADA una de las prendas por separado (ej: la chaqueta por un lado como 'top', la camisa por otro como 'top', los pantalones o vaqueros por otro como 'pantalon', los zapatos por otro como 'calzado', y el reloj, cinturón o gafas como 'accesorio'). Es de suma importancia que NO los agrupes en una sola prenda de armario.
-- Si la imagen contiene un único artículo de vestir aislado, lístalo como un único elemento en el array.
+- DETECCIÓN INDEPENDIENTE OBLIGATORIA: Si la imagen muestra a una persona vestida, un maniquí o un grupo de prendas juntas (ej: armario o ropa colgada), DEBES desglosar e identificar CADA una de las prendas por separado (ej: la chaqueta por un lado como 'top', la camisa por otro como 'top', los pantalones o vaqueros por otro como 'pantalon', los zapatos por otro como 'calzado'). Es de suma importancia que NO los agrupes en una sola prenda de armario.
+- REGLA CRÍTICA EXCLUSIÓN DE ACCESORIOS: Queda estrictamente PROHIBIDO detectar o extraer cualquier tipo de accesorio (tales como relojes, pulseras, joyas, gafas de sol o de vista, gorras, sombreros, cinturones, bolsos, mochilas, corbatas, bufandas, o pañuelos). No los incluyas bajo ningún concepto. Los accesorios se deben registrar de forma independiente por el usuario.
+- Si la imagen contiene un único artículo de vestir o calzado aislado, lístalo como un único elemento en el array.
 
-Para cada prenda identificada de forma independiente, determina:
+Para cada prenda de ropa o calzado identificada de forma independiente, determina:
 1. Nombre de lujo sastrero y refinado en español (ej: "Americana estructurada marrón chocolate", "Pantalón chino beige de corte recto", "Zapatos Loafer de piel marrón oscura").
-2. Categoría: "top" (camisas, camisetas, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas), "calzado" (zapatos, zapatillas, botas) o "accesorio" (relojes, gafas, cinturones, bufandas).
+2. Categoría: ÚNICAMENTE uno de estos tres valores: "top" (camisas, camisetas, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas) o "calzado" (zapatos, zapatillas, botas). ¡NO USAR la categoría 'accesorio' bajo ninguna circunstancia!
 3. Color predominante en hexadecimal (ej: "#2C3E50").
 4. Formalidad del 1 al 5 (1: muy casual/deportivo, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
 5. Temporada: "verano", "invierno" o "todo".
@@ -456,7 +457,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
           properties: {
             prendas: {
               type: Type.ARRAY,
-              description: "Lista de prendas de armario identificadas. Si la imagen contiene un outfit completo o varias prendas, desglósalo en múltiples elementos individuales. Si solo contiene una única prenda, devuelve un único elemento en este array.",
+              description: "Lista de prendas de armario identificadas. Si la imagen contiene un outfit completo o varias prendas, desglósalo en múltiples elementos individuales. Excluye cualquier accesorio.",
               items: {
                 type: Type.OBJECT,
                 properties: {
@@ -466,7 +467,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
                   },
                   categoria: {
                     type: Type.STRING,
-                    description: "Debe ser estrictamente uno de estos valores: top, pantalon, calzado, accesorio.",
+                    description: "Debe ser estrictamente uno de estos tres valores para prendas/calzado: top, pantalon, calzado. NUNCA utilices 'accesorio'.",
                   },
                   color: {
                     type: Type.STRING,
@@ -579,6 +580,36 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
     }
 
     const parsedResponse = JSON.parse(cleanText);
+    
+    // Server-side fail-safe filter to guarantee NO accessories are included in multiprendas mode
+    if (isMultiModeEnabled && parsedResponse && Array.isArray(parsedResponse.prendas)) {
+      parsedResponse.prendas = parsedResponse.prendas.filter((item: any) => {
+        if (!item) return false;
+        
+        // Ensure category is not "accesorio"
+        const cat = String(item.categoria || "").toLowerCase().trim();
+        if (cat === "accesorio") {
+          console.log(`[MULTIPRENDAS] Filtrando accesorio detectado en modo lote: ${item.nombre}`);
+          return false;
+        }
+
+        // Filter out item if name contains known accessory words (reloj, pulsera, gafas, etc.)
+        const name = String(item.nombre || "").toLowerCase();
+        const accessoryKeywords = [
+          "reloj", "watch", "pulsera", "bracelet", "gafas", "lentes", "glasses", "sunglasses", 
+          "gorra", "cap", "sombrero", "hat", "gorro", "cinturón", "belt", "anillo", "ring",
+          "collar", "necklace", "bufanda", "scarf", "bolso", "bag", "mochila", "backpack",
+          "corbata", "tie", "pajarita", "bowtie", "gemelos", "cufflinks", "pañuelo de bolsillo", "pocket square"
+        ];
+        if (accessoryKeywords.some(keyword => name.includes(keyword))) {
+          console.log(`[MULTIPRENDAS] Filtrando prenda por palabra clave de accesorio en modo lote: ${item.nombre}`);
+          return false;
+        }
+        
+        return true;
+      });
+    }
+
     res.json(parsedResponse);
   } catch (error: any) {
     console.error("Error en analizar-prenda, aplicando fallback de atelier:", error);
@@ -829,23 +860,23 @@ app.post("/api/generar-imagen", async (req, res) => {
     if (fullBody) {
       aspectRatio = "3:4";
       if (isUsingCustomBody) {
-        promptText = `CRITICAL INSTRUCTION: You must completely change the clothes of the person in the provided input full-body photograph. 
+        promptText = `CRITICAL INSTRUCTION: You must completely change the clothes of the person in the first input full-body photograph. 
 Do NOT keep, render or output their original shirt, suit, top, trousers, jeans, or shoes.
 Fully replace their entire outfit with the specified new ensemble.
-You MUST be extremely faithful to the exact colors (Hex codes), fabric textures, and style of the actual real-world garments specified below:
+You MUST be extremely faithful to the exact visual look, patterns, prints, colors (Hex codes), fabric textures, and style of the actual real-world garments whose photographs are provided as the subsequent input images.
 
-Real Wardrobe Garments to wear:
+Real Wardrobe Garments to wear (photos of these exact items are provided as subsequent inputs):
 ${descripcionPrendasDetallada}
 
-Fit and drape these exact new tailoring items (tops, pants, shoes) beautifully onto their body proportions, ensuring the colors and fabrics match the description perfectly. Keep their exact face, gaze, hair color, physique, stance, hands, and the general pose from the original picture. Preserve the high-fashion background scene nicely. Extremely photorealistic, high-fashion catalog magazine page quality.`;
+Drape these exact garments (shown in the subsequent input images) beautifully onto their body proportions, preserving the exact face, hair, gaze, hands, physique, and posture from the original picture. Copy their designs, patterns, textures, colors, and cuts directly from the garment images. Do NOT invent new clothing designs. Preserve the high-fashion background scene. Extremely photorealistic, high-fashion catalog magazine page quality.`;
       } else {
-        promptText = `Generate a photorealistic, full-body high-fashion editorial sartorial photograph of the same man shown in the portrait face photo.
+        promptText = `Generate a photorealistic, full-body high-fashion editorial sartorial photograph of the same man shown in the first portrait face photo.
 His facial identity, eyes, lips, ethnicity, beard, hair style, age, and skeletal structure must be matched perfectly with the provided visage photograph.
 He must be standing elegantly in a stylish, full-body menswear posture, looking directly at the camera. He must be shown from head to toe.
-He is wearing this complete tailored outfit combination:
+He is wearing this complete tailored outfit combination, whose exact photographs are provided as the subsequent input images:
 ${descripcionPrendasDetallada}
 
-The generated outfit must match the specified hexadecimal colors, fabric textures, and garment styles with absolute precision. The background is a tasteful, luxurious modern gentlemen's barber and sartorial atelier interior, with brass accents, warm wood paneling, and dramatic premium studio lighting. Focus on high-quality fabrics, professional tailoring drape, extremely sharp garment textures, and flawless visual style. High-fashion magazine editorial.`;
+The generated outfit must match the specified garment photos with absolute precision, copying their exact patterns, prints, fabrics, colors, and styling cuts. Dress the person in the exact clothes shown in the subsequent images, rather than inventing generic clothes. The background is a tasteful, luxurious modern gentlemen's barber and sartorial atelier interior, with brass accents, warm wood paneling, and dramatic premium studio lighting. Focus on high-quality fabrics, professional tailoring drape, extremely sharp garment textures, and flawless visual style. High-fashion magazine editorial.`;
       }
     } else {
       promptText = `Generate a photorealistic, professional, high-fashion editorial portrait of this same man. Use the original photograph provided as the base.
@@ -856,24 +887,45 @@ Modify only his hair and beard to match these styling guides perfectly:
 Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and facial likeness from the original image. He should look neatly groomed, handsome, stylish, in a warm, dark, premium luxury barber shop interior backdrop with subtle brass and mahogany warm wood lighting. Output should be high quality, sharp, balanced contrast, as a clean editorial magazine portrait picture.`;
     }
 
+    const parts: any[] = [
+      {
+        inlineData: {
+          mimeType,
+          data,
+        },
+      },
+    ];
+
+    if (fullBody && Array.isArray(prendasDetalle)) {
+      for (const p of prendasDetalle) {
+        if (p && p.imageSrc) {
+          try {
+            const parsedG = parseDataUri(p.imageSrc);
+            parts.push({
+              inlineData: {
+                mimeType: parsedG.mimeType,
+                data: parsedG.data,
+              },
+            });
+          } catch (e) {
+            console.warn("Error parsing garment image dataUri inside /api/generar-imagen:", e);
+          }
+        }
+      }
+    }
+
+    parts.push({
+      text: promptText,
+    });
+
     let response;
     try {
-      console.log("Intentando generación de imagen en Espejo IA con gemini-2.5-flash-image...");
+      console.log(`Intentando generación de imagen en Espejo IA con gemini-2.5-flash-image utilizando ${parts.length - 1} imagen/imágenes...`);
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
           model: "gemini-2.5-flash-image",
           contents: {
-            parts: [
-              {
-                inlineData: {
-                  mimeType,
-                  data,
-                },
-              },
-              {
-                text: promptText,
-              },
-            ],
+            parts: parts,
           },
           config: {
             imageConfig: {
@@ -885,12 +937,12 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
     } catch (imageErr: any) {
       const errStrLower = String(imageErr?.message || imageErr || "").toLowerCase();
       const isPermanentQuota = 
-        errStrLower.includes("limit: 0") || 
-        errStrLower.includes("plan and billing") || 
-        errStrLower.includes("check your plan") ||
-        errStrLower.includes("exceeded your current quota") ||
-        errStrLower.includes("free_tier_requests") ||
-        imageErr?.status === 429;
+         errStrLower.includes("limit: 0") || 
+         errStrLower.includes("plan and billing") || 
+         errStrLower.includes("check your plan") ||
+         errStrLower.includes("exceeded your current quota") ||
+         errStrLower.includes("free_tier_requests") ||
+         imageErr?.status === 429;
 
       if (isPermanentQuota) {
         console.warn("Fallo inmediato de cuota excedida detectado (plan/billing/limit 0). Saltando directo al fallback elegante.");
@@ -902,17 +954,7 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
         ai.models.generateContent({
           model: "gemini-3.1-flash-image",
           contents: {
-            parts: [
-              {
-                inlineData: {
-                  mimeType,
-                  data,
-                },
-              },
-              {
-                text: promptText,
-              },
-            ],
+            parts: parts,
           },
           config: {
             imageConfig: {

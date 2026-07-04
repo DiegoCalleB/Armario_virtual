@@ -1004,7 +1004,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                         ¿Foto grupal de prendas?
                       </span>
                       <span className="text-[9.5px] text-tinta-apagada block font-sans font-light leading-relaxed">
-                        Actívalo si en la misma fotografía aparecen varias prendas juntas (ej. 6 camisetas juntas). ESPEJO desglosará cada una con IA en fichas independientes automáticamente.
+                        Actívalo si en la misma fotografía aparecen varias prendas juntas (ej. 6 camisetas juntas). ESPEJO desglosará cada una con IA en fichas independientes automáticamente. (Solo se añaden prendas de vestir y calzado; los accesorios deben agregarse individualmente).
                       </span>
                     </div>
                     <button
@@ -1022,9 +1022,14 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     </button>
                   </div>
                   {isMultiMode && (
-                    <div className="flex items-center gap-1.5 text-[8.5px] bg-fondo p-1.5 px-2.5 rounded border border-laton/20 text-laton font-medium mt-2.5 font-sans justify-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-laton animate-ping" />
-                      Modo Desglose Express activo. Se extraerán múltiples fichas.
+                    <div className="flex flex-col gap-1 items-center bg-fondo p-2 rounded border border-laton/20 text-laton text-[8.5px] mt-2.5 font-sans">
+                      <div className="flex items-center gap-1.5 font-medium justify-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-laton animate-ping" />
+                        Modo Desglose Express activo. Se extraerán múltiples fichas.
+                      </div>
+                      <div className="text-[8px] text-tinta-apagada font-light text-center">
+                        ⚠️ Solo se extraerán prendas de vestir y calzado. Los accesorios se deben registrar por separado.
+                      </div>
                     </div>
                   )}
                 </div>
