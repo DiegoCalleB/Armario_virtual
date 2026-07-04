@@ -1,7 +1,8 @@
 import React, { useState, useRef } from "react";
 import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
 import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
-import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image } from "lucide-react";
+import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
+import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface TuArmarioProps {
@@ -193,21 +194,6 @@ const generateGarmentSVG = (categoria: CategoriaPrenda, color: string): string =
   return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
 };
 
-const getShareCodeFromEmail = (email?: string): string => {
-  if (!email) return "INVITADO-1001";
-  if (email.toLowerCase() === "diego.delacalleb@gmail.com") return "DIEGO-4739";
-  
-  const cleanEmail = email.toLowerCase().trim();
-  const namePart = cleanEmail.split("@")[0].toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6) || "USER";
-  
-  let hash = 0;
-  for (let i = 0; i < cleanEmail.length; i++) {
-    hash = cleanEmail.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const numericPart = Math.abs(hash % 9000) + 1000;
-  return `${namePart}-${numericPart}`;
-};
-
 export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada, onPrendaActualizada, userEmail }: TuArmarioProps) {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -221,6 +207,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [friendCode, setFriendCode] = useState("");
   const [friendConnected, setFriendConnected] = useState(false);
   const [friendName, setFriendName] = useState("");
+  const [friendPrendas, setFriendPrendas] = useState<Prenda[]>([]);
   const [borrowedIds, setBorrowedIds] = useState<string[]>([]);
   const [copiedOwnCode, setCopiedOwnCode] = useState(false);
 
@@ -250,6 +237,12 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [selectedPrenda, setSelectedPrenda] = useState<Prenda | null>(null);
+
+  React.useEffect(() => {
+    if (friendConnected && friendName.includes("(Tú)")) {
+      setFriendPrendas(prendas);
+    }
+  }, [prendas, friendConnected, friendName]);
   const [customDescripcion, setCustomDescripcion] = useState("");
   const [showVintedSync, setShowVintedSync] = useState(false);
   const [vintedDraft, setVintedDraft] = useState<{
@@ -1413,22 +1406,96 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                             const code = friendCode.trim().toUpperCase();
                             const ownCode = getShareCodeFromEmail(userEmail);
                             const ownParts = ownCode.split("-");
+                            
                             if (code.includes("MARIA") || code.includes("7892")) {
                               setFriendConnected(true);
                               setFriendName("María");
+                              setFriendPrendas([
+                                {
+                                  id: "friend_m1",
+                                  nombre: "Bolso de hombro de cuero vintage Sèzane",
+                                  categoria: "accesorio" as CategoriaPrenda,
+                                  color: "#5A1827",
+                                  formalidad: 4,
+                                  temporada: "todo" as TemporadaPrenda,
+                                  tejido: "Cuero italiano de becerro",
+                                  tags: ["Sèzane", "Eventos"]
+                                },
+                                {
+                                  id: "friend_m2",
+                                  nombre: "Vestido de satén drapeado de seda",
+                                  categoria: "top" as CategoriaPrenda,
+                                  color: "#E6D7C3",
+                                  formalidad: 5,
+                                  temporada: "todo" as TemporadaPrenda,
+                                  tejido: "Seda natural de morera",
+                                  tags: ["Boda", "Chic"]
+                                },
+                                {
+                                  id: "friend_m3",
+                                  nombre: "Chaqueta Tweed Bouclé clásica estilo Chanel",
+                                  categoria: "top" as CategoriaPrenda,
+                                  color: "#F5F2EB",
+                                  formalidad: 4,
+                                  temporada: "todo" as TemporadaPrenda,
+                                  tejido: "Lana Bouclé con hilos dorados",
+                                  tags: ["Clásico", "Atelier"]
+                                }
+                              ]);
                               setError(null);
                             } else if (code.includes("SOFIA") || code.includes("1102")) {
                               setFriendConnected(true);
                               setFriendName("Sofía");
+                              setFriendPrendas([
+                                {
+                                  id: "friend_s1",
+                                  nombre: "Chaqueta blazer de satén verde esmeralda",
+                                  categoria: "top" as CategoriaPrenda,
+                                  color: "#0F4C3A",
+                                  formalidad: 4,
+                                  temporada: "todo" as TemporadaPrenda,
+                                  tejido: "Satén brillante de seda",
+                                  tags: ["Fiesta", "Blazer"]
+                                },
+                                {
+                                  id: "friend_s2",
+                                  nombre: "Zapatos slingback de tacón de aguja Dior",
+                                  categoria: "calzado" as CategoriaPrenda,
+                                  color: "#0F0F10",
+                                  formalidad: 5,
+                                  temporada: "todo" as TemporadaPrenda,
+                                  tejido: "Charol fino italiano",
+                                  tags: ["Gala", "Dior"]
+                                },
+                                {
+                                  id: "friend_s3",
+                                  nombre: "Clutch de terciopelo con cadena de oro Yves Saint Laurent",
+                                  categoria: "accesorio" as CategoriaPrenda,
+                                  color: "#121A30",
+                                  formalidad: 5,
+                                  temporada: "todo" as TemporadaPrenda,
+                                  tejido: "Terciopelo de algodón",
+                                  tags: ["YSL", "Nocturno"]
+                                }
+                              ]);
                               setError(null);
                             } else if (code.includes(ownParts[0]) || (ownParts[1] && code.includes(ownParts[1]))) {
                               setFriendConnected(true);
                               const namePrefix = userEmail ? userEmail.split("@")[0] : "Tú";
                               const dispName = namePrefix.charAt(0).toUpperCase() + namePrefix.slice(1).split(".")[0];
                               setFriendName(`${dispName} (Tú)`);
+                              setFriendPrendas(prendas);
                               setError(null);
                             } else {
-                              setError(`Código de armario no encontrado. Prueba con 'MARIA-7892', 'SOFIA-1102' o tu propio código '${ownCode}'.`);
+                              const sharedWardrobe = getWardrobeFromRegistry(code);
+                              if (sharedWardrobe) {
+                                setFriendConnected(true);
+                                setFriendName(sharedWardrobe.userName);
+                                setFriendPrendas(sharedWardrobe.prendas || []);
+                                setError(null);
+                              } else {
+                                setError(`Código de armario no encontrado. Prueba con 'MARIA-7892', 'SOFIA-1102' o tu propio código '${ownCode}'.`);
+                              }
                             }
                           }}
                           className="px-4 bg-laton hover:bg-white text-fondo font-bold text-xs uppercase tracking-widest rounded transition duration-150"
@@ -1481,17 +1548,36 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           Conectado al armario de <strong className="text-laton">{friendName}</strong>
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFriendConnected(false);
-                          setFriendCode("");
-                          setFriendName("");
-                        }}
-                        className="text-[10px] text-red-400 hover:text-red-300 uppercase font-bold tracking-wider"
-                      >
-                        Desconectar
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (friendName.includes("(Tú)")) {
+                              setFriendPrendas(prendas);
+                            } else {
+                              const sharedWardrobe = getWardrobeFromRegistry(friendCode);
+                              if (sharedWardrobe) {
+                                setFriendPrendas(sharedWardrobe.prendas || []);
+                              }
+                            }
+                          }}
+                          className="text-[10px] text-laton hover:text-white uppercase font-bold tracking-wider flex items-center gap-1"
+                        >
+                          <RefreshCw size={10} /> Sincronizar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFriendConnected(false);
+                            setFriendCode("");
+                            setFriendName("");
+                            setFriendPrendas([]);
+                          }}
+                          className="text-[10px] text-red-400 hover:text-red-300 uppercase font-bold tracking-wider"
+                        >
+                          Desconectar
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -1500,90 +1586,26 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       </span>
                       
                       <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 no-scrollbar animate-fade-in">
-                        {(friendName.includes("(Tú)") ? (
-                          prendas.length > 0 ? prendas.map(p => ({
-                            id: p.id,
-                            nombre: p.nombre,
-                            categoria: p.categoria,
-                            color: p.color,
-                            formalidad: p.formalidad,
-                            temporada: p.temporada,
-                            tejido: p.tejido || "Algodón sastre",
-                            tags: p.tags || ["Propio", "Elegante"],
-                            imageSrc: p.imageSrc
-                          })) : [
-                            {
-                              id: "friend_empty",
-                              nombre: "Aún no tienes prendas en tu vestidor para compartir",
-                              categoria: "top" as CategoriaPrenda,
-                              color: "#C9A35B",
-                              formalidad: 3,
-                              temporada: "todo" as TemporadaPrenda,
-                              tejido: "Ninguno",
-                              tags: ["vacío"]
-                            }
-                          ]
-                        ) : friendName === "María" ? [
+                        {(friendPrendas.length > 0 ? friendPrendas.map(p => ({
+                          id: p.id,
+                          nombre: p.nombre,
+                          categoria: p.categoria,
+                          color: p.color,
+                          formalidad: p.formalidad,
+                          temporada: p.temporada,
+                          tejido: p.tejido || "Algodón sastre",
+                          tags: p.tags || ["Propio", "Elegante"],
+                          imageSrc: p.imageSrc
+                        })) : [
                           {
-                            id: "friend_m1",
-                            nombre: "Bolso de hombro de cuero vintage Sèzane",
-                            categoria: "accesorio" as CategoriaPrenda,
-                            color: "#5A1827",
-                            formalidad: 4,
-                            temporada: "todo" as TemporadaPrenda,
-                            tejido: "Cuero italiano de becerro",
-                            tags: ["Sèzane", "Eventos"]
-                          },
-                          {
-                            id: "friend_m2",
-                            nombre: "Vestido de satén drapeado de seda",
+                            id: "friend_empty",
+                            nombre: "Aún no hay prendas en este vestidor para compartir",
                             categoria: "top" as CategoriaPrenda,
-                            color: "#E6D7C3",
-                            formalidad: 5,
+                            color: "#C9A35B",
+                            formalidad: 3,
                             temporada: "todo" as TemporadaPrenda,
-                            tejido: "Seda natural de morera",
-                            tags: ["Boda", "Chic"]
-                          },
-                          {
-                            id: "friend_m3",
-                            nombre: "Chaqueta Tweed Bouclé clásica estilo Chanel",
-                            categoria: "top" as CategoriaPrenda,
-                            color: "#F5F2EB",
-                            formalidad: 4,
-                            temporada: "todo" as TemporadaPrenda,
-                            tejido: "Lana Bouclé con hilos dorados",
-                            tags: ["Clásico", "Atelier"]
-                          }
-                        ] : [
-                          {
-                            id: "friend_s1",
-                            nombre: "Chaqueta blazer de satén verde esmeralda",
-                            categoria: "top" as CategoriaPrenda,
-                            color: "#0F4C3A",
-                            formalidad: 4,
-                            temporada: "todo" as TemporadaPrenda,
-                            tejido: "Satén brillante de seda",
-                            tags: ["Fiesta", "Blazer"]
-                          },
-                          {
-                            id: "friend_s2",
-                            nombre: "Zapatos slingback de tacón de aguja Dior",
-                            categoria: "calzado" as CategoriaPrenda,
-                            color: "#0F0F10",
-                            formalidad: 5,
-                            temporada: "todo" as TemporadaPrenda,
-                            tejido: "Charol fino italiano",
-                            tags: ["Gala", "Dior"]
-                          },
-                          {
-                            id: "friend_s3",
-                            nombre: "Clutch de terciopelo con cadena de oro Yves Saint Laurent",
-                            categoria: "accesorio" as CategoriaPrenda,
-                            color: "#121A30",
-                            formalidad: 5,
-                            temporada: "todo" as TemporadaPrenda,
-                            tejido: "Terciopelo de algodón",
-                            tags: ["YSL", "Nocturno"]
+                            tejido: "Ninguno",
+                            tags: ["vacío"]
                           }
                         ]).map((p) => {
                           const isBorrowed = borrowedIds.includes(p.id);

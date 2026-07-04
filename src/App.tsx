@@ -9,6 +9,7 @@ import AsistenteMaleta from "./components/AsistenteMaleta";
 import AsesorCompras from "./components/AsesorCompras";
 import DiagnosticoEstilo from "./components/DiagnosticoEstilo";
 import Login from "./components/Login";
+import { publishWardrobeToRegistry } from "./utils/share";
 import { 
   supabase, 
   isSupabaseConfigured,
@@ -548,6 +549,13 @@ export default function App() {
       }
     }
   };
+
+  // Automatically publish user's wardrobe to shared registry whenever it changes
+  useEffect(() => {
+    if (user && user.email) {
+      publishWardrobeToRegistry(user.email, user.id, prendas);
+    }
+  }, [user, prendas]);
 
   const handleLooksGenerados = async (nuevosLooks: any[], ocasionValor: string, climaValor: string) => {
     const fechaActual = new Date().toLocaleDateString("es-ES", {
