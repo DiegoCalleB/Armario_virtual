@@ -433,17 +433,17 @@ Para cada prenda de ropa o calzado identificada de forma independiente, determin
 5. Temporada: "verano", "invierno" o "todo".
 6. Tejido o material (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa", "Seda", "Punto/Knit").
 7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estilo Oxford", "Básico"]).
-8. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0 a 1000 (donde box_ymin es el borde superior, box_xmin el borde izquierdo, box_ymax el borde inferior y box_xmax el borde derecho de la prenda, ej: una camisa puede ser box_ymin: 150, box_xmin: 250, box_ymax: 550, box_xmax: 750).
+8. Su caja delimitadora (bounding box) en coordenadas decimales normalizadas de 0.0 a 1.0 (donde box_ymin es el borde superior como float (ej: 0.15), box_xmin el borde izquierdo (ej: 0.25), box_ymax el borde inferior (ej: 0.55) y box_xmax el borde derecho (ej: 0.75) de la prenda en la imagen).
 
 DIRECTRICES CRÍTICAS PARA LAS COORDENADAS (box_ymin, box_xmin, box_ymax, box_xmax):
 - Cada prenda que identifiques DEBE tener una caja delimitadora (bounding box) extremadamente precisa y realista, que corresponda ÚNICAMENTE al área real de esa prenda en la foto.
 - NUNCA utilices coordenadas idénticas o casi idénticas para diferentes prendas.
 - Por ejemplo, si en la foto hay una persona vestida de cuerpo entero, un maniquí con outfit completo, o prendas dispuestas en vertical (ej. una percha con camiseta arriba y pantalones abajo):
-  * Los pantalones o bermudas ("pantalon") están en la mitad INFERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser significativamente mayor (por ejemplo, entre 450 y 650) and su "box_ymax" debe terminar cerca del borde inferior (por ejemplo, entre 850 y 1000). Jamás asignes una caja delimitadora en la mitad superior de la imagen a un pantalón.
-  * La camiseta, camisa, abrigo o chaqueta ("top") está en la mitad SUPERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser baja (por ejemplo, entre 0 y 250) y su "box_ymax" de final vertical debe estar en la mitad o torso medio (por ejemplo, entre 450 y 650).
-  * El calzado o zapatos ("calzado") están en la zona más BAJA de todas, por lo que su coordenada vertical "box_ymin" debe estar por encima de 850 o 900.
+  * Los pantalones o bermudas ("pantalon") están en la mitad INFERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser significativamente mayor (por ejemplo, entre 0.45 y 0.65) y su "box_ymax" debe terminar cerca del borde inferior (por ejemplo, entre 0.85 y 1.0). Jamás asignes una caja delimitadora en la mitad superior de la imagen a un pantalón.
+  * La camiseta, camisa, abrigo o chaqueta ("top") está en la mitad SUPERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser baja (por ejemplo, entre 0.0 y 0.25) y su "box_ymax" de final vertical debe estar en la mitad o torso medio (por ejemplo, entre 0.45 y 0.65).
+  * El calzado o zapatos ("calzado") están en la zona más BAJA de todas, por lo que su coordenada vertical "box_ymin" debe estar por encima de 0.85 o 0.90.
 - Si las prendas están dispuestas una al lado de la otra horizontalmente (ej: ropa doblada en una mesa o perchas paralelas), asegúrate de darles rangos horizontales de coordenadas ("box_xmin" y "box_xmax") claramente diferenciados y separados para que el recorte sea perfecto para cada prenda.
-- PROHIBIDO DEFINITIVO: No devuelvas las mismas coordenadas o las coordenadas de toda la imagen (0, 0, 1000, 1000) para más de una prenda. Si haces eso, el recorte de los pantalones saldrá con la foto de las camisetas, lo cual es incorrecto y confunde al usuario. Cada prenda debe tener su propia caja delimitadora exclusiva e impecable.
+- PROHIBIDO DEFINITIVO: No devuelvas las mismas coordenadas o las coordenadas de toda la imagen (0.0, 0.0, 1.0, 1.0) para más de una prenda. Si haces eso, el recorte de los pantalones saldrá con la foto de las camisetas, lo cual es incorrecto y confunde al usuario. Cada prenda debe tener su propia caja delimitadora exclusiva e impecable.
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
       : `Analiza este artículo de ropa o calzado de hombre de la imagen de forma individual. 
@@ -500,20 +500,20 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
                     description: "2 a 4 etiquetas breves descriptivas del corte, estilo o silueta.",
                   },
                   box_ymin: {
-                    type: Type.INTEGER,
-                    description: "Coordenada Y superior (0 a 1000) donde empieza la prenda verticalmente.",
+                    type: Type.NUMBER,
+                    description: "Coordenada Y superior (borde superior de la prenda como float entre 0.0 y 1.0).",
                   },
                   box_xmin: {
-                    type: Type.INTEGER,
-                    description: "Coordenada X izquierda (0 a 1000) donde empieza la prenda horizontalmente.",
+                    type: Type.NUMBER,
+                    description: "Coordenada X izquierda (borde izquierdo de la prenda como float entre 0.0 y 1.0).",
                   },
                   box_ymax: {
-                    type: Type.INTEGER,
-                    description: "Coordenada Y inferior (0 a 1000) donde termina la prenda verticalmente.",
+                    type: Type.NUMBER,
+                    description: "Coordenada Y inferior (borde inferior de la prenda como float entre 0.0 y 1.0).",
                   },
                   box_xmax: {
-                    type: Type.INTEGER,
-                    description: "Coordenada X derecha (0 a 1000) donde termina la prenda horizontalmente.",
+                    type: Type.NUMBER,
+                    description: "Coordenada X derecha (borde derecho de la prenda como float entre 0.0 y 1.0).",
                   }
                 },
                 required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags", "box_ymin", "box_xmin", "box_ymax", "box_xmax"],
@@ -622,16 +622,32 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
       const uniquePrendas: any[] = [];
       for (const item of parsedResponse.prendas) {
         let isDuplicate = false;
-        const ymin = Number(item.box_ymin !== undefined && item.box_ymin !== null ? item.box_ymin : 0);
-        const xmin = Number(item.box_xmin !== undefined && item.box_xmin !== null ? item.box_xmin : 0);
-        const ymax = Number(item.box_ymax !== undefined && item.box_ymax !== null ? item.box_ymax : 1000);
-        const xmax = Number(item.box_xmax !== undefined && item.box_xmax !== null ? item.box_xmax : 1000);
+        let ymin = Number(item.box_ymin !== undefined && item.box_ymin !== null ? item.box_ymin : 0);
+        let xmin = Number(item.box_xmin !== undefined && item.box_xmin !== null ? item.box_xmin : 0);
+        let ymax = Number(item.box_ymax !== undefined && item.box_ymax !== null ? item.box_ymax : 1);
+        let xmax = Number(item.box_xmax !== undefined && item.box_xmax !== null ? item.box_xmax : 1);
+
+        // Normalize coordinates to 0-1000 if they are returned as 0-1 floats
+        if (ymin <= 1.05 && xmin <= 1.05 && ymax <= 1.05 && xmax <= 1.05) {
+          ymin = ymin * 1000;
+          xmin = xmin * 1000;
+          ymax = ymax * 1000;
+          xmax = xmax * 1000;
+        }
 
         for (const existing of uniquePrendas) {
-          const exYMin = Number(existing.box_ymin !== undefined && existing.box_ymin !== null ? existing.box_ymin : 0);
-          const exXMin = Number(existing.box_xmin !== undefined && existing.box_xmin !== null ? existing.box_xmin : 0);
-          const exYMax = Number(existing.box_ymax !== undefined && existing.box_ymax !== null ? existing.box_ymax : 1000);
-          const exXMax = Number(existing.box_xmax !== undefined && existing.box_xmax !== null ? existing.box_xmax : 1000);
+          let exYMin = Number(existing.box_ymin !== undefined && existing.box_ymin !== null ? existing.box_ymin : 0);
+          let exXMin = Number(existing.box_xmin !== undefined && existing.box_xmin !== null ? existing.box_xmin : 0);
+          let exYMax = Number(existing.box_ymax !== undefined && existing.box_ymax !== null ? existing.box_ymax : 1);
+          let exXMax = Number(existing.box_xmax !== undefined && existing.box_xmax !== null ? existing.box_xmax : 1);
+
+          // Normalize coordinates of existing item to 0-1000 if they are in 0-1 float format
+          if (exYMin <= 1.05 && exXMin <= 1.05 && exYMax <= 1.05 && exXMax <= 1.05) {
+            exYMin = exYMin * 1000;
+            exXMin = exXMin * 1000;
+            exYMax = exYMax * 1000;
+            exXMax = exXMax * 1000;
+          }
 
           // Calculate area of each box
           const area1 = (xmax - xmin) * (ymax - ymin);
