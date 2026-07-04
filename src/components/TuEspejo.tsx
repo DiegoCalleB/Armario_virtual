@@ -1,8 +1,9 @@
 import React, { useState, useRef } from "react";
 import { Rostro } from "../types";
 import { fileToBase64, resizeImage } from "../utils";
-import { Camera, Upload, Sparkles, Check, RotateCcw, User, Eye, AlertCircle } from "lucide-react";
+import { Camera, Upload, Sparkles, Check, RotateCcw, User, Eye, AlertCircle, Image } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import GooglePhotosPicker from "./GooglePhotosPicker";
 
 interface TuEspejoProps {
   rostro: Rostro | null;
@@ -50,18 +51,12 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
     }
   };
 
-  // Process and scale face image
-  const procesarImagen = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setError("Por favor, sube un formato de imagen válido (PNG, JPEG, WebP).");
-      return;
-    }
-    
+  // Process and scale face image from base64 directly
+  const procesarBase64 = async (rawBase64: string) => {
     setError(null);
     setLoading(true);
 
     try {
-      const rawBase64 = await fileToBase64(file);
       // Resize to 768px in browser as requested!
       const resizedBase64 = await resizeImage(rawBase64, 768);
       
@@ -91,6 +86,21 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
       setError(errorFriendly);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Process and scale face image
+  const procesarImagen = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setError("Por favor, sube un formato de imagen válido (PNG, JPEG, WebP).");
+      return;
+    }
+    
+    try {
+      const rawBase64 = await fileToBase64(file);
+      await procesarBase64(rawBase64);
+    } catch (err: any) {
+      setError("Error al leer el archivo de imagen.");
     }
   };
 
@@ -217,7 +227,7 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
               </div>
               <p className="font-serif text-lg text-tinta font-semibold">Arrastra tu fotografía aquí</p>
               <p className="text-xs text-tinta-apagada mt-1">o haz clic para explorar tus archivos</p>
-              <div className="flex gap-4 mt-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-wrap gap-4 mt-6 justify-center" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   id="boton-camara"
@@ -226,6 +236,11 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
                 >
                   <Camera size={14} /> Usar Webcam
                 </button>
+                <GooglePhotosPicker 
+                  onPhotoSelected={procesarBase64}
+                  triggerButtonText="Importar de Google Fotos"
+                  triggerClassName="button-press flex items-center gap-2 px-4 py-2 border border-linea bg-tarjeta text-tinta hover:border-laton hover:text-laton rounded text-xs font-sans text-left"
+                />
               </div>
             </div>
             

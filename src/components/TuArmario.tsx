@@ -4,6 +4,7 @@ import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpen
 import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
 import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import GooglePhotosPicker from "./GooglePhotosPicker";
 
 interface TuArmarioProps {
   prendas: Prenda[];
@@ -341,6 +342,104 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
       setError("Ocurrió un error al procesar el archivo gráfico.");
     } finally {
       setManualUploading(false);
+    }
+  };
+
+  const procesarBase64Prenda = async (base64Image: string) => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      setLoadingText("Analizando prenda con IA...");
+      // Resize to 768px on browser client for ultra-fast light payload
+      const resizedBase64 = await resizeImage(base64Image, 768);
+
+      const res = await fetch("/api/analizar-prenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: resizedBase64, isMulti: isMultiMode }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || `Error en servidor`);
+      }
+
+      const infoParsed = await res.json();
+      
+      let prendasArray: any[] = [];
+      if (infoParsed && infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
+        prendasArray = infoParsed.prendas;
+      } else if (infoParsed && infoParsed.nombre) {
+        prendasArray = [infoParsed];
+      }
+
+      if (prendasArray.length > 0) {
+        const listToAdd: Prenda[] = [];
+        for (let idx = 0; idx < prendasArray.length; idx++) {
+          const item = prendasArray[idx];
+          if (!item) continue;
+          let croppedImg = resizedBase64;
+          
+          const yminVal = item.box_ymin !== undefined && item.box_ymin !== null ? Number(item.box_ymin) : NaN;
+          const xminVal = item.box_xmin !== undefined && item.box_xmin !== null ? Number(item.box_xmin) : NaN;
+          const ymaxVal = item.box_ymax !== undefined && item.box_ymax !== null ? Number(item.box_ymax) : NaN;
+          const xmaxVal = item.box_xmax !== undefined && item.box_xmax !== null ? Number(item.box_xmax) : NaN;
+
+          if (
+            !isNaN(yminVal) &&
+            !isNaN(xminVal) &&
+            !isNaN(ymaxVal) &&
+            !isNaN(xmaxVal) &&
+            !(yminVal === 0 && xminVal === 0 && ymaxVal === 1000 && xmaxVal === 1000 && prendasArray.length === 1)
+          ) {
+            try {
+              croppedImg = await cropGarmentImage(
+                resizedBase64,
+                yminVal,
+                xminVal,
+                ymaxVal,
+                xmaxVal
+              );
+            } catch (cropErr) {
+              console.error("No se pudo recortar la prenda, usando imagen base:", cropErr);
+            }
+          }
+
+          // Apply background removal and upscale
+          try {
+            croppedImg = await processImageToTransparentAndHD(croppedImg, (text) => {
+              setLoadingText(`[Prenda ${idx + 1}/${prendasArray.length}] ${text}`);
+            });
+          } catch (bgErr) {
+            console.error("Error al quitar fondo:", bgErr);
+          }
+
+          const formalidadVal = item.formalidad !== undefined && item.formalidad !== null ? Number(item.formalidad) : 3;
+          const nuevaPrenda: Prenda = {
+            id: "prenda_" + Date.now() + "_" + idx + "_" + Math.floor(Math.random() * 1000),
+            nombre: item.nombre || "Prenda identificada con IA",
+            categoria: (item.categoria as CategoriaPrenda) || "top",
+            color: item.color || "#C9A35B",
+            formalidad: isNaN(formalidadVal) ? 3 : Math.max(1, Math.min(5, formalidadVal)),
+            temporada: (item.temporada as TemporadaPrenda) || "todo",
+            imageSrc: croppedImg,
+            tejido: item.tejido || "Algodón mixto",
+            tags: Array.isArray(item.tags) ? item.tags : ["Modern", "Básico"],
+          };
+          listToAdd.push(nuevaPrenda);
+        }
+        if (listToAdd.length > 0) {
+          onPrendaAgregada(listToAdd);
+        }
+      } else {
+        throw new Error("No se pudo extraer ninguna prenda válida de la imagen analizada.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "No se pudo procesar la imagen de la prenda.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -837,14 +936,21 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                         <p className="font-serif text-base text-tinta font-semibold">Registrar con IA</p>
                         <p className="text-[11px] text-tinta-apagada mt-0.5 mb-4 font-light">Arrastra fotos de prendas o haz clic para subir</p>
                         
-                        <button
-                          type="button"
-                          id="boton-camara-prenda"
-                          onClick={startCamera}
-                          className="button-press flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-tarjeta border border-linea text-tinta-apagada hover:text-laton hover:border-laton transition text-xs rounded select-none font-medium"
-                        >
-                          <Camera size={13} /> Usar Cámara
-                        </button>
+                        <div className="flex flex-wrap gap-3 justify-center" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            id="boton-camara-prenda"
+                            onClick={startCamera}
+                            className="button-press flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-tarjeta border border-linea text-tinta-apagada hover:text-laton hover:border-laton transition text-xs rounded select-none font-medium"
+                          >
+                            <Camera size={13} /> Usar Cámara
+                          </button>
+                          <GooglePhotosPicker 
+                            onPhotoSelected={procesarBase64Prenda}
+                            triggerButtonText="Importar Google Fotos"
+                            triggerClassName="button-press flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-tarjeta border border-linea text-tinta-apagada hover:text-laton hover:border-laton transition text-xs rounded select-none font-medium text-left"
+                          />
+                        </div>
                       </>
                     )}
                   </motion.div>

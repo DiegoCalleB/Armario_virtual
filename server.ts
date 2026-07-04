@@ -145,6 +145,29 @@ async function callGeminiWithRetry<T>(
   throw lastError || new Error("El servicio de Espejo IA no está disponible temporalmente bajo alta demanda.");
 }
 
+// PROXY IMAGE FOR GOOGLE PHOTOS (CORS BYPASS)
+app.get("/api/proxy-image", async (req, res) => {
+  const imageUrl = req.query.url as string;
+  if (!imageUrl) {
+    res.status(400).json({ error: "No se proporcionó una URL de imagen." });
+    return;
+  }
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Fallo al descargar la imagen. Status: ${response.status}`);
+    }
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = `data:${contentType};base64,${buffer.toString("base64")}`;
+    res.json({ base64 });
+  } catch (err: any) {
+    console.error("Error in proxy-image endpoint:", err);
+    res.status(500).json({ error: "No se pudo recuperar la imagen de Google Fotos." });
+  }
+});
+
 // 1. ANALIZAR ROSTRO
 app.post("/api/analizar-rostro", async (req, res) => {
   try {
