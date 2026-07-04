@@ -1721,8 +1721,9 @@ app.post("/api/procesar-imagen-avanzada", async (req, res) => {
 Isolate the main clothing item/garment/shoe/accessory in this photo.
 Task instructions:
 1. BACKGROUND REMOVAL: Remove the entire background completely, placing the isolated garment on a solid, pure, clean transparent-like or pure white (#FFFFFF) background. There should be absolutely no hanger, no model skin/face/hands, no wall shadows, no carpet, and no background noise left. Only the garment itself.
-2. ADVANCED RESOLUTION ENHANCEMENT: Increase the resolution, contrast, sharpness, and details of the fabric texture. Upscale it to look like a premium, crisp, ultra-high-definition studio catalog product photo from a luxury fashion brand.
-3. OUTPUT: Return ONLY the edited image showing the isolated, enhanced garment.
+2. PRESERVE ORIGINAL DESIGN ELEMENTS: You MUST strictly preserve all original patterns, prints, stripes, decorations, text, brand logos, color blocks, contrasts, and trims. For example, if a garment has a stripe or line on the collar and cuffs (like a white line on a sweater), that specific detail MUST be maintained exactly as it is. Do NOT remove, smooth over, or simplify these features.
+3. ADVANCED RESOLUTION ENHANCEMENT: Increase the resolution, contrast, sharpness, and details of the fabric texture. Make it look clean, professionally ironed, and crisp like a premium, ultra-high-definition studio catalog product photo from a luxury fashion brand, while keeping its exact physical features and colors 100% faithful to the original.
+4. OUTPUT: Return ONLY the edited image showing the isolated, enhanced garment.
 `;
 
     const response = await ai.models.generateContent({

@@ -1075,6 +1075,7 @@ export default function App() {
                   onPrendaAgregada={handlePrendaAgregada}
                   onPrendaEliminada={handlePrendaEliminada}
                   onPrendaActualizada={handlePrendaActualizada}
+                  userEmail={user?.email}
                 />
               </motion.div>
             )}

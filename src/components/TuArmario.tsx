@@ -9,6 +9,7 @@ interface TuArmarioProps {
   onPrendaAgregada: (prenda: Prenda | Prenda[]) => void;
   onPrendaEliminada: (id: string) => void;
   onPrendaActualizada?: (prenda: Prenda) => void;
+  userEmail?: string;
 }
 
 const cropGarmentImage = (
@@ -192,7 +193,22 @@ const generateGarmentSVG = (categoria: CategoriaPrenda, color: string): string =
   return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
 };
 
-export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada, onPrendaActualizada }: TuArmarioProps) {
+const getShareCodeFromEmail = (email?: string): string => {
+  if (!email) return "INVITADO-1001";
+  if (email.toLowerCase() === "diego.delacalleb@gmail.com") return "DIEGO-4739";
+  
+  const cleanEmail = email.toLowerCase().trim();
+  const namePart = cleanEmail.split("@")[0].toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6) || "USER";
+  
+  let hash = 0;
+  for (let i = 0; i < cleanEmail.length; i++) {
+    hash = cleanEmail.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const numericPart = Math.abs(hash % 9000) + 1000;
+  return `${namePart}-${numericPart}`;
+};
+
+export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada, onPrendaActualizada, userEmail }: TuArmarioProps) {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -659,13 +675,13 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               Compartir Armario con Amigas:
             </span>
             <span className="font-mono text-xs font-bold text-tinta tracking-widest leading-none">
-              DIEGO-4739
+              {getShareCodeFromEmail(userEmail)}
             </span>
           </div>
           <button
             type="button"
             onClick={() => {
-              navigator.clipboard.writeText("DIEGO-4739");
+              navigator.clipboard.writeText(getShareCodeFromEmail(userEmail));
               setCopiedOwnCode(true);
               setTimeout(() => setCopiedOwnCode(false), 2000);
             }}
@@ -1395,6 +1411,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           type="button"
                           onClick={() => {
                             const code = friendCode.trim().toUpperCase();
+                            const ownCode = getShareCodeFromEmail(userEmail);
+                            const ownParts = ownCode.split("-");
                             if (code.includes("MARIA") || code.includes("7892")) {
                               setFriendConnected(true);
                               setFriendName("María");
@@ -1403,12 +1421,14 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                               setFriendConnected(true);
                               setFriendName("Sofía");
                               setError(null);
-                            } else if (code.includes("DIEGO") || code.includes("4739")) {
+                            } else if (code.includes(ownParts[0]) || (ownParts[1] && code.includes(ownParts[1]))) {
                               setFriendConnected(true);
-                              setFriendName("Diego (Tú)");
+                              const namePrefix = userEmail ? userEmail.split("@")[0] : "Tú";
+                              const dispName = namePrefix.charAt(0).toUpperCase() + namePrefix.slice(1).split(".")[0];
+                              setFriendName(`${dispName} (Tú)`);
                               setError(null);
                             } else {
-                              setError("Código de armario no encontrado. Prueba con 'MARIA-7892', 'SOFIA-1102' o tu propio código 'DIEGO-4739'.");
+                              setError(`Código de armario no encontrado. Prueba con 'MARIA-7892', 'SOFIA-1102' o tu propio código '${ownCode}'.`);
                             }
                           }}
                           className="px-4 bg-laton hover:bg-white text-fondo font-bold text-xs uppercase tracking-widest rounded transition duration-150"
@@ -1431,12 +1451,12 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       </p>
                       <div className="flex items-center justify-between bg-fondo p-2 rounded border border-linea">
                         <span className="font-mono text-xs font-bold text-tinta tracking-widest">
-                          DIEGO-4739
+                          {getShareCodeFromEmail(userEmail)}
                         </span>
                         <button
                           type="button"
                           onClick={() => {
-                            navigator.clipboard.writeText("DIEGO-4739");
+                            navigator.clipboard.writeText(getShareCodeFromEmail(userEmail));
                             setCopiedOwnCode(true);
                             setTimeout(() => setCopiedOwnCode(false), 2000);
                           }}
@@ -1480,7 +1500,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       </span>
                       
                       <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 no-scrollbar animate-fade-in">
-                        {(friendName === "Diego (Tú)" ? (
+                        {(friendName.includes("(Tú)") ? (
                           prendas.length > 0 ? prendas.map(p => ({
                             id: p.id,
                             nombre: p.nombre,
