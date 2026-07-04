@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "Rostro": {
+      "title": "Rostro",
+      "description": "Información del rostro, pelo, barba y avatar del usuario.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "forma_cara": { "type": "string" },
+        "pelo_actual": { "type": "string" },
+        "barba_actual": { "type": "string" },
+        "clave": { "type": "string" },
+        "image_src": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["user_id"]
+    },
+    "Prenda": {
+      "title": "Prenda",
+      "description": "Una prenda en el armario digital del usuario.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "categoria": { "type": "string" },
+        "color": { "type": "string" },
+        "formalidad": { "type": "string" },
+        "temporada": { "type": "string" },
+        "image_src": { "type": "string" },
+        "descripcion": { "type": "string" },
+        "tejido": { "type": "string" },
+        "tags": { "type": "array" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "user_id", "nombre", "categoria", "image_src"]
+    },
+    "HistorialItem": {
+      "title": "HistorialItem",
+      "description": "Un registro del historial de atuendos y recomendaciones del usuario.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "fecha": { "type": "string" },
+        "ocasion": { "type": "string" },
+        "clima": { "type": "string" },
+        "look_titulo": { "type": "string" },
+        "look_porque": { "type": "string" },
+        "look_pelo_sugerido": { "type": "string" },
+        "look_barba_sugerida": { "type": "string" },
+        "look_consejo_barberia": { "type": "string" },
+        "look_id_prendas": { "type": "array" },
+        "look_simulated_image_url": { "type": "string" },
+        "look_simulated_full_body_image_url": { "type": "string" },
+        "favorito": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "user_id", "fecha", "look_titulo"]
+    }
+  },
+  "firestore": {
+    "/rostro/{userId}": {
+      "schema": "Rostro",
+      "description": "Colección de perfiles de rostro por usuario."
+    },
+    "/prendas/{prendaId}": {
+      "schema": "Prenda",
+      "description": "Colección de prendas de vestir de los armarios de los usuarios."
+    },
+    "/historial/{historialId}": {
+      "schema": "HistorialItem",
+      "description": "Colección de looks recomendados y guardados en el historial."
+    }
+  }
+}

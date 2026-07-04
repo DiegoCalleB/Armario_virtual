@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity Validations
+    function isValidRostro(data) {
+      return data.user_id is string && data.user_id.size() <= 128
+        && (!data.keys().hasAll(['forma_cara']) || (data.forma_cara is string && data.forma_cara.size() <= 100))
+        && (!data.keys().hasAll(['pelo_actual']) || (data.pelo_actual is string && data.pelo_actual.size() <= 100))
+        && (!data.keys().hasAll(['barba_actual']) || (data.barba_actual is string && data.barba_actual.size() <= 100))
+        && (!data.keys().hasAll(['clave']) || (data.clave is string && data.clave.size() <= 100))
+        && (!data.keys().hasAll(['image_src']) || (data.image_src is string && data.image_src.size() <= 5000));
+    }
+
+    function isValidPrenda(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.user_id is string && data.user_id.size() <= 128
+        && data.nombre is string && data.nombre.size() <= 200
+        && data.categoria is string && data.categoria.size() <= 100
+        && (!data.keys().hasAll(['color']) || (data.color is string && data.color.size() <= 100))
+        && (!data.keys().hasAll(['formalidad']) || (data.formalidad is string && data.formalidad.size() <= 100))
+        && (!data.keys().hasAll(['temporada']) || (data.temporada is string && data.temporada.size() <= 100))
+        && (!data.keys().hasAll(['image_src']) || (data.image_src is string && data.image_src.size() <= 5000))
+        && (!data.keys().hasAll(['descripcion']) || (data.descripcion is string && data.descripcion.size() <= 2000))
+        && (!data.keys().hasAll(['tejido']) || (data.tejido is string && data.tejido.size() <= 100))
+        && (!data.keys().hasAll(['tags']) || (data.tags is list && data.tags.size() <= 50));
+    }
+
+    function isValidHistorial(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.user_id is string && data.user_id.size() <= 128
+        && data.fecha is string && data.fecha.size() <= 100
+        && (!data.keys().hasAll(['ocasion']) || (data.ocasion is string && data.ocasion.size() <= 200))
+        && (!data.keys().hasAll(['clima']) || (data.clima is string && data.clima.size() <= 200))
+        && (!data.keys().hasAll(['look_titulo']) || (data.look_titulo is string && data.look_titulo.size() <= 200))
+        && (!data.keys().hasAll(['look_porque']) || (data.look_porque is string && data.look_porque.size() <= 2000))
+        && (!data.keys().hasAll(['look_pelo_sugerido']) || (data.look_pelo_sugerido is string && data.look_pelo_sugerido.size() <= 200))
+        && (!data.keys().hasAll(['look_barba_sugerida']) || (data.look_barba_sugerida is string && data.look_barba_sugerida.size() <= 200))
+        && (!data.keys().hasAll(['look_consejo_barberia']) || (data.look_consejo_barberia is string && data.look_consejo_barberia.size() <= 2000))
+        && (!data.keys().hasAll(['look_id_prendas']) || (data.look_id_prendas is list && data.look_id_prendas.size() <= 50))
+        && (!data.keys().hasAll(['look_simulated_image_url']) || (data.look_simulated_image_url is string && data.look_simulated_image_url.size() <= 5000))
+        && (!data.keys().hasAll(['look_simulated_full_body_image_url']) || (data.look_simulated_full_body_image_url is string && data.look_simulated_full_body_image_url.size() <= 5000))
+        && (!data.keys().hasAll(['favorito']) || (data.favorito is bool));
+    }
+
+    // Rules matching collections
+    match /rostro/{userId} {
+      allow get, delete: if isSignedIn() && (userId == request.auth.uid || existing().user_id == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && incoming().user_id == request.auth.uid && isValidRostro(incoming());
+      allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && incoming().user_id == request.auth.uid && isValidRostro(incoming()) && incoming().user_id == existing().user_id;
+    }
+
+    match /prendas/{prendaId} {
+      allow get, delete: if isSignedIn() && existing().user_id == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(prendaId) && incoming().user_id == request.auth.uid && isValidPrenda(incoming());
+      allow update: if isSignedIn() && isValidId(prendaId) && existing().user_id == request.auth.uid && incoming().user_id == request.auth.uid && isValidPrenda(incoming());
+    }
+
+    match /historial/{historialId} {
+      allow get, delete: if isSignedIn() && existing().user_id == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(historialId) && incoming().user_id == request.auth.uid && isValidHistorial(incoming());
+      allow update: if isSignedIn() && isValidId(historialId) && existing().user_id == request.auth.uid && incoming().user_id == request.auth.uid && isValidHistorial(incoming());
+    }
+  }
+}

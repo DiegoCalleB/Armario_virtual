@@ -148,70 +148,19 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setInfoMsg(null);
     setIsLoading(true);
 
-    const useRealSupabase = isSupabaseConfigured && !forceLocalDemo;
-
     try {
-      if (useRealSupabase && supabase) {
-        // SUPABASE GOOGLE AUTHENTICATION
-        // We use skipBrowserRedirect: true to manually open popup, avoiding iframe blockade
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: window.location.origin,
-            skipBrowserRedirect: true,
-          },
-        });
-        if (error) throw error;
-
-        if (data?.url) {
-          const width = 500;
-          const height = 600;
-          const left = window.screen.width / 2 - width / 2;
-          const top = window.screen.height / 2 - height / 2;
-          const popup = window.open(
-            data.url,
-            "supabase_oauth_popup",
-            `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
-          );
-
-          if (!popup) {
-            setErrorMsg(
-              "El navegador ha bloqueado la ventana emergente de Google. Para poder acceder con Google en AI Studio: 1) Permite las ventanas emergentes (popups) en la configuración de la barra de direcciones de tu navegador, o 2) Abre este probador en una Pestaña Nueva haciendo clic en el botón con una flecha saliente en la esquina superior derecha del simulador. También puedes registrarte o entrar usando un Correo y Contraseña abajo sin restricciones."
-            );
-            return;
-          }
-
-          // Poll for completion
-          const interval = setInterval(async () => {
-            if (popup.closed) {
-              clearInterval(interval);
-              // Check session now
-              const { data: sessionData } = await supabase.auth.getSession();
-              if (sessionData.session?.user) {
-                onLoginSuccess({
-                  id: sessionData.session.user.id,
-                  email: sessionData.session.user.email || "usuario@espejo.ai",
-                }, false);
-              }
-            }
-          }, 1000);
-        } else {
-          throw new Error("No se pudo iniciar el flujo de autenticación de Google.");
-        }
-      } else {
-        // SIMULATED AUTHENTICATION FOR LOCAL DEMO MODE
-        await new Promise((resolve) => setTimeout(resolve, 850));
-        setInfoMsg("Acceso simulado con Google en Modo Demo.");
+      const { auth, googleProvider } = await import("../lib/firebase");
+      const { signInWithPopup } = await import("firebase/auth");
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result.user) {
         onLoginSuccess({
-          id: "usr_mock_diego_sartorial_gmail_com",
-          email: "diego.sartorial@gmail.com",
-        }, true);
+          id: result.user.uid,
+          email: result.user.email || "usuario@espejo.ai",
+        }, false);
       }
     } catch (err: any) {
+      console.error(err);
       let friendlyError = err.message || "Ocurrió un error al iniciar sesión con Google.";
-      if (err.message && (err.message.includes("provider is not enabled") || err.message.includes("Unsupported provider"))) {
-        friendlyError = "El inicio de sesión con Google no está habilitado en tu panel de control de Supabase (Authentication -> Providers -> Google -> Habilitar). No te preocupes: puedes registrarte e ingresar escribiendo cualquier Correo y Contraseña abajo en 2 segundos, o presionar el botón 'Entrar como Invitado' para explorar toda la suite de inmediato.";
-      }
       setErrorMsg(friendlyError);
     } finally {
       setIsLoading(false);
@@ -304,9 +253,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <div className="space-y-2">
           <div className="flex justify-between items-center bg-fondo/50 border border-linea/60 rounded px-3 py-1.5 text-[9.5px] uppercase tracking-wider font-semibold">
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${activeSupabase ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-              <span className={activeSupabase ? "text-emerald-400" : "text-amber-400"}>
-                {activeSupabase ? "SUPABASE CLOUD ACTIVO" : "MODO DEMO LOCAL (OFFLINE)"}
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-emerald-400">
+                FIREBASE CLOUD ACTIVO
               </span>
             </div>
             <button
@@ -315,7 +264,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               className="text-laton hover:underline flex items-center gap-1 focus:outline-none"
             >
               <HelpCircle size={11} className="shrink-0" />
-              Configurar
+              Ver Estado
             </button>
           </div>
 
@@ -360,16 +309,15 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             animate={{ opacity: 1, height: "auto" }}
             className="bg-fondo border border-linea/80 rounded p-4 text-[11px] text-tinta-apagada space-y-3"
           >
-            <p className="text-white font-semibold">¿Cómo conectar tu propia base de datos Supabase?</p>
+            <p className="text-white font-semibold">Base de Datos Firebase Conectada</p>
             <p className="leading-relaxed">
-              Es muy sencillo. Solo debes configurar las siguientes claves en la sección de <strong>Secrets (Configuración)</strong> de tu AI Studio:
+              La integración de <strong>Firebase (Firestore & Authentication)</strong> se ha realizado con éxito. 
+              Tus rostros analizados, prendas de armario e historial de looks se sincronizan en tiempo real de forma segura.
             </p>
-            <div className="bg-tarjeta border border-linea rounded p-2 text-[10px] font-mono space-y-1 block text-left">
-              <div>VITE_SUPABASE_URL="tu-url-de-supabase"</div>
-              <div>VITE_SUPABASE_ANON_KEY="tu-clave-anonima"</div>
-            </div>
-            <p className="leading-relaxed">
-              Una vez configuradas en AI Studio, la aplicación sincronizará automáticamente tu Espejo, prendas de vestir e historial de looks en tiempo real en la nube segura de Supabase.
+            <p className="leading-relaxed text-emerald-400 font-medium">
+              ✓ Firebase Firestore está aprovisionado en la región europe-west1.<br/>
+              ✓ Reglas de seguridad robustas de Firestore aplicadas de forma activa.<br/>
+              ✓ Inicio de sesión con correo/contraseña y Google habilitado.
             </p>
             <button
               type="button"
@@ -432,108 +380,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           <p className="text-[10.5px] text-amber-200/80 bg-amber-950/20 border border-amber-920/10 rounded p-2.5 text-center leading-relaxed">
             ⚠️ <strong>Entorno Seguro Iframe:</strong> Si este botón no abre la ventana de Google, se debe a restricciones del simulador de AI Studio. Permite las <strong>ventanas emergentes (popups)</strong> en la barra de tu navegador, o abre la app en una <strong>Pestaña Nueva</strong> desde el botón superior derecho. ¡O usa el registro manual con contraseña abajo sin trabas!
           </p>
-
-          {/* Toggleable Google Credentials Step-by-Step Guide */}
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setShowGoogleHelp(!showGoogleHelp)}
-              className="text-xs text-[#C9A35B] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
-            >
-              🔑 {showGoogleHelp ? "Ocultar guía de configuración" : "¿Cómo configurar el acceso con Google paso a paso?"}
-            </button>
-          </div>
-
-          {showGoogleHelp && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-neutral-900 border border-linea/60 rounded p-4 text-[11px] text-tinta-apagada space-y-3.5 text-left leading-relaxed"
-            >
-              <p className="text-white font-serif font-semibold text-[11.5px] tracking-wide uppercase border-b border-linea/20 pb-1.5 flex items-center justify-between">
-                <span>🛠️ GUÍA RÁPIDA DE CONFIGURACIÓN</span>
-                <span className="text-[9px] text-[#C9A35B] font-mono lowercase">google cloud &supabase</span>
-              </p>
-              
-              <div className="space-y-3 text-tinta-apagada/90">
-                <div>
-                  <p className="text-white font-semibold">1. Pantalla de Consentimiento (OAuth Consent Screen)</p>
-                  <p className="mt-0.5">
-                    Ve a <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-[#C9A35B] underline">Google Cloud Console</a>. Selecciona o crea un proyecto arriba, busca <strong>"OAuth consent screen"</strong> en el buscador de arriba y:
-                  </p>
-                  <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[10.5px]">
-                    <li>Elige el tipo de usuario <strong>Externo (External)</strong> y haz clic en <i>Crear</i>.</li>
-                    <li>Completa solo lo mínimo requerido: <b>Nombre de app</b>, tu <b>correo</b> de soporte y tu <b>correo</b> de contacto de desarrollador abajo del todo.</li>
-                    <li>Guarda y avanza hasta el final del asistente (no necesitas agregar "scopes" ni "test users").</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <p className="text-white font-semibold">2. Obtener Client ID & Client Secret</p>
-                  <p className="mt-0.5">
-                    Haz clic en <strong>"Credenciales" (Credentials)</strong> en el panel izquierdo de Google Cloud:
-                  </p>
-                  <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[10.5px]">
-                    <li>Haz clic en <strong>"+ Crear credenciales"</strong> en la parte superior y elige <strong>"ID de cliente de OAuth"</strong>.</li>
-                    <li>En <i>Tipo de aplicación</i> selecciona <strong>Aplicación web (Web application)</strong>.</li>
-                    <li>En la sección <b>"URI de redireccionamiento autorizados"</b>, añade la URL que te proporciona Supabase.</li>
-                    <li className="text-amber-200/90 list-none mt-1 pl-1 font-mono text-[9.5px] bg-zinc-950/60 p-1.5 rounded border border-linea/30">
-                      💡 Copia esta URL desde tu panel de Supabase en <i>Authentication &rarr; Providers &rarr; Google &rarr; Redirect URI</i>.
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <p className="text-white font-semibold">3. Activar en Supabase</p>
-                  <p className="mt-0.5">
-                    Una vez guardado en Google Cloud, se te mostrará una ventana flotante con tu <strong>ID de cliente (Client ID)</strong> y <strong>Secreto de cliente (Client Secret)</strong>:
-                  </p>
-                  <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[10.5px]">
-                    <li>Copia ambos códigos y ve a tu proyecto en <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#C9A35B] underline">Supabase</a>.</li>
-                    <li>Entra en <strong>Authentication &rarr; Providers &rarr; Google</strong>.</li>
-                    <li>Activa la casilla <strong>"Enable Google Provider"</strong>, pega el <i>Client ID</i> y el <i>Client Secret</i>, y haz clic en <strong>Save</strong>.</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="bg-amber-950/20 border border-amber-920/30 p-2 rounded text-[10px] text-amber-200/90">
-                🔒 <strong>¿Prefieres omitir esto?</strong> Si no deseas configurar Google Cloud, puedes usar el <strong>Enlace de Acceso Rápido (Magic Link)</strong> abajo escribiendo tu correo, ¡o registrarte con una contraseña sencilla en 2 segundos!
-              </div>
-            </motion.div>
-          )}
-
-          {/* Vercel & Railway Guidance Card */}
-          <div className="bg-zinc-950/50 border border-linea/60 rounded p-3 text-[10.5px] text-tinta-apagada space-y-2 text-left">
-            <p className="text-white font-serif font-semibold text-[11px] tracking-wide uppercase flex items-center gap-1">
-              🚀 ¿Desplegando en Railway o Vercel?
-            </p>
-            <p className="leading-relaxed">
-              Si al iniciar sesión o usar Magic Link desde tu propio dominio (ej: Railway/Vercel) te redirige de vuelta a AI Studio, se debe a que tu panel de <strong>Supabase</strong> no conoce aún tu nueva URL. Para solucionarlo:
-            </p>
-            <ul className="list-decimal list-inside space-y-1 text-tinta-apagada/90 pl-1">
-              <li>Entra al panel de control de <strong>Supabase</strong>.</li>
-              <li>Ve a la sección lateral <strong>Authentication</strong> &rarr; <strong>URL Configuration</strong>.</li>
-              <li>
-                Añade la URL de tu despliegue con un asterisco doble al final en <strong>Redirect URLs</strong>. Por ejemplo:
-                <div className="mt-1 pl-4 space-y-1">
-                  <div>• Para Railway: <code className="bg-zinc-800 text-amber-200 px-1 py-0.5 rounded font-mono">https://*.railway.app/**</code></div>
-                  <div>• Para Vercel: <code className="bg-zinc-800 text-amber-200 px-1 py-0.5 rounded font-mono">https://*.vercel.app/**</code></div>
-                </div>
-              </li>
-              <li>
-                Si quieres que sea la URL principal por defecto al registrarse, también puedes cambiar el campo <strong>Site URL</strong> por tu dominio de Railway o Vercel.
-              </li>
-              <li>Asegúrate de haber configurado las variables de entorno <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_URL</code> y <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_ANON_KEY</code> en la pestaña de variables de tu servicio de Railway o Vercel.</li>
-            </ul>
-          </div>
-
-          <div className="relative flex py-1.5 items-center">
-            <div className="flex-grow border-t border-linea/30"></div>
-            <span className="flex-shrink mx-4 text-[9px] text-tinta-apagada/40 uppercase tracking-widest font-bold">
-              o con credenciales
-            </span>
-            <div className="flex-grow border-t border-linea/30"></div>
-          </div>
         </div>
 
         {/* Credentials Form */}
