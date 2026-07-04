@@ -33,7 +33,11 @@ export default function AuditoriaArmario({
   // Saving state
   useEffect(() => {
     if (auditResult) {
-      localStorage.setItem("espejo_auditoria", JSON.stringify(auditResult));
+      try {
+        localStorage.setItem("espejo_auditoria", JSON.stringify(auditResult));
+      } catch (e) {
+        console.warn("Storage quota exceeded for auditoria. Unable to save audit result.", e);
+      }
     } else {
       localStorage.removeItem("espejo_auditoria");
     }

@@ -628,24 +628,38 @@ app.post("/api/generar-imagen", async (req, res) => {
     let promptText = "";
     let aspectRatio: "1:1" | "3:4" = "1:1";
 
+    let descripcionPrendasDetallada = "";
+    if (Array.isArray(prendasDetalle) && prendasDetalle.length > 0) {
+      descripcionPrendasDetallada = prendasDetalle.map((p, idx) => {
+        const catLabel = p.categoria === "top" ? "prenda superior (chaqueta/camisa/abrigo)" : p.categoria === "pantalon" ? "prenda inferior (pantalón/jeans/chino)" : p.categoria === "calzado" ? "calzado (zapatos/botas/zapatillas)" : "accesorio";
+        const tejidoLabel = p.tejido ? `con tejido/material: ${p.tejido}` : "";
+        const tagsLabel = Array.isArray(p.tags) && p.tags.length > 0 ? `estilo y corte: ${p.tags.join(", ")}` : "";
+        return `- Prenda ${idx + 1}: Un ${p.nombre} (${catLabel}), con color hexadecimal exacto ${p.color}, ${tejidoLabel}, ${tagsLabel}.`;
+      }).join("\n");
+    } else {
+      descripcionPrendasDetallada = `- Outfit completo a vestir: ${prendasTexto || "una americana estructurada de sastre y pantalones chinos elegantes con zapatos loafer"}`;
+    }
+
     if (fullBody) {
       aspectRatio = "3:4";
       if (isUsingCustomBody) {
         promptText = `CRITICAL INSTRUCTION: You must completely change the clothes of the person in the provided input full-body photograph. 
-Do NOT keep or output their original shirt, suit, top, trousers, jeans, or shoes.
+Do NOT keep, render or output their original shirt, suit, top, trousers, jeans, or shoes.
 Fully replace their entire outfit with the specified new ensemble.
-New outfit garments to wear:
-- ${prendasTexto || "a tailored blazer and formal chino trousers with elegant shoes"}
+You MUST be extremely faithful to the exact colors (Hex codes), fabric textures, and style of the actual real-world garments specified below:
 
-Keep their exact face, gaze, hair color, physique, stance, hands, and the general pose from the original picture. Preserve the high-fashion background scene nicely. Fit and drape the new tailoring items (tops, pants, shoes) beautifully onto their body proportions as a highly realistic menswear editorial digital outfit replacement. Extremely photorealistic, high-fashion catalog magazine page quality.`;
+Real Wardrobe Garments to wear:
+${descripcionPrendasDetallada}
+
+Fit and drape these exact new tailoring items (tops, pants, shoes) beautifully onto their body proportions, ensuring the colors and fabrics match the description perfectly. Keep their exact face, gaze, hair color, physique, stance, hands, and the general pose from the original picture. Preserve the high-fashion background scene nicely. Extremely photorealistic, high-fashion catalog magazine page quality.`;
       } else {
         promptText = `Generate a photorealistic, full-body high-fashion editorial sartorial photograph of the same man shown in the portrait face photo.
 His facial identity, eyes, lips, ethnicity, beard, hair style, age, and skeletal structure must be matched perfectly with the provided visage photograph.
 He must be standing elegantly in a stylish, full-body menswear posture, looking directly at the camera. He must be shown from head to toe.
 He is wearing this complete tailored outfit combination:
-- ${prendasTexto || "a tailored blazer and formal chino trousers with loafer shoes"}
+${descripcionPrendasDetallada}
 
-The background is a tasteful, luxurious modern gentlemen's barber and sartorial atelier interior, with brass accents, warm wood paneling, and dramatic premium studio lighting. Focus on high-quality fabrics, professional tailoring drape, extremely sharp garment textures, and flawless visual style. High-fashion magazine editorial.`;
+The generated outfit must match the specified hexadecimal colors, fabric textures, and garment styles with absolute precision. The background is a tasteful, luxurious modern gentlemen's barber and sartorial atelier interior, with brass accents, warm wood paneling, and dramatic premium studio lighting. Focus on high-quality fabrics, professional tailoring drape, extremely sharp garment textures, and flawless visual style. High-fashion magazine editorial.`;
       }
     } else {
       promptText = `Generate a photorealistic, professional, high-fashion editorial portrait of this same man. Use the original photograph provided as the base.
@@ -1562,6 +1576,232 @@ Responde únicamente con el esquema JSON válido, sin delimitadores de código m
         tags: ["sartorial", "casual", "importado"],
         imageSrc: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=500&q=80"
       }
+    });
+  }
+});
+
+// NUEVO ENDPOINT PARA PROBAR LOOKS MULTIMODAL CON GEMINI
+app.post("/api/probar-look", async (req, res) => {
+  try {
+    const { personImage, garmentImages } = req.body;
+
+    if (!personImage) {
+      res.status(400).json({ error: "Por favor, proporciona la foto de tu cuerpo completo." });
+      return;
+    }
+
+    if (!garmentImages || !Array.isArray(garmentImages) || garmentImages.length === 0) {
+      res.status(400).json({ error: "Por favor, proporciona al menos una foto de prenda para probarte." });
+      return;
+    }
+
+    const ai = getGenAI();
+
+    // Parse main person full-body image
+    const personParsed = parseDataUri(personImage);
+    const parts: any[] = [
+      {
+        inlineData: {
+          mimeType: personParsed.mimeType,
+          data: personParsed.data,
+        },
+      },
+    ];
+
+    // Parse and append garment images
+    for (const gImg of garmentImages) {
+      if (gImg) {
+        const parsedG = parseDataUri(gImg);
+        parts.push({
+          inlineData: {
+            mimeType: parsedG.mimeType,
+            data: parsedG.data,
+          },
+        });
+      }
+    }
+
+    // Append the fashion instruction prompt
+    const promptText = `You are an expert fashion compositor and photorealistic image generator.
+
+I am providing you with:
+1. A full-body photograph of a specific person (the first image)
+2. A curated outfit consisting of ${garmentImages.length} clothing items (the subsequent images)
+
+Your task: Generate a photorealistic image of this EXACT person wearing this EXACT outfit.
+
+CRITICAL RULES:
+- Preserve 100%: face, facial features, skin tone, hair, body shape, height proportions and posture.
+- The person's identity must be unambiguously recognizable.
+- Each garment must drape naturally with realistic fabric physics, creases and shadows.
+- Match the original photo's: lighting direction, color temperature and background exactly.
+- The final image must be indistinguishable from a real photograph.
+- Do NOT alter body shape, weight or proportions in any way.
+- Do NOT add accessories not provided in the outfit images.
+- If a garment is partially visible in its reference image, infer the complete garment naturally.
+
+OUTPUT: A single photorealistic full-body photograph. No text, no borders, no collage.`;
+
+    parts.push({
+      text: promptText,
+    });
+
+    console.log(`[PROBAR-LOOK] Llamando a Gemini con la foto de persona y ${garmentImages.length} prenda(s)...`);
+
+    let response;
+    try {
+      response = await callGeminiWithRetry(() =>
+        ai.models.generateContent({
+          model: "gemini-2.5-flash-image",
+          contents: {
+            parts,
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: "3:4", // Standard full-body aspect ratio
+            },
+          },
+        })
+      );
+    } catch (err: any) {
+      console.warn("[PROBAR-LOOK] Error con gemini-2.5-flash-image, intentando fallback de robustez con gemini-3.1-flash-image...", err);
+      response = await callGeminiWithRetry(() =>
+        ai.models.generateContent({
+          model: "gemini-3.1-flash-image",
+          contents: {
+            parts,
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: "3:4",
+            },
+          },
+        })
+      );
+    }
+
+    let base64Output: string | null = null;
+    if (response?.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          base64Output = part.inlineData.data;
+          break;
+        }
+      }
+    }
+
+    if (!base64Output) {
+      throw new Error("No se pudo extraer la imagen simulada de la respuesta de Gemini. Verifica tu API key.");
+    }
+
+    res.json({
+      imageUrl: `data:image/png;base64,${base64Output}`,
+    });
+  } catch (error: any) {
+    console.error("Error en api/probar-look:", error);
+    res.status(500).json({ error: error.message || "Fallo interno al simular el look multimodal." });
+  }
+});
+
+// 12. PROCESAR IMAGEN AVANZADA (QUITAR FONDO Y SUPER RESOLUCIÓN)
+app.post("/api/procesar-imagen-avanzada", async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) {
+      res.status(400).json({ error: "No se proporcionó ninguna imagen." });
+      return;
+    }
+
+    const { mimeType, data } = parseDataUri(image);
+    const ai = getGenAI();
+
+    console.log("[IMAGEN-AVANZADA] Iniciando remoción de fondo y súper resolución para la prenda...");
+
+    const promptText = `
+Isolate the main clothing item/garment/shoe/accessory in this photo.
+Task instructions:
+1. BACKGROUND REMOVAL: Remove the entire background completely, placing the isolated garment on a solid, pure, clean transparent-like or pure white (#FFFFFF) background. There should be absolutely no hanger, no model skin/face/hands, no wall shadows, no carpet, and no background noise left. Only the garment itself.
+2. ADVANCED RESOLUTION ENHANCEMENT: Increase the resolution, contrast, sharpness, and details of the fabric texture. Upscale it to look like a premium, crisp, ultra-high-definition studio catalog product photo from a luxury fashion brand.
+3. OUTPUT: Return ONLY the edited image showing the isolated, enhanced garment.
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-image",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data,
+              mimeType,
+            },
+          },
+          {
+            text: promptText,
+          },
+        ],
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1",
+          imageSize: "1K"
+        }
+      }
+    });
+
+    let base64Output: string | null = null;
+    if (response?.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          base64Output = part.inlineData.data;
+          break;
+        }
+      }
+    }
+
+    if (!base64Output) {
+      console.warn("[IMAGEN-AVANZADA] Error o ausencia de inlineData en gemini-3.1-flash-image, intentando con gemini-3.1-flash-lite-image...");
+      const fallbackResponse = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite-image",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data,
+                mimeType,
+              },
+            },
+            {
+              text: promptText,
+            },
+          ],
+        },
+      });
+
+      if (fallbackResponse?.candidates?.[0]?.content?.parts) {
+        for (const part of fallbackResponse.candidates[0].content.parts) {
+          if (part.inlineData) {
+            base64Output = part.inlineData.data;
+            break;
+          }
+        }
+      }
+    }
+
+    if (base64Output) {
+      console.log("[IMAGEN-AVANZADA] Procesamiento con IA completado con éxito.");
+      res.json({
+        processedImage: `data:image/png;base64,${base64Output}`,
+        method: "gemini-ia"
+      });
+    } else {
+      throw new Error("No se devolvió ninguna imagen editada en la respuesta de Gemini.");
+    }
+  } catch (error: any) {
+    console.error("Error en procesar-imagen-avanzada, devolviendo la original para asegurar resiliencia:", error);
+    res.json({
+      processedImage: req.body.image,
+      method: "original-fallback",
+      error: error.message || "Fallo en el servicio de IA de imagen."
     });
   }
 });

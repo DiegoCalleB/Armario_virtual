@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
-import { fileToBase64, resizeImage, getCategoryLabel } from "../utils";
-import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight } from "lucide-react";
+import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
+import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface TuArmarioProps {
@@ -48,17 +48,23 @@ const cropGarmentImage = (
           xmaxScale = xmaxScale * 1000;
         }
 
+        // Normalize coordinates to ensure start is always <= end
+        const normYMin = Math.min(yminScale, ymaxScale);
+        const normYMax = Math.max(yminScale, ymaxScale);
+        const normXMin = Math.min(xminScale, xmaxScale);
+        const normXMax = Math.max(xminScale, xmaxScale);
+
         // Convert normalized (0-1000) coordinates to actual pixels
-        const yStart = (Math.max(0, Math.min(1000, yminScale)) / 1000) * totalH;
-        const xStart = (Math.max(0, Math.min(1000, xminScale)) / 1000) * totalW;
-        const yEnd = (Math.max(0, Math.min(1000, ymaxScale)) / 1000) * totalH;
-        const xEnd = (Math.max(0, Math.min(1000, xmaxScale)) / 1000) * totalW;
+        const yStart = (Math.max(0, Math.min(1000, normYMin)) / 1000) * totalH;
+        const xStart = (Math.max(0, Math.min(1000, normXMin)) / 1000) * totalW;
+        const yEnd = (Math.max(0, Math.min(1000, normYMax)) / 1000) * totalH;
+        const xEnd = (Math.max(0, Math.min(1000, normXMax)) / 1000) * totalW;
 
         let cropW = xEnd - xStart;
         let cropH = yEnd - yStart;
 
-        if (cropW <= 10 || cropH <= 10) {
-          console.warn("Rango de recorte inválido o muy pequeño de la IA, devolviendo original:", { ymin, xmin, ymax, xmax });
+        if (isNaN(cropW) || isNaN(cropH) || cropW <= 10 || cropH <= 10) {
+          console.warn("Rango de recorte inválido, NaN o muy pequeño de la IA, devolviendo original:", { ymin, xmin, ymax, xmax });
           resolve(base64Src);
           return;
         }
@@ -74,6 +80,12 @@ const cropGarmentImage = (
 
         const finalCropW = paddedXEnd - paddedXStart;
         const finalCropH = paddedYEnd - paddedYStart;
+
+        if (isNaN(finalCropW) || isNaN(finalCropH) || finalCropW <= 5 || finalCropH <= 5) {
+          console.warn("Ancho/alto de recorte final inválido o muy pequeño, devolviendo original.");
+          resolve(base64Src);
+          return;
+        }
 
         canvas.width = finalCropW;
         canvas.height = finalCropH;
@@ -101,6 +113,43 @@ const cropGarmentImage = (
     };
     img.src = base64Src;
   });
+};
+
+/**
+ * Removes background and upscales the garment image using Gemini 3.1 Flash Image editing or high-precision local fallback.
+ */
+const processImageToTransparentAndHD = async (
+  base64Src: string,
+  onProgress?: (text: string) => void
+): Promise<string> => {
+  if (!base64Src || base64Src.startsWith("data:image/svg+xml")) {
+    return base64Src;
+  }
+  try {
+    if (onProgress) {
+      onProgress("Removiendo fondo y mejorando resolución con IA avanzada...");
+    }
+    const res = await fetch("/api/procesar-imagen-avanzada", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64Src }),
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.processedImage) {
+        console.log("Background removal & advanced resolution upscaling completed:", data.method);
+        return data.processedImage;
+      }
+    }
+  } catch (err) {
+    console.warn("Fallo en procesado servidor IA, aplicando fallback canvas local de súper resolución:", err);
+  }
+  
+  if (onProgress) {
+    onProgress("Aplicando remoción de fondo y nitidez premium local...");
+  }
+  return await removeBackgroundAndSharpenCanvas(base64Src);
 };
 
 const generateGarmentSVG = (categoria: CategoriaPrenda, color: string): string => {
@@ -150,7 +199,20 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<"all" | CategoriaPrenda>("all");
   
   // Registration control tabs
-  const [registrationTab, setRegistrationTab] = useState<"ia" | "manual" | "link">("link");
+  const [registrationTab, setRegistrationTab] = useState<"ia" | "manual" | "link" | "amiga" | "googlefotos">("link");
+
+  // Friend Wardrobe states
+  const [friendCode, setFriendCode] = useState("");
+  const [friendConnected, setFriendConnected] = useState(false);
+  const [friendName, setFriendName] = useState("");
+  const [borrowedIds, setBorrowedIds] = useState<string[]>([]);
+  const [copiedOwnCode, setCopiedOwnCode] = useState(false);
+
+  // Google Fotos states
+  const [gphotosConnected, setGphotosConnected] = useState(false);
+  const [gphotosConnecting, setGphotosConnecting] = useState(false);
+  const [gphotosExtractingId, setGphotosExtractingId] = useState<string | null>(null);
+  const [gphotosExtractedCount, setGphotosExtractedCount] = useState(0);
 
   // Link Importer Form States
   const [linkInputUrl, setLinkInputUrl] = useState("");
@@ -242,7 +304,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
     try {
       let finalImage = "";
       if (manualImagePreview) {
-        finalImage = await resizeImage(manualImagePreview, 512);
+        const resized = await resizeImage(manualImagePreview, 512);
+        finalImage = await processImageToTransparentAndHD(resized);
       } else {
         finalImage = generateGarmentSVG(manualCategoria, manualColor);
       }
@@ -306,9 +369,9 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
           const infoParsed = await res.json();
           
           let prendasArray: any[] = [];
-          if (infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
+          if (infoParsed && infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
             prendasArray = infoParsed.prendas;
-          } else if (infoParsed.nombre) {
+          } else if (infoParsed && infoParsed.nombre) {
             prendasArray = [infoParsed];
           }
 
@@ -316,6 +379,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             const listToAdd: Prenda[] = [];
             for (let idx = 0; idx < prendasArray.length; idx++) {
               const item = prendasArray[idx];
+              if (!item) continue;
               let croppedImg = resizedBase64;
               
               const yminVal = item.box_ymin !== undefined && item.box_ymin !== null ? Number(item.box_ymin) : NaN;
@@ -343,12 +407,22 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 }
               }
 
+              // Apply background removal and upscale
+              try {
+                croppedImg = await processImageToTransparentAndHD(croppedImg, (text) => {
+                  setLoadingText(`[Prenda ${idx + 1}/${prendasArray.length}] ${text}`);
+                });
+              } catch (bgErr) {
+                console.error("Error al quitar fondo:", bgErr);
+              }
+
+              const formalidadVal = item.formalidad !== undefined && item.formalidad !== null ? Number(item.formalidad) : 3;
               const nuevaPrenda: Prenda = {
                 id: "prenda_" + Date.now() + "_" + i + "_" + idx + "_" + Math.floor(Math.random() * 1000),
                 nombre: item.nombre || "Prenda identificada con IA",
                 categoria: (item.categoria as CategoriaPrenda) || "top",
                 color: item.color || "#C9A35B",
-                formalidad: item.formalidad !== undefined ? item.formalidad : 3,
+                formalidad: isNaN(formalidadVal) ? 3 : Math.max(1, Math.min(5, formalidadVal)),
                 temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
                 tejido: item.tejido || "Algodón mixto",
@@ -371,6 +445,13 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
           const rawBase64 = await fileToBase64(file);
           const resizedBase64 = await resizeImage(rawBase64, 400);
           
+          let processedFallbackImg = resizedBase64;
+          try {
+            processedFallbackImg = await processImageToTransparentAndHD(resizedBase64);
+          } catch (bgErr) {
+            console.error("Error en quitar fondo fallback:", bgErr);
+          }
+          
           const mockPrenda: Prenda = {
             id: "prenda_f_" + Date.now() + "_" + i + "_" + Math.floor(Math.random() * 1000),
             nombre: "Prenda registrada (Ajustar manual)",
@@ -378,7 +459,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             color: "#3A3225",
             formalidad: 3,
             temporada: "todo",
-            imageSrc: resizedBase64,
+            imageSrc: processedFallbackImg,
             descripcion: "Fallo o lentitud al contactar la IA sastre. Presiona esta carta para configurar sus detalles y notas."
           };
           onPrendaAgregada(mockPrenda);
@@ -511,6 +592,15 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 }
               }
 
+              // Apply background removal and upscale
+              try {
+                croppedImg = await processImageToTransparentAndHD(croppedImg, (text) => {
+                  setLoadingText(`[Prenda ${idx + 1}/${prendasArray.length}] ${text}`);
+                });
+              } catch (bgErr) {
+                console.error("Error al quitar fondo:", bgErr);
+              }
+
               const nuevaPrenda: Prenda = {
                 id: "prenda_" + Date.now() + "_" + idx + "_" + Math.floor(Math.random() * 1000),
                 nombre: item.nombre || "Prenda identificada con IA",
@@ -553,12 +643,41 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
   return (
     <section id="tu-armario-sección" className="border-t border-linea pt-8 pb-10">
-      <div className="flex items-baseline justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-linea/30 pb-4">
         <div className="flex items-center gap-3">
           <span className="font-serif italic text-laton font-medium text-lg">02</span>
-          <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Tu Armario</h2>
+          <div>
+            <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Tu Armario</h2>
+            <p className="text-[10px] text-tinta-apagada font-sans tracking-wide uppercase">DIGITAL WARDROBE</p>
+          </div>
         </div>
-        <p className="text-xs font-sans text-tinta-apagada select-none">DIGITAL WARDROBE</p>
+        
+        {/* Código para compartir el armario con amigas */}
+        <div className="flex items-center gap-2.5 bg-tarjeta border border-linea px-3.5 py-2 rounded-lg self-start sm:self-center shadow-sm">
+          <div className="text-left">
+            <span className="text-[8.5px] uppercase tracking-widest text-laton font-bold block leading-none mb-1">
+              Compartir Armario con Amigas:
+            </span>
+            <span className="font-mono text-xs font-bold text-tinta tracking-widest leading-none">
+              DIEGO-4739
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText("DIEGO-4739");
+              setCopiedOwnCode(true);
+              setTimeout(() => setCopiedOwnCode(false), 2000);
+            }}
+            className="ml-2 px-2.5 py-1 text-[8.5px] uppercase font-bold tracking-wider rounded bg-laton text-fondo hover:bg-white hover:text-laton transition duration-150 select-none flex items-center gap-1 shrink-0"
+          >
+            {copiedOwnCode ? "¡Copiado! ✓" : (
+              <>
+                <Clipboard size={10} /> Copiar Código
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -620,10 +739,42 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 <Plus size={11} className={registrationTab === "manual" ? "text-laton" : "text-tinta-apagada"} /> Rápido
               </span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRegistrationTab("amiga");
+                setError(null);
+              }}
+              className={`flex-1 min-w-[90px] py-3 text-[9.5px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest border-b-2 transition ${
+                registrationTab === "amiga"
+                  ? "border-laton text-laton bg-tarjeta/15"
+                  : "border-transparent text-tinta-apagada hover:text-tinta hover:bg-tarjeta/5"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                <Users size={11} className={registrationTab === "amiga" ? "text-laton" : "text-tinta-apagada"} /> De Amiga
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRegistrationTab("googlefotos");
+                setError(null);
+              }}
+              className={`flex-1 min-w-[90px] py-3 text-[9.5px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest border-b-2 transition ${
+                registrationTab === "googlefotos"
+                  ? "border-laton text-laton bg-tarjeta/15"
+                  : "border-transparent text-tinta-apagada hover:text-tinta hover:bg-tarjeta/5"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                <Image size={11} className={registrationTab === "googlefotos" ? "text-laton" : "text-tinta-apagada"} /> Google Fotos
+              </span>
+            </button>
           </div>
 
           <AnimatePresence mode="wait">
-            {registrationTab === "ia" ? (
+            {registrationTab === "ia" && (
               <motion.div
                 key="ia-panel"
                 initial={{ opacity: 0, y: 5 }}
@@ -763,7 +914,9 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                   )}
                 </div>
               </motion.div>
-            ) : (
+            )}
+
+            {registrationTab === "manual" && (
               <motion.form
                 key="manual-panel"
                 onSubmit={handleAddPrendaManual}
@@ -1168,6 +1321,17 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           const id = "prenda_url_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
                           let finalImg = extractedPrenda.imageSrc || "";
                           
+                          setLoading(true);
+                          setLoadingText("Removiendo fondo y mejorando resolución del enlace...");
+                          try {
+                            finalImg = await processImageToTransparentAndHD(finalImg);
+                          } catch (bgErr) {
+                            console.error(bgErr);
+                          } finally {
+                            setLoading(false);
+                            setLoadingText("");
+                          }
+                          
                           const resolvedPrenda: Prenda = {
                             id,
                             nombre: (extractedPrenda.nombre || "Camiseta sastre").trim(),
@@ -1192,6 +1356,443 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       </button>
                     </div>
                   </motion.div>
+                )}
+              </motion.div>
+            )}
+
+            {registrationTab === "amiga" && (
+              <motion.div
+                key="amiga-panel"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="p-4 bg-tarjeta border border-linea rounded-lg space-y-4 text-left font-sans animate-fade-in"
+              >
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-laton uppercase tracking-widest block font-sans">
+                    Armario Compartido de Amigas
+                  </span>
+                  <p className="text-[10.5px] text-tinta-apagada font-light leading-relaxed">
+                    ¿Quieres usar ropa prestada de una amiga para tu próximo evento? Conecta su vestidor con su código exclusivo.
+                  </p>
+                </div>
+
+                {!friendConnected ? (
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-widest text-tinta-apagada font-bold block">
+                        Código del Armario de tu Amiga
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Ej: MARIA-7892 o SOFIA-1102"
+                          value={friendCode}
+                          onChange={(e) => setFriendCode(e.target.value.toUpperCase())}
+                          className="flex-1 text-xs font-sans bg-fondo border border-linea text-tinta p-2.5 rounded focus:border-laton focus:outline-none placeholder-tinta-apagada/30 font-semibold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = friendCode.trim().toUpperCase();
+                            if (code.includes("MARIA") || code.includes("7892")) {
+                              setFriendConnected(true);
+                              setFriendName("María");
+                              setError(null);
+                            } else if (code.includes("SOFIA") || code.includes("1102")) {
+                              setFriendConnected(true);
+                              setFriendName("Sofía");
+                              setError(null);
+                            } else if (code.includes("DIEGO") || code.includes("4739")) {
+                              setFriendConnected(true);
+                              setFriendName("Diego (Tú)");
+                              setError(null);
+                            } else {
+                              setError("Código de armario no encontrado. Prueba con 'MARIA-7892', 'SOFIA-1102' o tu propio código 'DIEGO-4739'.");
+                            }
+                          }}
+                          className="px-4 bg-laton hover:bg-white text-fondo font-bold text-xs uppercase tracking-widest rounded transition duration-150"
+                        >
+                          Conectar
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[9.5px] text-tinta-apagada/70 italic">
+                      Amigas recomendadas para probar: <strong className="text-laton/85 hover:underline cursor-pointer" onClick={() => setFriendCode("MARIA-7892")}>MARIA-7892</strong> o <strong className="text-laton/85 hover:underline cursor-pointer" onClick={() => setFriendCode("SOFIA-1102")}>SOFIA-1102</strong>
+                    </p>
+
+                    {/* Tu propio código de armario para compartir */}
+                    <div className="mt-4 pt-3 border-t border-linea/50 bg-fondo/30 p-2.5 rounded space-y-2">
+                      <span className="text-[9px] uppercase tracking-widest text-laton font-bold block">
+                        Tu Código de Armario Compartido
+                      </span>
+                      <p className="text-[10px] text-tinta-apagada font-light leading-snug">
+                        Comparte este código con tus amigas para que puedan ver e interactuar con las prendas de tu vestidor en tiempo real:
+                      </p>
+                      <div className="flex items-center justify-between bg-fondo p-2 rounded border border-linea">
+                        <span className="font-mono text-xs font-bold text-tinta tracking-widest">
+                          DIEGO-4739
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText("DIEGO-4739");
+                            setCopiedOwnCode(true);
+                            setTimeout(() => setCopiedOwnCode(false), 2000);
+                          }}
+                          className="px-2.5 py-1 text-[8.5px] uppercase font-bold tracking-wider rounded bg-laton/15 hover:bg-laton hover:text-fondo text-laton transition duration-150 select-none"
+                        >
+                          {copiedOwnCode ? "¡Copiado! ✓" : "Copiar Código"}
+                        </button>
+                      </div>
+                      {copiedOwnCode && (
+                        <p className="text-[8.5px] text-green-400 font-medium animate-pulse text-right">
+                          Código copiado al portapapeles. ¡Pásaselo a tu amiga!
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between bg-fondo p-2.5 rounded border border-laton/20">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+                        <span className="text-xs font-medium text-tinta">
+                          Conectado al armario de <strong className="text-laton">{friendName}</strong>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFriendConnected(false);
+                          setFriendCode("");
+                          setFriendName("");
+                        }}
+                        className="text-[10px] text-red-400 hover:text-red-300 uppercase font-bold tracking-wider"
+                      >
+                        Desconectar
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-[9px] uppercase tracking-widest text-tinta-apagada font-bold block">
+                        Prendas compartidas por {friendName}
+                      </span>
+                      
+                      <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 no-scrollbar animate-fade-in">
+                        {(friendName === "Diego (Tú)" ? (
+                          prendas.length > 0 ? prendas.map(p => ({
+                            id: p.id,
+                            nombre: p.nombre,
+                            categoria: p.categoria,
+                            color: p.color,
+                            formalidad: p.formalidad,
+                            temporada: p.temporada,
+                            tejido: p.tejido || "Algodón sastre",
+                            tags: p.tags || ["Propio", "Elegante"],
+                            imageSrc: p.imageSrc
+                          })) : [
+                            {
+                              id: "friend_empty",
+                              nombre: "Aún no tienes prendas en tu vestidor para compartir",
+                              categoria: "top" as CategoriaPrenda,
+                              color: "#C9A35B",
+                              formalidad: 3,
+                              temporada: "todo" as TemporadaPrenda,
+                              tejido: "Ninguno",
+                              tags: ["vacío"]
+                            }
+                          ]
+                        ) : friendName === "María" ? [
+                          {
+                            id: "friend_m1",
+                            nombre: "Bolso de hombro de cuero vintage Sèzane",
+                            categoria: "accesorio" as CategoriaPrenda,
+                            color: "#5A1827",
+                            formalidad: 4,
+                            temporada: "todo" as TemporadaPrenda,
+                            tejido: "Cuero italiano de becerro",
+                            tags: ["Sèzane", "Eventos"]
+                          },
+                          {
+                            id: "friend_m2",
+                            nombre: "Vestido de satén drapeado de seda",
+                            categoria: "top" as CategoriaPrenda,
+                            color: "#E6D7C3",
+                            formalidad: 5,
+                            temporada: "todo" as TemporadaPrenda,
+                            tejido: "Seda natural de morera",
+                            tags: ["Boda", "Chic"]
+                          },
+                          {
+                            id: "friend_m3",
+                            nombre: "Chaqueta Tweed Bouclé clásica estilo Chanel",
+                            categoria: "top" as CategoriaPrenda,
+                            color: "#F5F2EB",
+                            formalidad: 4,
+                            temporada: "todo" as TemporadaPrenda,
+                            tejido: "Lana Bouclé con hilos dorados",
+                            tags: ["Clásico", "Atelier"]
+                          }
+                        ] : [
+                          {
+                            id: "friend_s1",
+                            nombre: "Chaqueta blazer de satén verde esmeralda",
+                            categoria: "top" as CategoriaPrenda,
+                            color: "#0F4C3A",
+                            formalidad: 4,
+                            temporada: "todo" as TemporadaPrenda,
+                            tejido: "Satén brillante de seda",
+                            tags: ["Fiesta", "Blazer"]
+                          },
+                          {
+                            id: "friend_s2",
+                            nombre: "Zapatos slingback de tacón de aguja Dior",
+                            categoria: "calzado" as CategoriaPrenda,
+                            color: "#0F0F10",
+                            formalidad: 5,
+                            temporada: "todo" as TemporadaPrenda,
+                            tejido: "Charol fino italiano",
+                            tags: ["Gala", "Dior"]
+                          },
+                          {
+                            id: "friend_s3",
+                            nombre: "Clutch de terciopelo con cadena de oro Yves Saint Laurent",
+                            categoria: "accesorio" as CategoriaPrenda,
+                            color: "#121A30",
+                            formalidad: 5,
+                            temporada: "todo" as TemporadaPrenda,
+                            tejido: "Terciopelo de algodón",
+                            tags: ["YSL", "Nocturno"]
+                          }
+                        ]).map((p) => {
+                          const isBorrowed = borrowedIds.includes(p.id);
+                          const garmentImage = (p as any).imageSrc || generateGarmentSVG(p.categoria, p.color);
+                          return (
+                            <div key={p.id} className="flex gap-3 bg-fondo/50 border border-linea p-2 rounded items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded border border-linea/60 overflow-hidden shrink-0 flex items-center justify-center bg-tarjeta/40">
+                                  { (p as any).imageSrc ? (
+                                    <img src={(p as any).imageSrc} alt={p.nombre} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                  ) : (
+                                    <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: p.color }} />
+                                  )}
+                                </div>
+                                <div className="text-left">
+                                  <h5 className="text-[11px] font-bold text-tinta line-clamp-1">{p.nombre}</h5>
+                                  <p className="text-[8.5px] text-tinta-apagada font-light">
+                                    {p.tejido} • {p.tags.join(", ")}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={isBorrowed || p.id === "friend_empty"}
+                                onClick={() => {
+                                  // Add to user's wardrobe
+                                  const id = "friend_borrowed_" + p.id + "_" + Date.now();
+                                  const finalPrenda: Prenda = {
+                                    ...p,
+                                    id,
+                                    nombre: `[Préstamo de ${friendName}] ${p.nombre}`,
+                                    tags: [...p.tags, `De ${friendName}`, "prestado"],
+                                    imageSrc: garmentImage,
+                                  };
+                                  onPrendaAgregada(finalPrenda);
+                                  setBorrowedIds([...borrowedIds, p.id]);
+                                }}
+                                className={`px-2.5 py-1 text-[9px] uppercase font-bold tracking-wider rounded select-none ${
+                                  p.id === "friend_empty"
+                                    ? "bg-transparent text-tinta-apagada border border-linea cursor-not-allowed"
+                                    : isBorrowed
+                                    ? "bg-green-950/40 border border-green-900/30 text-green-400 cursor-default"
+                                    : "bg-laton hover:bg-white text-fondo transition duration-150"
+                                }`}
+                              >
+                                {p.id === "friend_empty" ? "Vacío" : isBorrowed ? "Prestado ✓" : "Pedir Prestado"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {registrationTab === "googlefotos" && (
+              <motion.div
+                key="googlefotos-panel"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="p-4 bg-tarjeta border border-linea rounded-lg space-y-4 text-left font-sans animate-fade-in"
+              >
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-laton uppercase tracking-widest block font-sans">
+                    Sincronización con Google Fotos
+                  </span>
+                  <p className="text-[10.5px] text-tinta-apagada font-light leading-relaxed">
+                    Sincroniza tus álbumes personales. La inteligencia artificial de Espejo analizará tus fotografías para identificar, aislar e incorporar la ropa que llevas puesta a tu vestidor virtual de forma autónoma.
+                  </p>
+                </div>
+
+                {!gphotosConnected ? (
+                  <div className="py-6 flex flex-col items-center justify-center border border-dashed border-linea rounded bg-fondo/30 space-y-4">
+                    <div className="w-10 h-10 rounded-full bg-laton/15 flex items-center justify-center text-laton">
+                      <Image size={18} />
+                    </div>
+                    <div className="text-center space-y-1 px-4">
+                      <h4 className="text-xs font-bold text-tinta">Extrae prendas de tus fotos personales</h4>
+                      <p className="text-[10px] text-tinta-apagada font-light max-w-xs leading-relaxed">
+                        Conéctate de forma segura con tu cuenta de Google Fotos para escanear de forma inteligente tus retratos y modelados diarios.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={gphotosConnecting}
+                      onClick={() => {
+                        setGphotosConnecting(true);
+                        setTimeout(() => {
+                          setGphotosConnected(true);
+                          setGphotosConnecting(false);
+                          setError(null);
+                        }, 1600);
+                      }}
+                      className="px-4 py-2 bg-white text-slate-800 hover:bg-slate-100 font-bold text-xs uppercase tracking-widest rounded transition duration-200 flex items-center gap-2 shadow-md border border-slate-200"
+                    >
+                      {gphotosConnecting ? (
+                        <>
+                          <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-800 border-t-transparent animate-spin" />
+                          Conectando...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                          </svg>
+                          Conectar Google Fotos
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between bg-fondo p-2.5 rounded border border-laton/20">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping shrink-0" />
+                        <span className="text-xs font-medium text-tinta">
+                          Álbumes sincronizados ✓
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGphotosConnected(false);
+                          setGphotosExtractedCount(0);
+                        }}
+                        className="text-[10px] text-red-400 hover:text-red-300 uppercase font-bold tracking-wider"
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <span className="text-[9.5px] uppercase tracking-widest text-tinta-apagada font-bold block">
+                        Fotos personales detectadas (Últimas cargadas)
+                      </span>
+
+                      <div className="grid grid-cols-3 gap-2 animate-fade-in">
+                        {[
+                          {
+                            id: "gphoto_1",
+                            title: "Outfit de Boda",
+                            categoria: "top" as CategoriaPrenda,
+                            desc: "Americana entallada de sastre azul cobalto",
+                            color: "#1d2b42",
+                            formalidad: 5,
+                            tejido: "Lana virgen súper 120",
+                            tags: ["Boda", "Elegante"]
+                          },
+                          {
+                            id: "gphoto_2",
+                            title: "Atuendo Casual",
+                            categoria: "top" as CategoriaPrenda,
+                            desc: "Jersey de punto beige de cuello alto cisne",
+                            color: "#d7c5ae",
+                            formalidad: 3,
+                            tejido: "Algodón peinado y cachemira",
+                            tags: ["Casual", "Invierno"]
+                          },
+                          {
+                            id: "gphoto_3",
+                            title: "Zapatos Cóctel",
+                            categoria: "calzado" as CategoriaPrenda,
+                            desc: "Mocasines de cuero negro con antifaz",
+                            color: "#111111",
+                            formalidad: 4,
+                            tejido: "Cuero Napa cepillado",
+                            tags: ["Sartorial", "Atelier"]
+                          }
+                        ].map((item) => {
+                          const isExtracting = gphotosExtractingId === item.id;
+                          return (
+                            <div key={item.id} className="relative rounded border border-linea/60 overflow-hidden bg-fondo/60 p-2 flex flex-col justify-between min-h-[145px] hover:border-laton/40 transition">
+                              <div className="space-y-1 text-center">
+                                <div className="w-8 h-8 rounded bg-laton/10 mx-auto flex items-center justify-center text-laton">
+                                  <Camera size={13} />
+                                </div>
+                                <h6 className="text-[10px] font-bold text-tinta leading-tight">{item.title}</h6>
+                                <p className="text-[8.5px] text-tinta-apagada line-clamp-2 leading-relaxed font-light">{item.desc}</p>
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={isExtracting}
+                                onClick={() => {
+                                  setGphotosExtractingId(item.id);
+                                  setTimeout(() => {
+                                    // Add extracted prenda to user's wardrobe!
+                                    const finalPrenda: Prenda = {
+                                      id: "gphoto_extracted_" + item.id + "_" + Date.now(),
+                                      nombre: `[Google Fotos] ${item.desc}`,
+                                      categoria: item.categoria,
+                                      color: item.color,
+                                      formalidad: item.formalidad,
+                                      temporada: "todo",
+                                      tejido: item.tejido,
+                                      tags: [...item.tags, "Google Fotos", "IA"],
+                                      imageSrc: generateGarmentSVG(item.categoria, item.color)
+                                    };
+                                    onPrendaAgregada(finalPrenda);
+                                    setGphotosExtractingId(null);
+                                    setGphotosExtractedCount(prev => prev + 1);
+                                  }, 1800);
+                                }}
+                                className={`w-full py-1 text-[8.5px] uppercase font-bold tracking-wider rounded select-none text-center ${
+                                  isExtracting
+                                    ? "bg-laton/20 text-laton animate-pulse cursor-default"
+                                    : "bg-laton hover:bg-white text-fondo transition duration-150"
+                                }`}
+                              >
+                                {isExtracting ? "Analizando..." : "Extraer IA"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {gphotosExtractedCount > 0 && (
+                        <div className="text-[9px] text-green-400 bg-green-950/20 border border-green-900/30 p-2 rounded text-center font-medium animate-fade-in">
+                          ¡Prenda extraída con éxito! Se ha incorporado a tu vestidor virtual con todas sus propiedades clasificadas de forma sastrera.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </motion.div>
             )}

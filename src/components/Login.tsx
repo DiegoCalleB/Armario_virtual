@@ -502,19 +502,28 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             </motion.div>
           )}
 
-          {/* Vercel Guidance Card */}
+          {/* Vercel & Railway Guidance Card */}
           <div className="bg-zinc-950/50 border border-linea/60 rounded p-3 text-[10.5px] text-tinta-apagada space-y-2 text-left">
             <p className="text-white font-serif font-semibold text-[11px] tracking-wide uppercase flex items-center gap-1">
-              🚀 ¿Desplegando en Vercel?
+              🚀 ¿Desplegando en Railway o Vercel?
             </p>
             <p className="leading-relaxed">
-              Para que el acceso con Google funcione en <strong>Vercel</strong>, debes configurar los redireccionamientos permitidos en Supabase:
+              Si al iniciar sesión o usar Magic Link desde tu propio dominio (ej: Railway/Vercel) te redirige de vuelta a AI Studio, se debe a que tu panel de <strong>Supabase</strong> no conoce aún tu nueva URL. Para solucionarlo:
             </p>
             <ul className="list-decimal list-inside space-y-1 text-tinta-apagada/90 pl-1">
-              <li>Entra al panel de <strong>Supabase</strong> de tu proyecto.</li>
-              <li>Ve a <strong>Authentication</strong> &rarr; <strong>URL Configuration</strong>.</li>
-              <li>Añade la URL de Vercel (ej: <code className="bg-zinc-800 text-amber-200 px-1 py-0.5 rounded font-mono">https://tu-proyecto.vercel.app/**</code>) en la sección de <strong>Redirect URLs</strong>.</li>
-              <li>Asegúrate de configurar los Secrets <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_URL</code> y <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_ANON_KEY</code> en la configuración de variables de Vercel.</li>
+              <li>Entra al panel de control de <strong>Supabase</strong>.</li>
+              <li>Ve a la sección lateral <strong>Authentication</strong> &rarr; <strong>URL Configuration</strong>.</li>
+              <li>
+                Añade la URL de tu despliegue con un asterisco doble al final en <strong>Redirect URLs</strong>. Por ejemplo:
+                <div className="mt-1 pl-4 space-y-1">
+                  <div>• Para Railway: <code className="bg-zinc-800 text-amber-200 px-1 py-0.5 rounded font-mono">https://*.railway.app/**</code></div>
+                  <div>• Para Vercel: <code className="bg-zinc-800 text-amber-200 px-1 py-0.5 rounded font-mono">https://*.vercel.app/**</code></div>
+                </div>
+              </li>
+              <li>
+                Si quieres que sea la URL principal por defecto al registrarse, también puedes cambiar el campo <strong>Site URL</strong> por tu dominio de Railway o Vercel.
+              </li>
+              <li>Asegúrate de haber configurado las variables de entorno <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_URL</code> y <code className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded font-mono">VITE_SUPABASE_ANON_KEY</code> en la pestaña de variables de tu servicio de Railway o Vercel.</li>
             </ul>
           </div>
 

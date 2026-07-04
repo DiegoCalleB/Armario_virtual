@@ -31,6 +31,110 @@ import { motion, AnimatePresence } from "motion/react";
 
 type ActiveTab = "espejo" | "armario" | "asesor" | "historial" | "auditoria" | "maleta" | "compras" | "diagnostico";
 
+function safeSetLocalStorage(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error: any) {
+    const isQuotaError = 
+      error.name === "QuotaExceededError" ||
+      error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      error.code === 22 ||
+      error.code === 1014;
+
+    if (isQuotaError) {
+      console.warn("localStorage quota exceeded for key:", key, ". Attempting mitigation...");
+
+      if (key.includes("espejo_historial")) {
+        try {
+          const items = JSON.parse(value);
+          if (Array.isArray(items) && items.length > 0) {
+            let prunedItems = [...items];
+            
+            // Limit length
+            if (prunedItems.length > 3) {
+              const favorites = prunedItems.filter(item => item.favorito);
+              const nonFavorites = prunedItems.filter(item => !item.favorito);
+              const maxNonFavs = Math.max(1, 3 - favorites.length);
+              const allowedNonFavs = nonFavorites.slice(0, maxNonFavs);
+              prunedItems = [...allowedNonFavs, ...favorites].sort((a, b) => b.id.localeCompare(a.id));
+            }
+
+            // Strip out large base64 image simulations for non-favorites (or older items)
+            prunedItems = prunedItems.map((item, idx) => {
+              if (idx > 0 && !item.favorito) {
+                return {
+                  ...item,
+                  look: {
+                    ...item.look,
+                    simulatedImageUrl: undefined,
+                    simulatedFullBodyImageUrl: undefined
+                  }
+                };
+              }
+              return item;
+            });
+
+            const prunedValue = JSON.stringify(prunedItems);
+            try {
+              localStorage.setItem(key, prunedValue);
+              console.log("Pruned history saved successfully under key:", key);
+              return true;
+            } catch (innerErr) {
+              // If still failing, drop base64 image strings completely for ALL except the absolute first one
+              const ultraPruned = prunedItems.map((item, idx) => {
+                if (idx > 0) {
+                  return {
+                    ...item,
+                    look: {
+                      ...item.look,
+                      simulatedImageUrl: undefined,
+                      simulatedFullBodyImageUrl: undefined
+                    }
+                  };
+                }
+                return item;
+              });
+              try {
+                localStorage.setItem(key, JSON.stringify(ultraPruned));
+                console.log("Ultra-pruned history saved successfully under key:", key);
+                return true;
+              } catch (extremeErr) {
+                try {
+                  localStorage.setItem(key, JSON.stringify(prunedItems.slice(0, 1)));
+                  return true;
+                } catch (e) {}
+              }
+            }
+          }
+        } catch (parseErr) {
+          console.error("Error parsing history in mitigation:", parseErr);
+        }
+      }
+
+      // Try cleaning up old unneeded storage keys
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k !== key) {
+            if (k.includes("usr_guest") || k.includes("auditoria") || k.includes("perfil")) {
+              keysToRemove.push(k);
+            }
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        localStorage.setItem(key, value);
+        return true;
+      } catch (cleaningErr) {
+        console.error("Failed to clean secondary keys for storage:", cleaningErr);
+      }
+    }
+    console.error("Failed to store key:", key, error);
+    return false;
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isAuthMock, setIsAuthMock] = useState(false);
@@ -250,13 +354,13 @@ export default function App() {
 
           // Update local cache for safety and offline work
           if (dbRostro) {
-            localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(dbRostro));
+            safeSetLocalStorage(`espejo_rostro_${user.id}`, JSON.stringify(dbRostro));
           }
           if (dbPrendas.length > 0) {
-            localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(dbPrendas));
+            safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(dbPrendas));
           }
           if (dbHistorial.length > 0) {
-            localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(dbHistorial));
+            safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(dbHistorial));
           }
           
           setRostro(dbRostro);
@@ -286,20 +390,20 @@ export default function App() {
               const parsedGuest = JSON.parse(guestPrendas);
               if (parsedGuest.length > 0) {
                 parsedPrendas = parsedGuest;
-                localStorage.setItem(prendasKey, JSON.stringify(parsedPrendas));
+                safeSetLocalStorage(prendasKey, JSON.stringify(parsedPrendas));
               }
             }
 
             if (!parsedRostro && guestRostro) {
               parsedRostro = JSON.parse(guestRostro);
-              localStorage.setItem(rostroKey, JSON.stringify(parsedRostro));
+              safeSetLocalStorage(rostroKey, JSON.stringify(parsedRostro));
             }
 
             if (parsedHistorial.length === 0 && guestHistorial) {
               const parsedGuestHist = JSON.parse(guestHistorial);
               if (parsedGuestHist.length > 0) {
                 parsedHistorial = parsedGuestHist;
-                localStorage.setItem(historialKey, JSON.stringify(parsedHistorial));
+                safeSetLocalStorage(historialKey, JSON.stringify(parsedHistorial));
               }
             }
           }
@@ -340,7 +444,7 @@ export default function App() {
   const handlePerfilGuardado = (nuevoPerfil: PerfilEstilo) => {
     setPerfilEstilo(nuevoPerfil);
     if (user) {
-      localStorage.setItem(`espejo_perfil_${user.id}`, JSON.stringify(nuevoPerfil));
+      safeSetLocalStorage(`espejo_perfil_${user.id}`, JSON.stringify(nuevoPerfil));
     }
   };
 
@@ -348,12 +452,12 @@ export default function App() {
     setRostro(nuevoRostro);
     if (user) {
       // Local backup first (Always)
-      localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(nuevoRostro));
+      safeSetLocalStorage(`espejo_rostro_${user.id}`, JSON.stringify(nuevoRostro));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         try {
           const savedRostro = await saveUserRostro(user.id, nuevoRostro);
           setRostro(savedRostro);
-          localStorage.setItem(`espejo_rostro_${user.id}`, JSON.stringify(savedRostro));
+          safeSetLocalStorage(`espejo_rostro_${user.id}`, JSON.stringify(savedRostro));
         } catch (err) {
           console.error("Error saving rostro:", err);
         }
@@ -380,7 +484,7 @@ export default function App() {
       const filteredPrev = prev.filter(p => !nuevas.some(n => n.id === p.id));
       const updated = [...nuevas, ...filteredPrev];
       if (user) {
-        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+        safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       }
       return updated;
     });
@@ -403,7 +507,7 @@ export default function App() {
           const matchingUpdated = updatedPrendasWithUrls.find(u => u.id === p.id);
           return matchingUpdated ? matchingUpdated : p;
         });
-        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+        safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
         return updated;
       });
     }
@@ -413,7 +517,7 @@ export default function App() {
     const updated = prendas.filter((p) => p.id !== id);
     setPrendas(updated);
     if (user) {
-      localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+      safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await deleteUserPrenda(user.id, id);
       }
@@ -425,7 +529,7 @@ export default function App() {
     setPrendas((prev) => {
       const updated = prev.map((p) => (p.id === prendaActualizada.id ? prendaActualizada : p));
       if (user) {
-        localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+        safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       }
       return updated;
     });
@@ -436,7 +540,7 @@ export default function App() {
         // Actualizamos de nuevo con la URL final del storage
         setPrendas((prev) => {
           const updated = prev.map((p) => (p.id === saved.id ? saved : p));
-          localStorage.setItem(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+          safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
           return updated;
         });
       } catch (err) {
@@ -467,7 +571,7 @@ export default function App() {
     setHistorial(updated);
 
     if (user) {
-      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
+      safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await saveMultipleUserHistorialItems(user.id, nuevosItems);
       }
@@ -501,7 +605,7 @@ export default function App() {
       setHistorial(updatedHistorial);
 
       if (user) {
-        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updatedHistorial));
+        safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(updatedHistorial));
         if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
           const imgUrl = isFullBody ? nextLook.simulatedFullBodyImageUrl : nextLook.simulatedImageUrl;
           if (imgUrl) {
@@ -532,7 +636,7 @@ export default function App() {
       setHistorial(updatedHistorial);
 
       if (user) {
-        localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updatedHistorial));
+        safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(updatedHistorial));
         if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
           await saveMultipleUserHistorialItems(user.id, [newItem]);
         }
@@ -547,7 +651,7 @@ export default function App() {
       setSelectedHistorialItem(null);
     }
     if (user) {
-      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
+      safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         await deleteUserHistorialItem(user.id, id);
       }
@@ -565,7 +669,7 @@ export default function App() {
     setHistorial(updated);
 
     if (user) {
-      localStorage.setItem(`espejo_historial_${user.id}`, JSON.stringify(updated));
+      safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(updated));
       if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
         if (matched) {
           await toggleUserHistorialItemFavorito(user.id, id, !matched.favorito);
@@ -685,7 +789,7 @@ export default function App() {
               { id: "espejo", label: "Tú Espejo", desc: "Análisis Fisiognómico", icon: Scissors },
               { id: "diagnostico", label: "ADN Estilo", desc: "Preferencias y Silueta", icon: Sliders },
               { id: "armario", label: "Tú Armario", desc: "Digital & Inteligente", icon: Shirt },
-              { id: "asesor", label: "Asesor Sastre", desc: "Generador de Looks", icon: Sparkles },
+              { id: "asesor", label: "✨ Probador IA", desc: "Pruébate Ropa con IA", icon: Sparkles },
               { id: "maleta", label: "Equipaje Smart", desc: "Cápsula de Viajes", icon: Briefcase },
               { id: "compras", label: "Tendencias", desc: "Asesor de Compras", icon: TrendingUp },
               { id: "historial", label: "Catálogo Looks", desc: "Historial Guardado", icon: History },
@@ -781,7 +885,7 @@ export default function App() {
             <h1 className="font-serif text-3xl sm:text-4xl lg:text-3xl font-extrabold tracking-tight text-white select-none uppercase">
               {activeTab === "espejo" && "TÚ ESPEJO VIRTUAL"}
               {activeTab === "armario" && "TÚ ARMARIO DIGITAL"}
-              {activeTab === "asesor" && "COORDINADOR DE LOOKS"}
+              {activeTab === "asesor" && "✨ PROBADOR DE LOOKS IA"}
               {activeTab === "historial" && "HISTORIAL DE LOOKS"}
               {activeTab === "auditoria" && "AUDITORÍA DE ARMARIO"}
               {activeTab === "maleta" && "EQUIPAJE CÁPSULA SMART"}
@@ -792,7 +896,7 @@ export default function App() {
             <p className="font-sans text-[11px] sm:text-xs uppercase tracking-widest text-[#A89C82] font-normal max-w-3xl mx-auto mt-2 leading-relaxed">
               {activeTab === "espejo" && "Calibración fisionómica por I.A.: Analiza la forma de tu rostro para optimizar tu corte de cabello, barba y sintonizarlo con tu estilo."}
               {activeTab === "armario" && "Tu atelier digital: Registra tu colección de prendas reales con la inteligencia de categorización rápida por visión computacional."}
-              {activeTab === "asesor" && "Estilismo sartorial automatizado: Diseña combinaciones editoriales de alta costura adaptadas al clima y tu perfil."}
+              {activeTab === "asesor" && "Probador virtual fotorrealista de alta fidelidad: Sube tu foto de cuerpo completo y pruébate de inmediato cualquier combinación de tu armario con tecnología de inteligencia artificial."}
               {activeTab === "historial" && "Colección privada de atuendos de gala: Guarda tus propuestas favoritas de cada ocasión o evento."}
               {activeTab === "auditoria" && "Estudio crítico de tu ropero: Descubre el coeficiente de cohesión, lo que realmente necesitas y lo que te sobra."}
               {activeTab === "maleta" && "Planificador de maletas inteligente: Viaja ultra-ligero con un ropero de cápsula sastrera para cada día de viaje."}
@@ -1158,7 +1262,7 @@ export default function App() {
         {[
           { id: "espejo", label: "Espejo", icon: Scissors },
           { id: "armario", label: "Armario", icon: Shirt },
-          { id: "asesor", label: "Asesoría", icon: Sparkles },
+          { id: "asesor", label: "Probador IA", icon: Sparkles },
           { id: "historial", label: "Historial", icon: History },
         ].map((tab) => {
           const Icon = tab.icon;

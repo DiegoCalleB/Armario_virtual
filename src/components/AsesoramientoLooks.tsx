@@ -231,7 +231,7 @@ export default function AsesoramientoLooks({
   const [simulating, setSimulating] = useState(false);
   const [simulationError, setSimulationError] = useState<string | null>(null);
   const [currentBarberPhraseIndex, setCurrentBarberPhraseIndex] = useState(0);
-  const [simulationTab, setSimulationTab] = useState<"retrato" | "cuerpo">("retrato");
+  const [simulationTab, setSimulationTab] = useState<"retrato" | "cuerpo">("cuerpo");
   const [copiedShare, setCopiedShare] = useState(false);
   const [customFullBodyPhoto, setCustomFullBodyPhoto] = useState<string | null>(null);
   const [customFullBodyFile, setCustomFullBodyFile] = useState<File | null>(null);
@@ -394,7 +394,7 @@ export default function AsesoramientoLooks({
   const selectedLook = looks[activeLookIndex];
 
   // Interactive wardrobe try-on positions
-  const [cuerpoMode, setCuerpoMode] = useState<"interactivo" | "ia">("interactivo");
+  const [cuerpoMode, setCuerpoMode] = useState<"interactivo" | "ia">("ia");
   const [garmentPositions, setGarmentPositions] = useState<Record<string, {
     id: string;
     x: number;
@@ -507,6 +507,52 @@ export default function AsesoramientoLooks({
   const handlePointerUp = () => {
     setDraggedGarmentId(null);
   };
+
+  const matchingGarments = selectedLook ? getResilientMatchingGarments(selectedLook.id_prendas, armario) : [];
+  const tops = matchingGarments.filter(p => p.categoria === "top");
+  const pantalones = matchingGarments.filter(p => p.categoria === "pantalon");
+  const calzados = matchingGarments.filter(p => p.categoria === "calzado");
+  const accesorios = matchingGarments.filter(p => p.categoria === "accesorio");
+
+  const renderPrendaCardItem = (item: Prenda, compact = false) => (
+    <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#C9A35B]/50 transition duration-200 shadow-md">
+      <div className={`${compact ? "w-9 h-9" : "w-12 h-12"} rounded overflow-hidden border border-linea/40 shrink-0 bg-fondo`}>
+        <img
+          src={item.imageSrc}
+          alt={item.nombre}
+          className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      <div className="min-w-0 flex-1 text-left">
+        <div className="flex items-center justify-between gap-1">
+          <p className="text-[8px] uppercase tracking-wider text-[#C9A35B]/80 font-bold leading-none">
+            {item.categoria === "top" ? "Prenda Superior" : item.categoria === "pantalon" ? "Prenda Inferior" : item.categoria === "calzado" ? "Calzado" : "Accesorio"}
+          </p>
+          <span className="text-[8px] text-tinta-apagada px-1.5 py-0.5 rounded bg-fondo font-medium uppercase font-sans">
+            Nivel {item.formalidad}
+          </span>
+        </div>
+        <p className="font-serif text-xs font-semibold text-tinta truncate mt-0.5" title={item.nombre}>
+          {item.nombre}
+        </p>
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="w-2.5 h-2.5 rounded-full border border-white/10"
+              style={{ backgroundColor: item.color }}
+            />
+            <span className="text-[9px] font-mono text-tinta-apagada font-light uppercase">
+              {item.color}
+            </span>
+          </div>
+          <span className="text-[8.5px] text-tinta-apagada/70 italic capitalize">
+            {item.temporada === "todo" ? "Todo el año" : item.temporada}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <section id="asesoramiento-looks-sección" className="border-t border-linea pt-8 pb-12">
@@ -664,37 +710,37 @@ export default function AsesoramientoLooks({
               </div>
 
               {selectedLook && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Left Column: Garments list (Magazine Collage style) */}
-                  <div className="lg:col-span-7 space-y-6">
-                    <div>
-                      {selectedLook.titulo.includes("Sartorial Instantáneo") ? (
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="text-[9px] bg-laton/15 text-laton border border-laton/30 px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans">
-                            Catálogo Express (Sin IA)
-                          </span>
-                          <span className="text-[10px] text-tinta-apagada">Sinergia Automática de Armario</span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="text-[9px] bg-[#C9A35B] text-fondo px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans animate-pulse">
-                            Bespoke por Gemini sastre IA
-                          </span>
-                          <span className="text-[10px] text-laton font-medium">Coordinación Exclusiva</span>
-                        </div>
-                      )}
-                      <h3 className="font-serif text-2xl font-bold text-tinta italic mt-1 leading-tight">
-                        {selectedLook.titulo.replace(" (Sartorial Instantáneo)", "")}
-                      </h3>
-                      <p className="text-sm font-light text-tinta/80 mt-3 leading-relaxed">
-                        {selectedLook.porque}
-                      </p>
-                    </div>
+                <div className="space-y-6">
+                  {/* Title & Description of active Look */}
+                  <div>
+                    {selectedLook.titulo.includes("Sartorial Instantáneo") ? (
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="text-[9px] bg-laton/15 text-laton border border-laton/30 px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans">
+                          Catálogo Express (Sin IA)
+                        </span>
+                        <span className="text-[10px] text-tinta-apagada">Sinergia Automática de Armario</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="text-[9px] bg-[#C9A35B] text-fondo px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans animate-pulse">
+                          Bespoke por Gemini sastre IA
+                        </span>
+                        <span className="text-[10px] text-laton font-medium">Coordinación Exclusiva</span>
+                      </div>
+                    )}
+                    <h3 className="font-serif text-2xl font-bold text-tinta italic mt-1 leading-tight">
+                      {selectedLook.titulo.replace(" (Sartorial Instantáneo)", "")}
+                    </h3>
+                    <p className="text-sm font-light text-tinta/80 mt-3 leading-relaxed">
+                      {selectedLook.porque}
+                    </p>
+                  </div>
 
-                    <div className="h-px bg-linea" />
-
-                    {(() => {
-                      const matchingGarments = getResilientMatchingGarments(selectedLook.id_prendas, armario);
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    {/* Left Column: Garments list (Magazine Collage style) */}
+                    <div className="lg:col-span-7 space-y-6">
+                      {(() => {
+                        const matchingGarments = getResilientMatchingGarments(selectedLook.id_prendas, armario);
 
                       const tops = matchingGarments.filter(p => p.categoria === "top");
                       const pantalones = matchingGarments.filter(p => p.categoria === "pantalon");
@@ -820,7 +866,7 @@ export default function AsesoramientoLooks({
                   </div>
 
                   {/* Right Column: Hairstyling, Grooming & Simulating Re-render */}
-                  <div className="lg:col-span-5 bg-tarjeta border border-linea rounded-lg p-6 space-y-6">
+                  <div className="lg:col-span-5 order-first lg:order-none bg-tarjeta border border-laton/50 rounded-lg p-6 space-y-6">
                     <span className="font-serif italic text-laton font-semibold block text-base border-b border-linea pb-2">
                       Facciones & Barbería (04)
                     </span>
@@ -1782,9 +1828,10 @@ export default function AsesoramientoLooks({
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+        )}
         </div>
       )}
     </section>
