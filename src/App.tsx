@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Rostro, Prenda, HistorialLook, PerfilEstilo, Look } from "./types";
+import { Rostro, Prenda, HistorialLook, PerfilEstilo, Look, LookPlanificado } from "./types";
 import TuEspejo from "./components/TuEspejo";
 import TuArmario from "./components/TuArmario";
 import AsesoramientoLooks from "./components/AsesoramientoLooks";
@@ -8,6 +8,8 @@ import AuditoriaArmario from "./components/AuditoriaArmario";
 import AsistenteMaleta from "./components/AsistenteMaleta";
 import AsesorCompras from "./components/AsesorCompras";
 import DiagnosticoEstilo from "./components/DiagnosticoEstilo";
+import PlanificadorLooks from "./components/PlanificadorLooks";
+import EstadisticasSostenibilidad from "./components/EstadisticasSostenibilidad";
 import Login from "./components/Login";
 import { publishWardrobeToRegistry } from "./utils/share";
 import { 
@@ -27,10 +29,10 @@ import {
   deleteUserHistorialItem,
   resetUserAllData
 } from "./supabase";
-import { Sparkles, LogOut, Cloud, CloudOff, RefreshCw, Database, Scissors, Shirt, History, ClipboardList, Briefcase, TrendingUp, Sliders, Menu, AlertTriangle, X, Check, Copy } from "lucide-react";
+import { Sparkles, LogOut, Cloud, CloudOff, RefreshCw, Database, Scissors, Shirt, History, ClipboardList, Briefcase, TrendingUp, Sliders, Menu, AlertTriangle, X, Check, Copy, Calendar, Coins } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-type ActiveTab = "espejo" | "armario" | "asesor" | "historial" | "auditoria" | "maleta" | "compras" | "diagnostico";
+type ActiveTab = "espejo" | "armario" | "asesor" | "historial" | "auditoria" | "maleta" | "compras" | "diagnostico" | "planificador" | "costeperwear";
 
 function safeSetLocalStorage(key: string, value: string): boolean {
   try {
@@ -149,9 +151,74 @@ export default function App() {
   const [prendas, setPrendas] = useState<Prenda[]>([]);
   const [historial, setHistorial] = useState<HistorialLook[]>([]);
   const [selectedHistorialItem, setSelectedHistorialItem] = useState<HistorialLook | null>(null);
+  const [planificaciones, setPlanificaciones] = useState<LookPlanificado[]>([]);
   
   // Style Profile State
   const [perfilEstilo, setPerfilEstilo] = useState<PerfilEstilo | null>(null);
+
+  const handleAgregarPlanificacion = (plan: LookPlanificado) => {
+    setPlanificaciones((prev) => {
+      const updated = [...prev, plan];
+      if (user) {
+        safeSetLocalStorage(`espejo_plan_semanal_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const handleEliminarPlanificacion = (id: string) => {
+    setPlanificaciones((prev) => {
+      const updated = prev.filter(p => p.id !== id);
+      if (user) {
+        safeSetLocalStorage(`espejo_plan_semanal_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const handleMarcarComoVestido = (prendasIds: string[]) => {
+    setPrendas((prev) => {
+      const updated = prev.map((p) => {
+        if (prendasIds.includes(p.id)) {
+          return {
+            ...p,
+            veces_puesto: (p.veces_puesto ?? 0) + 1
+          };
+        }
+        return p;
+      });
+      if (user) {
+        safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+        if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+          updated.forEach(async (p) => {
+            if (prendasIds.includes(p.id)) {
+              await updateUserPrenda(user.id, p).catch(e => console.error("Failed to update garment count in db:", e));
+            }
+          });
+        }
+      }
+      return updated;
+    });
+  };
+
+  const handleActualizarPrenda = (id: string, updates: Partial<Prenda>) => {
+    setPrendas((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === id) {
+          const item = { ...p, ...updates };
+          if (user && isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+            updateUserPrenda(user.id, item).catch(e => console.error("Failed to sync garment updates in db:", e));
+          }
+          return item;
+        }
+        return p;
+      });
+      if (user) {
+        safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
 
   // Storage bucket RLS/error state
   const [storageError, setStorageError] = useState<{ error: string; buckets: string[] } | null>(null);
@@ -353,33 +420,70 @@ export default function App() {
             }
           }
 
+          // Enrich wardrobe with default prices/usages for immediate premium financial stats
+          const enrichedPrendas = dbPrendas.map((p, idx) => ({
+            ...p,
+            precio_compra: p.precio_compra ?? [145, 89, 185, 45, 220, 75][idx % 6],
+            veces_puesto: p.veces_puesto ?? [8, 14, 1, 0, 19, 3][idx % 6],
+            composicion_tejido: p.composicion_tejido || p.tejido || ["100% Lana de Sastre", "100% Algodón Egipcio", "Cuero Premium", "Mezcla de Lino", "Ante Italiano", "Sarga Fina"][idx % 6]
+          }));
+
+          // Load weekly plan
+          const planKey = `espejo_plan_semanal_${user.id}`;
+          const savedPlanes = localStorage.getItem(planKey);
+          let parsedPlanes = savedPlanes ? JSON.parse(savedPlanes) : [];
+
+          if (parsedPlanes.length === 0 && enrichedPrendas.length > 0) {
+            // Generate some elegant default plans for the current week
+            const todayStr = new Date().toISOString().split("T")[0];
+            parsedPlanes = [
+              {
+                id: "plan_default_1",
+                fecha: todayStr,
+                nombre_look: "Reunión Ejecutiva & Almuerzo",
+                prendasIds: enrichedPrendas.slice(0, 3).map(p => p.id),
+                clima_simulado: {
+                  temp: 17,
+                  condicion: "nublado",
+                  ciudad: "Madrid"
+                },
+                comentarios_sastre: "Atelier climatológico (Madrid, 17°C): El blazer desestructurado en sintonía de lana es idóneo para el viento fresco de la capital. Resguardo óptimo."
+              }
+            ];
+            safeSetLocalStorage(planKey, JSON.stringify(parsedPlanes));
+          }
+
           // Update local cache for safety and offline work
           if (dbRostro) {
             safeSetLocalStorage(`espejo_rostro_${user.id}`, JSON.stringify(dbRostro));
           }
-          if (dbPrendas.length > 0) {
-            safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(dbPrendas));
+          if (enrichedPrendas.length > 0) {
+            safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(enrichedPrendas));
           }
           if (dbHistorial.length > 0) {
             safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(dbHistorial));
           }
           
           setRostro(dbRostro);
-          setPrendas(dbPrendas);
+          setPrendas(enrichedPrendas);
           setHistorial(dbHistorial);
+          setPlanificaciones(parsedPlanes);
         } else {
           // Local storage user-specific sync
           const rostroKey = `espejo_rostro_${user.id}`;
           const prendasKey = `espejo_prendas_${user.id}`;
           const historialKey = `espejo_historial_${user.id}`;
+          const planKey = `espejo_plan_semanal_${user.id}`;
 
           let finalRostro = localStorage.getItem(rostroKey);
           let finalPrendas = localStorage.getItem(prendasKey);
           let finalHistorial = localStorage.getItem(historialKey);
+          let finalPlanes = localStorage.getItem(planKey);
 
           let parsedRostro = finalRostro ? JSON.parse(finalRostro) : null;
           let parsedPrendas = finalPrendas ? JSON.parse(finalPrendas) : [];
           let parsedHistorial = finalHistorial ? JSON.parse(finalHistorial) : [];
+          let parsedPlanes = finalPlanes ? JSON.parse(finalPlanes) : [];
 
           // Auto-migrate Guest local data to the newly logged-in/registered mock user
           if (user.id !== "usr_guest") {
@@ -409,9 +513,37 @@ export default function App() {
             }
           }
 
+          // Enrich local wardrobe items with default prices and textiles
+          const enrichedLocalPrendas = parsedPrendas.map((p: any, idx: number) => ({
+            ...p,
+            precio_compra: p.precio_compra ?? [145, 89, 185, 45, 220, 75][idx % 6],
+            veces_puesto: p.veces_puesto ?? [8, 14, 1, 0, 19, 3][idx % 6],
+            composicion_tejido: p.composicion_tejido || p.tejido || ["100% Lana de Sastre", "100% Algodón Egipcio", "Cuero Premium", "Mezcla de Lino", "Ante Italiano", "Sarga Fina"][idx % 6]
+          }));
+
+          if (parsedPlanes.length === 0 && enrichedLocalPrendas.length > 0) {
+            const todayStr = new Date().toISOString().split("T")[0];
+            parsedPlanes = [
+              {
+                id: "plan_default_1",
+                fecha: todayStr,
+                nombre_look: "Reunión Ejecutiva & Almuerzo",
+                prendasIds: enrichedLocalPrendas.slice(0, 3).map((p: any) => p.id),
+                clima_simulado: {
+                  temp: 17,
+                  condicion: "nublado",
+                  ciudad: "Madrid"
+                },
+                comentarios_sastre: "Atelier climatológico (Madrid, 17°C): El blazer desestructurado en sintonía de lana es idóneo para el viento fresco de la capital. Resguardo óptimo."
+              }
+            ];
+            safeSetLocalStorage(planKey, JSON.stringify(parsedPlanes));
+          }
+
           setRostro(parsedRostro);
-          setPrendas(parsedPrendas);
+          setPrendas(enrichedLocalPrendas);
           setHistorial(parsedHistorial);
+          setPlanificaciones(parsedPlanes);
         }
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -797,6 +929,8 @@ export default function App() {
               { id: "espejo", label: "Tú Espejo", desc: "Análisis Fisiognómico", icon: Scissors },
               { id: "diagnostico", label: "ADN Estilo", desc: "Preferencias y Silueta", icon: Sliders },
               { id: "armario", label: "Tú Armario", desc: "Digital & Inteligente", icon: Shirt },
+              { id: "planificador", label: "Agenda Looks", desc: "Agenda de Estilo & Clima", icon: Calendar },
+              { id: "costeperwear", label: "CPW & Sostenibilidad", desc: "Rentabilidad & Tejidos", icon: Coins },
               { id: "asesor", label: "✨ Probador IA", desc: "Pruébate Ropa con IA", icon: Sparkles },
               { id: "maleta", label: "Equipaje Smart", desc: "Cápsula de Viajes", icon: Briefcase },
               { id: "compras", label: "Tendencias", desc: "Asesor de Compras", icon: TrendingUp },
@@ -809,13 +943,13 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as ActiveTab)}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded text-left transition-all duration-200 cursor-pointer ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded text-left transition-all duration-200 cursor-pointer ${
                     isSelected
                       ? "bg-laton/15 border-l-2 border-laton text-laton font-medium shadow-md shadow-amber-950/5"
                       : "text-tinta-apagada hover:text-white hover:bg-tarjeta border-l-2 border-transparent"
                   }`}
                 >
-                  <Icon size={16} className={isSelected ? "text-laton animate-pulse" : "text-tinta-apagada"} />
+                  <Icon size={15} className={isSelected ? "text-laton animate-pulse" : "text-tinta-apagada"} />
                   <div className="leading-tight">
                     <p className={`text-[11px] uppercase tracking-wider font-bold ${isSelected ? "text-white" : ""}`}>
                       {tab.label}
@@ -893,6 +1027,8 @@ export default function App() {
             <h1 className="font-serif text-3xl sm:text-4xl lg:text-3xl font-extrabold tracking-tight text-white select-none uppercase">
               {activeTab === "espejo" && "TÚ ESPEJO VIRTUAL"}
               {activeTab === "armario" && "TÚ ARMARIO DIGITAL"}
+              {activeTab === "planificador" && "AGENDA & PLANIFICADOR DE LOOKS METEOROLÓGICO"}
+              {activeTab === "costeperwear" && "SARTORIAL FINANCE: COSTE POR USO & ECO"}
               {activeTab === "asesor" && "✨ PROBADOR DE LOOKS IA"}
               {activeTab === "historial" && "HISTORIAL DE LOOKS"}
               {activeTab === "auditoria" && "AUDITORÍA DE ARMARIO"}
@@ -904,6 +1040,8 @@ export default function App() {
             <p className="font-sans text-[11px] sm:text-xs uppercase tracking-widest text-[#A89C82] font-normal max-w-3xl mx-auto mt-2 leading-relaxed">
               {activeTab === "espejo" && "Calibración fisionómica por I.A.: Analiza la forma de tu rostro para optimizar tu corte de cabello, barba y sintonizarlo con tu estilo."}
               {activeTab === "armario" && "Tu atelier digital: Registra tu colección de prendas reales con la inteligencia de categorización rápida por visión computacional."}
+              {activeTab === "planificador" && "Agenda climática e inteligente: Planifica tus atuendos semanales con sintonía meteorológica interactiva y asesoramiento sastrero por IA."}
+              {activeTab === "costeperwear" && "Finanzas sastreras & Sostenibilidad: Conoce la rentabilidad de tus inversiones mediante el Coste por Uso (CPW), composición textil y asesoramiento de lujo."}
               {activeTab === "asesor" && "Probador virtual fotorrealista de alta fidelidad: Sube tu foto de cuerpo completo y pruébate de inmediato cualquier combinación de tu armario con tecnología de inteligencia artificial."}
               {activeTab === "historial" && "Colección privada de atuendos de gala: Guarda tus propuestas favoritas de cada ocasión o evento."}
               {activeTab === "auditoria" && "Estudio crítico de tu ropero: Descubre el coeficiente de cohesión, lo que realmente necesitas y lo que te sobra."}
@@ -1088,6 +1226,38 @@ export default function App() {
               </motion.div>
             )}
 
+            {activeTab === "planificador" && (
+              <motion.div
+                key="planificador"
+                initial={{ opacity: 0, y: 15, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ cubicBezier: [0.16, 1, 0.3, 1], duration: 0.5 }}
+              >
+                <PlanificadorLooks
+                  armario={prendas}
+                  historial={historial}
+                  planificaciones={planificaciones}
+                  onAgregarPlanificacion={handleAgregarPlanificacion}
+                  onEliminarPlanificacion={handleEliminarPlanificacion}
+                  onMarcarComoVestido={handleMarcarComoVestido}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === "costeperwear" && (
+              <motion.div
+                key="costeperwear"
+                initial={{ opacity: 0, y: 15, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ cubicBezier: [0.16, 1, 0.3, 1], duration: 0.5 }}
+              >
+                <EstadisticasSostenibilidad
+                  armario={prendas}
+                  onActualizarPrenda={handleActualizarPrenda}
+                />
+              </motion.div>
+            )}
+
             {activeTab === "asesor" && (
               <motion.div
                 key="asesor"
@@ -1235,6 +1405,8 @@ export default function App() {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { id: "diagnostico", label: "ADN Estilo", desc: "Preferencias", icon: Sliders },
+                  { id: "planificador", label: "Agenda Looks", desc: "Clima y Agenda", icon: Calendar },
+                  { id: "costeperwear", label: "Coste x Uso", desc: "Rentabilidad", icon: Coins },
                   { id: "maleta", label: "Equipaje Smart", desc: "Maleta Cápsula", icon: Briefcase },
                   { id: "compras", label: "Tendencias", desc: "Asesor Compras", icon: TrendingUp },
                   { id: "auditoria", label: "Plan Auditoría", desc: "Optimizar Armario", icon: ClipboardList }
@@ -1298,13 +1470,13 @@ export default function App() {
         <button
           onClick={() => setShowMoreMenu(!showMoreMenu)}
           className={`flex flex-col items-center gap-1 focus:outline-none transition-all cursor-pointer ${
-            ["diagnostico", "maleta", "compras", "auditoria"].includes(activeTab) || showMoreMenu
+            ["diagnostico", "planificador", "costeperwear", "maleta", "compras", "auditoria"].includes(activeTab) || showMoreMenu
               ? "text-laton scale-105 font-bold"
               : "text-tinta-apagada hover:text-white"
           }`}
           title="Opciones adicionales"
         >
-          <Menu size={18} className={["diagnostico", "maleta", "compras", "auditoria"].includes(activeTab) || showMoreMenu ? "text-laton animate-pulse" : "text-tinta-apagada"} />
+          <Menu size={18} className={["diagnostico", "planificador", "costeperwear", "maleta", "compras", "auditoria"].includes(activeTab) || showMoreMenu ? "text-laton animate-pulse" : "text-tinta-apagada"} />
           <span className="text-[8.5px] uppercase tracking-wider font-bold mt-0.5">Más</span>
         </button>
       </nav>

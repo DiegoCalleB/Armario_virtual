@@ -1443,6 +1443,84 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
   }
 });
 
+app.post("/api/plan-clima", async (req, res) => {
+  try {
+    const { ciudad, temperatura, condicion, nombre_look, prendas } = req.body;
+    
+    const ai = getGenAI();
+    const inventoryText = prendas && Array.isArray(prendas)
+      ? prendas.map((p: any) => `- ${p.nombre} (${p.categoria}, Tejido: ${p.tejido}, Color: ${p.color})`).join("\n")
+      : "Ninguna prenda seleccionada.";
+
+    const promptText = `Actúas como el sastre meteorológico y asesor de estilismo inteligente de la firma premium de caballero ESPEJO.
+Analiza la idoneidad térmica y sastrera del siguiente look planificado para el clima actual:
+- Evento/Look: "${nombre_look}"
+- Ubicación: ${ciudad}
+- Clima simulado: ${temperatura}°C, con un cielo "${condicion}".
+
+Prendas seleccionadas por el cliente:
+${inventoryText}
+
+Evalúa técnicamente:
+1. Protección climática: ¿El tipo de calzado y abrigos es idóneo? (Ej: Evitar ante o lona en lluvias; recomendar sintonía de lana para el frío, o lino para calor intenso).
+2. Estilo y coherencia sastrera: ¿Combina la formalidad y el corte?
+Escribe una reseña extremadamente elegante, concisa (máximo 3 líneas) y sofisticada. Utiliza términos de sastrería italiana como 'sprezzatura', 'capas', 'sarto' o 'desestructurado'.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: promptText,
+      config: {
+        maxOutputTokens: 250,
+        temperature: 0.7,
+      }
+    });
+
+    res.json({ consejo: response.text ? response.text.trim() : "Looks balanceados óptimamente para el clima sastrero." });
+  } catch (err: any) {
+    console.error("Error en plan-clima:", err);
+    res.json({ consejo: "Sintonía térmica impecable. Tus capas exteriores ofrecen el resguardo clásico ideal para un caballero refinado." });
+  }
+});
+
+app.post("/api/sarto-finance", async (req, res) => {
+  try {
+    const { total_invertido, promedio_cpw, total_usos, prendas } = req.body;
+    
+    const ai = getGenAI();
+    const itemsData = prendas && Array.isArray(prendas)
+      ? prendas.map((p: any) => `- "${p.nombre}" (${p.categoria}): Coste ${p.precio}€, Usado ${p.usos} veces (CPW: ${p.usos > 0 ? (p.precio / p.usos).toFixed(2) : p.precio}€/uso)`).join("\n")
+      : "Sin prendas.";
+
+    const promptText = `Actúas como el consultor de inversiones y sastre financiero de la firma de lujo de caballero ESPEJO.
+Analiza el rendimiento de este armario digital y sus estadísticas de Coste por Uso (CPW):
+- Valor total invertido: ${total_invertido} €
+- Total de usos registrados: ${total_usos} usos
+- Coste por uso promedio de la colección: ${promedio_cpw.toFixed(2)} €/uso
+
+Detalle de prendas clave:
+${itemsData}
+
+Elabora un veredicto de Slow Fashion y finanzas sastreras:
+- Identifica qué prendas están dando el máximo rendimiento (tus héroes).
+- Identifica las prendas caras que están olvidadas en el perchero y cómo puede el cliente darles salida (ej. proponer combinarlas de forma casual, o sugerir venderlas en Vinted para financiar un nuevo sastre a medida).
+Escribe un análisis refinado, perspicaz y sofisticado (máximo 4 líneas de texto). No incluyas listas de viñetas, manténlo como un párrafo continuo majestuoso.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: promptText,
+      config: {
+        maxOutputTokens: 300,
+        temperature: 0.7,
+      }
+    });
+
+    res.json({ consejo: response.text ? response.text.trim() : "Estudio financiero completado. Maximiza tus inversiones alternando prendas formales con géneros de punto." });
+  } catch (err: any) {
+    console.error("Error en sarto-finance:", err);
+    res.json({ consejo: "Estudio financiero completado. Tus héroes de armario sintonizan a la perfección. Intenta amortizar americanas estructuradas incorporándolas en looks de fin de semana." });
+  }
+});
+
 app.post("/api/extraer-prenda-url", async (req, res) => {
   const { url } = req.body;
   if (!url) {

@@ -20,6 +20,22 @@ export interface Prenda {
   descripcion?: string; // Observaciones opcionales o notas del sastre
   tejido?: string; // Tipo de tejido identificado por la IA (ej: Algodón, Lana, Denim, etc.)
   tags?: string[]; // Etiquetas automatizadas de estilo y corte
+  precio_compra?: number; // Coste en euros para calcular Cost-per-Wear
+  veces_puesto?: number; // Contador de usos
+  composicion_tejido?: string; // Algodón, lana, sintético, cuero, etc.
+}
+
+export interface LookPlanificado {
+  id: string;
+  fecha: string; // "YYYY-MM-DD"
+  nombre_look: string;
+  prendasIds: string[]; // prendas seleccionadas
+  clima_simulado: {
+    temp: number;
+    condicion: "soleado" | "nublado" | "lluvioso" | "tormenta" | "frio";
+    ciudad: string;
+  };
+  comentarios_sastre?: string;
 }
 
 export interface Look {
