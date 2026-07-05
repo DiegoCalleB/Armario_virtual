@@ -924,7 +924,7 @@ app.post("/api/generar-imagen", async (req, res) => {
     const { mimeType, data } = parseDataUri(activeImageSource);
     const ai = getGenAI();
 
-    console.log(`Generando imagen simulada con gemini-2.5-flash-image (fullBody: ${!!fullBody}, customBody: ${isUsingCustomBody})...`);
+    console.log(`Generando imagen simulada con gemini-3.1-flash-lite-image (fullBody: ${!!fullBody}, customBody: ${isUsingCustomBody})...`);
 
     let promptText = "";
     let aspectRatio: "1:1" | "3:4" = "1:1";
@@ -1004,10 +1004,10 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
 
     let response;
     try {
-      console.log(`Intentando generación de imagen en Espejo IA con gemini-2.5-flash-image utilizando ${parts.length - 1} imagen/imágenes...`);
+      console.log(`Intentando generación de imagen en Espejo IA con gemini-3.1-flash-lite-image utilizando ${parts.length - 1} imagen/imágenes...`);
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
-          model: "gemini-2.5-flash-image",
+          model: "gemini-3.1-flash-lite-image",
           contents: {
             parts: parts,
           },
@@ -1033,7 +1033,7 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
         throw imageErr; // Lanza al catch externo para generar el fallback SVG inmediatamente sin retrasos
       }
 
-      console.warn("Fallo con gemini-2.5-flash-image, intentando fallback de robustez con gemini-3.1-flash-image...", imageErr);
+      console.warn("Fallo con gemini-3.1-flash-lite-image, intentando fallback de robustez con gemini-3.1-flash-image...", imageErr);
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
           model: "gemini-3.1-flash-image",
@@ -2100,7 +2100,7 @@ OUTPUT: A single photorealistic full-body photograph. No text, no borders, no co
     try {
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
-          model: "gemini-2.5-flash-image",
+          model: "gemini-3.1-flash-lite-image",
           contents: {
             parts,
           },
@@ -2112,7 +2112,7 @@ OUTPUT: A single photorealistic full-body photograph. No text, no borders, no co
         })
       );
     } catch (err: any) {
-      console.warn("[PROBAR-LOOK] Error con gemini-2.5-flash-image, intentando fallback de robustez con gemini-3.1-flash-image...", err);
+      console.warn("[PROBAR-LOOK] Error con gemini-3.1-flash-lite-image, intentando fallback de robustez con gemini-3.1-flash-image...", err);
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
           model: "gemini-3.1-flash-image",
