@@ -929,7 +929,13 @@ export default function App() {
               { id: "armario", label: "Tú Armario", desc: "Digital & Inteligente", icon: Shirt },
               { id: "asesor", label: "✨ Probador IA", desc: "Pruébate Ropa con IA", icon: Sparkles },
               { id: "historial", label: "Catálogo Looks", desc: "Historial Guardado", icon: History },
-              { id: "espejo", label: "Tú Espejo", desc: "Análisis Fisiognómico", icon: Scissors }
+              { id: "espejo", label: "Tú Espejo", desc: "Análisis Fisiognómico", icon: Scissors },
+              { id: "diagnostico", label: "ADN Estilo", desc: "Preferencias y Silueta", icon: Sliders },
+              { id: "planificador", label: "Agenda Looks", desc: "Agenda de Estilo & Clima", icon: Calendar },
+              { id: "costeperwear", label: "CPW & Sostenibilidad", desc: "Rentabilidad & Tejidos", icon: Coins },
+              { id: "maleta", label: "Equipaje Smart", desc: "Cápsula de Viajes", icon: Briefcase },
+              { id: "compras", label: "Tendencias", desc: "Asesor de Compras", icon: TrendingUp },
+              { id: "auditoria", label: "Plan Auditoría", desc: "Auditar Mi Armario", icon: ClipboardList }
             ].map((tab) => {
               const Icon = tab.icon;
               const isSelected = activeTab === tab.id;
@@ -1373,6 +1379,65 @@ export default function App() {
         </main>
       </div>
 
+      {/* "Más" Options Popover Drawer for Mobile */}
+      <AnimatePresence>
+        {showMoreMenu && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMoreMenu(false)}
+              className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            />
+            {/* Drawer Container */}
+            <motion.div
+              initial={{ opacity: 0, y: 100, x: "-50%" }}
+              animate={{ opacity: 1, y: 0, x: "-50%" }}
+              exit={{ opacity: 0, y: 100, x: "-50%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="lg:hidden fixed bottom-24 left-1/2 z-50 w-[92%] max-w-sm bg-tarjeta/98 border border-linea/80 rounded-2xl p-5 shadow-[0_15px_50px_rgba(0,0,0,0.95)] backdrop-blur-xl"
+            >
+              <h3 className="text-[10px] tracking-wider text-laton uppercase font-bold border-b border-linea/30 pb-2 mb-3 text-center">
+                MÁS HERRAMIENTAS DE ESTILO
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: "diagnostico", label: "ADN Estilo", desc: "Preferencias", icon: Sliders },
+                  { id: "planificador", label: "Agenda Looks", desc: "Clima y Agenda", icon: Calendar },
+                  { id: "costeperwear", label: "Coste x Uso", desc: "Rentabilidad", icon: Coins },
+                  { id: "maleta", label: "Equipaje Smart", desc: "Maleta Cápsula", icon: Briefcase },
+                  { id: "compras", label: "Tendencias", desc: "Asesor Compras", icon: TrendingUp },
+                  { id: "auditoria", label: "Plan Auditoría", desc: "Optimizar Armario", icon: ClipboardList }
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isSelected = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id as ActiveTab);
+                        setShowMoreMenu(false);
+                      }}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg border text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-laton/20 border-laton text-laton"
+                          : "bg-fondo/40 border-linea/50 text-tinta hover:bg-tarjeta"
+                      }`}
+                    >
+                      <Icon size={18} className="mb-1 text-laton" />
+                      <span className="text-[10px] uppercase tracking-wider font-extrabold block text-white">{item.label}</span>
+                      <span className="text-[8px] text-tinta-apagada font-mono mt-0.5">{item.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* 3. MOBILE BOTTOM NAV DOCK (ONLY FOR MOBILE & TABLETS) */}
       <nav className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-tarjeta/95 backdrop-blur-md border border-linea/80 rounded-full px-3 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.95)] flex items-center justify-around">
         {[
@@ -1400,6 +1465,20 @@ export default function App() {
             </button>
           );
         })}
+        
+        {/* Toggle button for others */}
+        <button
+          onClick={() => setShowMoreMenu(!showMoreMenu)}
+          className={`flex flex-col items-center gap-1 focus:outline-none transition-all cursor-pointer ${
+            ["diagnostico", "planificador", "costeperwear", "maleta", "compras", "auditoria"].includes(activeTab) || showMoreMenu
+              ? "text-laton scale-105 font-bold"
+              : "text-tinta-apagada hover:text-white"
+          }`}
+          title="Opciones adicionales"
+        >
+          <Menu size={18} className={["diagnostico", "planificador", "costeperwear", "maleta", "compras", "auditoria"].includes(activeTab) || showMoreMenu ? "text-laton animate-pulse" : "text-tinta-apagada"} />
+          <span className="text-[8.5px] uppercase tracking-wider font-bold mt-0.5">Más</span>
+        </button>
       </nav>
     </div>
   );
