@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
 import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
 import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
@@ -417,6 +417,42 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
       }
     }
   };
+
+  // Sincronización con la base de datos Supabase: descubre armarios personalizados a partir de las etiquetas de las prendas
+  const armariosTagsString = (prendas || [])
+    .map(p => (p.tags || []).filter(t => t.startsWith("armario:")).sort().join(","))
+    .sort()
+    .join("|");
+
+  useEffect(() => {
+    if (!prendas || prendas.length === 0) return;
+    const foundArmarios = new Set<string>();
+    prendas.forEach(p => {
+      if (p.tags) {
+        p.tags.forEach(t => {
+          if (t.startsWith("armario:")) {
+            const val = t.substring("armario:".length).trim().toLowerCase();
+            if (val) {
+              foundArmarios.add(val);
+            }
+          }
+        });
+      }
+    });
+
+    let modified = false;
+    const currentList = [...armariosDisponibles];
+    foundArmarios.forEach(arm => {
+      if (!currentList.includes(arm)) {
+        currentList.push(arm);
+        modified = true;
+      }
+    });
+
+    if (modified) {
+      saveArmariosLista(currentList);
+    }
+  }, [armariosTagsString]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
