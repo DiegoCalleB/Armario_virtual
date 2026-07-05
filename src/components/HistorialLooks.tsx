@@ -24,13 +24,13 @@ export default function HistorialLooks({
   const handleCompartir = async (item: HistorialLook, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    const textToShare = `💈 *ESPEJO - Estilista Virtual de Lujo* 💈\n\n` +
+    const textToShare = `💈 *Tu Armario Inteligente - Estilista IA* 💈\n\n` +
       `Look Propuesto para: *${item.ocasion}* (${item.clima})\n` +
       `• Estilo: ${item.look.titulo}\n` +
       `• Corte de cabello: ${item.look.pelo_sugerido}\n` +
       `• Barba sugerida: ${item.look.barba_sugerida}\n` +
       `• Por qué funciona: "${item.look.porque}"\n\n` +
-      `Descubre tu sastre virtual en Espejo.`;
+      `Descubre tu sastre virtual en Tu Armario Inteligente.`;
 
     const shareUrl = `${window.location.origin}/?look=${encodeURIComponent(item.look.titulo)}&event=${encodeURIComponent(item.ocasion)}`;
 

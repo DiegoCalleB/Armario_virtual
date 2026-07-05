@@ -937,10 +937,10 @@ export default function App() {
           {/* Brand/Logo */}
           <div className="text-left py-2 border-b border-linea/40 pb-4">
             <span className="text-[10px] tracking-widest text-[#C9A35B] uppercase font-bold block mb-1">ATELIER PRIVADO</span>
-            <h1 className="font-serif text-3xl font-black tracking-tight text-tinta uppercase select-none leading-none">
-              Espejo
+            <h1 className="font-serif text-xl sm:text-2xl font-black tracking-tight text-tinta uppercase select-none leading-tight">
+              Armario Inteligente
             </h1>
-            <p className="font-sans text-[9px] tracking-wider text-tinta-apagada uppercase mt-1">Estilismo Inteligente</p>
+            <p className="font-sans text-[9px] tracking-wider text-tinta-apagada uppercase mt-1">Sastrería Inteligente IA</p>
           </div>
 
           {/* Sync Stats Bar */}
@@ -1034,8 +1034,8 @@ export default function App() {
         {/* COMPACT TOP BAR FOR MOBILE/TABLET */}
         <div className="lg:hidden flex items-center justify-between bg-tarjeta/95 border-b border-linea/60 px-4 py-3 sticky top-0 z-30 backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <h1 className="font-serif text-xl font-black uppercase tracking-widest text-[#F3ECDD]">
-              ESPEJO
+            <h1 className="font-serif text-sm font-black uppercase tracking-wider text-[#F3ECDD]">
+              ARMARIO INTELIGENTE
             </h1>
             <span className="text-[8px] font-mono text-laton uppercase tracking-[0.2em] bg-laton/5 border border-laton/25 px-1.5 py-0.5 rounded leading-none shrink-0">
               A.I.
@@ -1318,8 +1318,8 @@ export default function App() {
 
           {/* Footnote inside Main Panel */}
           <footer className="text-center pt-10 pb-8 text-[11px] font-sans text-tinta-apagada/40 leading-relaxed max-w-sm mx-auto select-none">
-            <p className="font-serif italic font-medium text-laton">ESPEJO</p>
-            <p>Atelier de Asesoría de Imagen Masculina & Sastrería Digital Inteligente.</p>
+            <p className="font-serif italic font-medium text-laton">Tu Armario Inteligente</p>
+            <p>Atelier de Asesoría de Imagen & Sastrería Digital Inteligente.</p>
             <p className="mt-0.5 text-laton/80 font-medium">Diseñado y Desarrollado por <span className="font-bold">AIron Labs</span>.</p>
             <p className="mt-1">© 2026. Todos los derechos reservados.</p>
           </footer>

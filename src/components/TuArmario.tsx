@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
 import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
 import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
-import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw } from "lucide-react";
+import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import GooglePhotosPicker from "./GooglePhotosPicker";
 
@@ -318,6 +318,106 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [copiedDescripcion, setCopiedDescripcion] = useState(false);
   const [isMultiMode, setIsMultiMode] = useState(false);
 
+  // Encapsulated wardrobes states
+  const [armariosDisponibles, setArmariosDisponibles] = useState<string[]>(() => {
+    const cached = localStorage.getItem(`espejo_armarios_lista_${userEmail || "guest"}`);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        // Ignore cache parse error
+      }
+    }
+    return ["normal", "oficina", "fiesta"];
+  });
+
+  const [activeArmarioFilter, setActiveArmarioFilter] = useState<string>("all");
+
+  const saveArmariosLista = (lista: string[]) => {
+    setArmariosDisponibles(lista);
+    localStorage.setItem(`espejo_armarios_lista_${userEmail || "guest"}`, JSON.stringify(lista));
+  };
+
+  const getArmariosDePrenda = (prenda: Prenda): string[] => {
+    if (!prenda.tags) return ["normal"];
+    const armariosTags = prenda.tags
+      .filter(t => t.startsWith("armario:"))
+      .map(t => t.substring("armario:".length));
+    if (armariosTags.length === 0) return ["normal"];
+    return armariosTags;
+  };
+
+  const setArmariosDePrenda = (prenda: Prenda, nuevosArmarios: string[]) => {
+    const cleanTags = (prenda.tags || []).filter(t => !t.startsWith("armario:"));
+    const newTags = [...cleanTags, ...nuevosArmarios.map(a => `armario:${a}`)];
+    if (onPrendaActualizada) {
+      onPrendaActualizada({
+        ...prenda,
+        tags: newTags
+      });
+    }
+  };
+
+  const handlePrendaAgregadaConArmario = (nuevaPrendaOrArray: Prenda | Prenda[]) => {
+    const arr = Array.isArray(nuevaPrendaOrArray) ? nuevaPrendaOrArray : [nuevaPrendaOrArray];
+    const activeArm = activeArmarioFilter !== "all" ? activeArmarioFilter : "normal";
+    
+    const updated = arr.map(p => {
+      const current = getArmariosDePrenda(p);
+      let next = current;
+      if (activeArm !== "normal" && current.length === 1 && current[0] === "normal") {
+        next = [activeArm];
+      } else if (!current.includes(activeArm)) {
+        next = [...current, activeArm];
+      }
+      
+      const cleanTags = (p.tags || []).filter(t => !t.startsWith("armario:"));
+      const newTags = [...cleanTags, ...next.map(a => `armario:${a}`)];
+      return {
+        ...p,
+        tags: newTags
+      };
+    });
+    
+    onPrendaAgregada(updated);
+  };
+
+  const handleCrearArmario = () => {
+    const nombre = window.prompt("Introduce el nombre del nuevo armario (ej: deporte, viaje, playa):");
+    if (!nombre) return;
+    const cleanNombre = nombre.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (!cleanNombre) return;
+    if (armariosDisponibles.includes(cleanNombre)) {
+      alert("Ya existe un armario con ese nombre.");
+      return;
+    }
+    saveArmariosLista([...armariosDisponibles, cleanNombre]);
+    setActiveArmarioFilter(cleanNombre);
+  };
+
+  const handleEliminarArmario = (arm: string) => {
+    if (window.confirm(`¿Seguro que quieres eliminar el armario "${arm}"? Tus prendas se conservarán en el ropero general.`)) {
+      const updated = armariosDisponibles.filter(a => a !== arm);
+      saveArmariosLista(updated);
+      
+      // Update each garment belonging to this wardrobe
+      prendas.forEach(p => {
+        const currentArmarios = getArmariosDePrenda(p);
+        if (currentArmarios.includes(arm)) {
+          const nextArmarios = currentArmarios.filter(a => a !== arm);
+          if (nextArmarios.length === 0) {
+            nextArmarios.push("normal");
+          }
+          setArmariosDePrenda(p, nextArmarios);
+        }
+      });
+      
+      if (activeArmarioFilter === arm) {
+        setActiveArmarioFilter("all");
+      }
+    }
+  };
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -390,7 +490,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
         descripcion: "Ficha registrada manualmente de forma instantánea."
       };
       
-      onPrendaAgregada(nuevaPrenda);
+      handlePrendaAgregadaConArmario(nuevaPrenda);
       
       // Reset form fields
       setManualNombre("");
@@ -490,7 +590,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
           listToAdd.push(nuevaPrenda);
         }
         if (listToAdd.length > 0) {
-          onPrendaAgregada(listToAdd);
+          handlePrendaAgregadaConArmario(listToAdd);
         }
       } else {
         throw new Error("No se pudo extraer ninguna prenda válida de la imagen analizada.");
@@ -600,7 +700,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               listToAdd.push(nuevaPrenda);
             }
             if (listToAdd.length > 0) {
-              onPrendaAgregada(listToAdd);
+              handlePrendaAgregadaConArmario(listToAdd);
             }
           } else {
             throw new Error("No se pudo extraer ninguna prenda válida de la imagen analizada.");
@@ -631,7 +731,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             imageSrc: processedFallbackImg,
             descripcion: "Fallo o lentitud al contactar la IA sastre. Presiona esta carta para configurar sus detalles y notas."
           };
-          onPrendaAgregada(mockPrenda);
+          handlePrendaAgregadaConArmario(mockPrenda);
           completedCount++;
           setLoadingText(`Analizando lote con IA: ${completedCount} de ${validImageFiles.length} completadas...`);
         }
@@ -785,7 +885,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               listToAdd.push(nuevaPrenda);
             }
             if (listToAdd.length > 0) {
-              onPrendaAgregada(listToAdd);
+              handlePrendaAgregadaConArmario(listToAdd);
             }
           } else {
             throw new Error("Fallo al identificar la prenda o prendas de la captura.");
@@ -807,6 +907,15 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
   // Filter garments list
   const prendasFiltradas = prendas.filter((p) => {
+    // 1. Filter by Armario (wardrobe capsule)
+    if (activeArmarioFilter !== "all") {
+      const armarios = getArmariosDePrenda(p);
+      if (!armarios.includes(activeArmarioFilter)) {
+        return false;
+      }
+    }
+    
+    // 2. Filter by Category
     if (activeCategoryFilter === "all") return true;
     return p.categoria === activeCategoryFilter;
   });
@@ -1550,7 +1659,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                     tags: [...p.tags, `De ${friendName}`, "prestado"],
                                     imageSrc: garmentImage,
                                   };
-                                  onPrendaAgregada(finalPrenda);
+                                  handlePrendaAgregadaConArmario(finalPrenda);
                                   setBorrowedIds([...borrowedIds, p.id]);
                                 }}
                                 className={`px-2.5 py-1 text-[9px] uppercase font-bold tracking-wider rounded select-none ${
@@ -1707,7 +1816,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                       tags: [...item.tags, "Google Fotos", "IA"],
                                       imageSrc: generateGarmentSVG(item.categoria, item.color)
                                     };
-                                    onPrendaAgregada(finalPrenda);
+                                    handlePrendaAgregadaConArmario(finalPrenda);
                                     setGphotosExtractingId(null);
                                     setGphotosExtractedCount(prev => prev + 1);
                                   }, 1800);
@@ -1749,6 +1858,85 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
         {/* Garment Catalog & Filtering - Columns 2 & 3 */}
         <div className="lg:col-span-2">
+
+          {/* Section for Encapsulated Wardrobes */}
+          <div className="mb-6 p-4 bg-[#1e1a13]/60 border border-laton/15 rounded-lg space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Briefcase size={12} className="text-laton animate-pulse" />
+                <span className="text-[10px] font-extrabold text-[#C9A35B] uppercase tracking-widest">
+                  Armarios Encapsulados (Cápsulas IA)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCrearArmario}
+                className="text-[9px] font-extrabold text-[#C9A35B] hover:text-white transition flex items-center gap-1 uppercase tracking-wider"
+              >
+                <Plus size={10} /> Crear Armario
+              </button>
+            </div>
+            
+            <p className="text-[10.5px] text-tinta-apagada leading-relaxed">
+              Define colecciones independientes de tu ropero (ej: oficina, normal, fiesta). Las prendas agregadas con un filtro activo se clasificarán automáticamente en esa cápsula.
+            </p>
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setActiveArmarioFilter("all")}
+                className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded font-sans transition flex items-center gap-1.5 border ${
+                  activeArmarioFilter === "all"
+                    ? "bg-laton border-laton text-fondo font-bold"
+                    : "bg-tarjeta/40 border-linea/60 text-tinta-apagada hover:text-tinta hover:border-laton/40"
+                }`}
+              >
+                <Folder size={11} /> Todo ({prendas.length})
+              </button>
+              
+              {armariosDisponibles.map((arm) => {
+                const count = prendas.filter(p => getArmariosDePrenda(p).includes(arm)).length;
+                const isCustom = arm !== "normal" && arm !== "oficina" && arm !== "fiesta";
+                return (
+                  <div key={arm} className="relative group flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => setActiveArmarioFilter(arm)}
+                      className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded font-sans transition flex items-center gap-1.5 border pr-5 ${
+                        activeArmarioFilter === arm
+                          ? "bg-laton border-laton text-fondo font-bold"
+                          : "bg-tarjeta/40 border-linea/60 text-tinta-apagada hover:text-tinta hover:border-laton/40"
+                      }`}
+                    >
+                      <span>
+                        {arm === "normal" && "🏠"}
+                        {arm === "oficina" && "💼"}
+                        {arm === "fiesta" && "✨"}
+                        {isCustom && "🏷️"} {arm.charAt(0).toUpperCase() + arm.slice(1)}
+                      </span>
+                      <span className={`text-[9px] ${activeArmarioFilter === arm ? "text-fondo/80 font-black" : "text-tinta-apagada/70"}`}>
+                        ({count})
+                      </span>
+                    </button>
+                    
+                    {isCustom && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEliminarArmario(arm);
+                        }}
+                        className="absolute -top-1 -right-1 bg-red-950/90 border border-red-800/40 text-red-300 hover:bg-red-800 hover:text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] leading-none transition shadow"
+                        title={`Eliminar armario ${arm}`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Categories Selector tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none border-b border-linea/60">
@@ -2065,6 +2253,62 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           )}
                         </div>
                       )}
+
+                      {/* Wardrobe Capsules Membership */}
+                      <div className="space-y-2 p-3 bg-[#1e1a13]/30 border border-laton/10 rounded">
+                        <span className="text-[9px] uppercase tracking-wider text-laton font-extrabold block">
+                          Clasificación de Armario (Cápsulas)
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {armariosDisponibles.map((arm) => {
+                            const isMember = getArmariosDePrenda(selectedPrenda).includes(arm);
+                            return (
+                              <label
+                                key={arm}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] border cursor-pointer select-none transition ${
+                                  isMember
+                                    ? "bg-laton/15 border-laton text-laton font-bold"
+                                    : "bg-fondo2/30 border-linea/65 text-tinta-apagada hover:text-tinta hover:border-laton/30"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isMember}
+                                  onChange={(e) => {
+                                    const currentArmarios = getArmariosDePrenda(selectedPrenda);
+                                    let nextArmarios = currentArmarios;
+                                    if (e.target.checked) {
+                                      if (!nextArmarios.includes(arm)) {
+                                        nextArmarios = [...nextArmarios, arm];
+                                      }
+                                    } else {
+                                      nextArmarios = nextArmarios.filter(a => a !== arm);
+                                      if (nextArmarios.length === 0) {
+                                        nextArmarios = ["normal"];
+                                      }
+                                    }
+                                    setArmariosDePrenda(selectedPrenda, nextArmarios);
+                                    setSelectedPrenda({
+                                      ...selectedPrenda,
+                                      tags: [
+                                        ...(selectedPrenda.tags || []).filter(t => !t.startsWith("armario:")),
+                                        ...nextArmarios.map(a => `armario:${a}`)
+                                      ]
+                                    });
+                                  }}
+                                  className="hidden"
+                                />
+                                <span>
+                                  {arm === "normal" && "🏠"}
+                                  {arm === "oficina" && "💼"}
+                                  {arm === "fiesta" && "✨"}
+                                  {arm !== "normal" && arm !== "oficina" && arm !== "fiesta" && "🏷️"} {arm.charAt(0).toUpperCase() + arm.slice(1)}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
 
                       {/* Description Input Textarea */}
                       <div className="space-y-1">

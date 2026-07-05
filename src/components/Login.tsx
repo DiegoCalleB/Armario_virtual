@@ -276,12 +276,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full border border-laton/40 bg-tarjeta text-laton mb-2">
             <Sparkles size={20} className="animate-pulse" />
           </div>
-          <h1 className="font-serif text-4xl font-extrabold tracking-tight text-white uppercase">
-            ESPEJO
+          <h1 className="font-serif text-2xl font-extrabold tracking-tight text-white uppercase">
+            ARMARIO INTELIGENTE
           </h1>
           <div className="w-12 h-px bg-laton mx-auto opacity-70" />
           <p className="font-sans text-[10px] uppercase tracking-widest text-tinta-apagada">
-            ACCESO CONFIDENCIAL • ESTILISMO MASCULINO
+            ACCESO CONFIDENCIAL • ESTILISMO INTELIGENTE
           </p>
         </div>
 
