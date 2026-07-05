@@ -745,15 +745,103 @@ app.post("/api/generar-looks", async (req, res) => {
 
     const ai = getGenAI();
 
-    // Prepare a highly descriptive prompt containing user characteristics and inventory items with exact IDs
+    // Prepare a highly descriptive prompt containing user characteristics and inventory items with exact IDs and their wardrobe capsule tags
     const inventoryText = armario
-      .map(
-        (item, index) =>
-          `${index + 1}. [ID: "${item.id}"] Nombre: "${item.nombre}", Categoría: "${item.categoria}", Color: "${item.color}", Nivel de Formalidad: ${item.formalidad}/5, Temporada: "${item.temporada}"`
-      )
+      .map((item, index) => {
+        const itemCapsules = (item.tags || [])
+          .filter((t: string) => t.startsWith("armario:"))
+          .map((t: string) => t.substring("armario:".length).toLowerCase());
+        const finalCapsules = itemCapsules.length > 0 ? itemCapsules : ["normal"];
+        return `${index + 1}. [ID: "${item.id}"] Nombre: "${item.nombre}", Categoría: "${item.categoria}", Color: "${item.color}", Nivel de Formalidad: ${item.formalidad}/5, Temporada: "${item.temporada}", Cápsulas de Armario: [${finalCapsules.join(", ")}]`;
+      })
       .join("\n");
 
     const perfilContext = compilePerfilContext(perfilEstilo);
+
+    // Detect if the occasion mentions or strongly implies a specific capsule (e.g., "oficina", "fiesta", "normal")
+    const occasionLower = ocasion.toLowerCase();
+    const availableCapsules = new Set<string>();
+    armario.forEach((item: any) => {
+      if (item.tags) {
+        item.tags.forEach((t: string) => {
+          if (t.startsWith("armario:")) {
+            availableCapsules.add(t.substring("armario:".length).toLowerCase());
+          }
+        });
+      }
+    });
+
+    let matchedCapsule = "";
+    for (const cap of availableCapsules) {
+      if (occasionLower.includes(cap)) {
+        matchedCapsule = cap;
+        break;
+      }
+    }
+
+    // Handle common synonyms and variations for office and party
+    if (!matchedCapsule) {
+      if (
+        occasionLower.includes("trabajo") ||
+        occasionLower.includes("laboral") ||
+        occasionLower.includes("reunión") ||
+        occasionLower.includes("reunion") ||
+        occasionLower.includes("junta") ||
+        occasionLower.includes("oficina") ||
+        occasionLower.includes("office") ||
+        occasionLower.includes("curro") ||
+        occasionLower.includes("business") ||
+        occasionLower.includes("work")
+      ) {
+        if (availableCapsules.has("oficina")) {
+          matchedCapsule = "oficina";
+        }
+      } else if (
+        occasionLower.includes("boda") ||
+        occasionLower.includes("gala") ||
+        occasionLower.includes("club") ||
+        occasionLower.includes("noche") ||
+        occasionLower.includes("party") ||
+        occasionLower.includes("cocktail") ||
+        occasionLower.includes("coctel") ||
+        occasionLower.includes("fiesta") ||
+        occasionLower.includes("celebracion") ||
+        occasionLower.includes("celebración")
+      ) {
+        if (availableCapsules.has("fiesta")) {
+          matchedCapsule = "fiesta";
+        }
+      } else if (
+        occasionLower.includes("diario") ||
+        occasionLower.includes("casual") ||
+        occasionLower.includes("calle") ||
+        occasionLower.includes("pasear") ||
+        occasionLower.includes("compras") ||
+        occasionLower.includes("normal")
+      ) {
+        if (availableCapsules.has("normal")) {
+          matchedCapsule = "normal";
+        }
+      }
+    }
+
+    let capsuleInstruction = "";
+    if (matchedCapsule) {
+      const capsuleItemsCount = armario.filter((item: any) => {
+        const itemCapsules = (item.tags || [])
+          .filter((t: string) => t.startsWith("armario:"))
+          .map((t: string) => t.substring("armario:".length).toLowerCase());
+        const finalCapsules = itemCapsules.length > 0 ? itemCapsules : ["normal"];
+        return finalCapsules.includes(matchedCapsule);
+      }).length;
+
+      if (capsuleItemsCount > 0) {
+        capsuleInstruction = `\nRESTRICCIÓN DE ARMARIO CÁPSULA MANDATORIA:
+El usuario ha solicitado una propuesta para la ocasión "${ocasion}", la cual coincide/se asocia directamente con su armario cápsula de "${matchedCapsule.toUpperCase()}".
+Por lo tanto, DEBES diseñar los looks utilizando prioritariamente o en su totalidad las prendas que pertenezcan a la cápsula de "${matchedCapsule}" (puedes identificarlas porque en el listado de inventario tienen marcado: "Cápsulas de Armario: [..., ${matchedCapsule}, ...]").
+No sugieras prendas de otras cápsulas a menos que sea estrictamente necesario para complementar el look debido a la escasez de prendas. Explica en el campo 'porque' cómo estás respetando su cápsula de "${matchedCapsule}" y seleccionando la ropa adecuada.`;
+      }
+    }
 
     const prompt = `Actúa como el estilista jefe de un salón de imagen masculina de lujo llamado ESPEJO.
 Analiza la fisionomía del usuario:
@@ -766,6 +854,7 @@ ${perfilContext}
 Recomendación requerida para el siguiente contexto:
 - Ocasión/Evento: ${ocasion}
 - Clima y temperatura: ${clima}
+${capsuleInstruction}
 
 Inventario disponible de su propio Armario (USAR EXCLUSIVAMENTE ESTOS Ids para componer los looks):
 ${inventoryText}
