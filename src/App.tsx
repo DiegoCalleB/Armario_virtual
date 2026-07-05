@@ -27,7 +27,12 @@ import {
   updateUserHistorialItemImage,
   toggleUserHistorialItemFavorito,
   deleteUserHistorialItem,
-  resetUserAllData
+  resetUserAllData,
+  fetchUserPerfil,
+  saveUserPerfil,
+  fetchUserPlanificaciones,
+  saveUserPlanificacion,
+  deleteUserPlanificacion
 } from "./supabase";
 import { Sparkles, LogOut, Cloud, CloudOff, RefreshCw, Database, Scissors, Shirt, History, ClipboardList, Briefcase, TrendingUp, Sliders, Menu, AlertTriangle, X, Check, Copy, Calendar, Coins } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -164,6 +169,9 @@ export default function App() {
       }
       return updated;
     });
+    if (user && isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+      saveUserPlanificacion(user.id, plan).catch(e => console.error("Error saving plan:", e));
+    }
   };
 
   const handleEliminarPlanificacion = (id: string) => {
@@ -174,6 +182,9 @@ export default function App() {
       }
       return updated;
     });
+    if (user && isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+      deleteUserPlanificacion(user.id, id).catch(e => console.error("Error deleting plan:", e));
+    }
   };
 
   const handleMarcarComoVestido = (prendasIds: string[]) => {
@@ -318,7 +329,7 @@ export default function App() {
     async function loadUserData() {
       setIsDataLoading(true);
       try {
-        // Load style profile for all user sessions
+        // Load local style profile first as a quick start
         const dbPerfilKey = `espejo_perfil_${user.id}`;
         const savedPerfil = localStorage.getItem(dbPerfilKey);
         setPerfilEstilo(savedPerfil ? JSON.parse(savedPerfil) : null);
@@ -328,12 +339,16 @@ export default function App() {
           let dbRostro: Rostro | null = null;
           let dbPrendas: Prenda[] = [];
           let dbHistorial: HistorialLook[] = [];
+          let dbPerfil: PerfilEstilo | null = null;
+          let dbPlanificaciones: LookPlanificado[] = [];
 
           try {
             const results = await Promise.allSettled([
               fetchUserRostro(user.id),
               fetchUserPrendas(user.id),
-              fetchUserHistorial(user.id)
+              fetchUserHistorial(user.id),
+              fetchUserPerfil(user.id),
+              fetchUserPlanificaciones(user.id)
             ]);
 
             if (results[0].status === "fulfilled") {
@@ -345,6 +360,12 @@ export default function App() {
             if (results[2].status === "fulfilled") {
               dbHistorial = (results[2].value as HistorialLook[]) || [];
             }
+            if (results[3].status === "fulfilled") {
+              dbPerfil = results[3].value as PerfilEstilo | null;
+            }
+            if (results[4].status === "fulfilled") {
+              dbPlanificaciones = (results[4].value as LookPlanificado[]) || [];
+            }
           } catch (syncErr) {
             console.error("Supabase load error, falling back:", syncErr);
           }
@@ -353,6 +374,8 @@ export default function App() {
           const cachedRostro = localStorage.getItem(`espejo_rostro_${user.id}`);
           const cachedPrendas = localStorage.getItem(`espejo_prendas_${user.id}`);
           const cachedHistorial = localStorage.getItem(`espejo_historial_${user.id}`);
+          const cachedPerfil = localStorage.getItem(`espejo_perfil_${user.id}`);
+          const cachedPlanes = localStorage.getItem(`espejo_plan_semanal_${user.id}`);
 
           if (!dbRostro && cachedRostro) {
             try { dbRostro = JSON.parse(cachedRostro); } catch (_) {}
@@ -370,6 +393,17 @@ export default function App() {
               const parsed = JSON.parse(cachedHistorial);
               if (Array.isArray(parsed) && parsed.length > 0) {
                 dbHistorial = parsed;
+              }
+            } catch (_) {}
+          }
+          if (!dbPerfil && cachedPerfil) {
+            try { dbPerfil = JSON.parse(cachedPerfil); } catch (_) {}
+          }
+          if (dbPlanificaciones.length === 0 && cachedPlanes) {
+            try {
+              const parsed = JSON.parse(cachedPlanes);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                dbPlanificaciones = parsed;
               }
             } catch (_) {}
           }
@@ -430,13 +464,10 @@ export default function App() {
 
           // Load weekly plan
           const planKey = `espejo_plan_semanal_${user.id}`;
-          const savedPlanes = localStorage.getItem(planKey);
-          let parsedPlanes = savedPlanes ? JSON.parse(savedPlanes) : [];
-
-          if (parsedPlanes.length === 0 && enrichedPrendas.length > 0) {
+          if (dbPlanificaciones.length === 0 && enrichedPrendas.length > 0) {
             // Generate some elegant default plans for the current week
             const todayStr = new Date().toISOString().split("T")[0];
-            parsedPlanes = [
+            dbPlanificaciones = [
               {
                 id: "plan_default_1",
                 fecha: todayStr,
@@ -450,7 +481,8 @@ export default function App() {
                 comentarios_sastre: "Atelier climatológico (Madrid, 17°C): El blazer desestructurado en sintonía de lana es idóneo para el viento fresco de la capital. Resguardo óptimo."
               }
             ];
-            safeSetLocalStorage(planKey, JSON.stringify(parsedPlanes));
+            safeSetLocalStorage(planKey, JSON.stringify(dbPlanificaciones));
+            await saveUserPlanificacion(user.id, dbPlanificaciones[0]).catch(e => console.error(e));
           }
 
           // Update local cache for safety and offline work
@@ -463,11 +495,18 @@ export default function App() {
           if (dbHistorial.length > 0) {
             safeSetLocalStorage(`espejo_historial_${user.id}`, JSON.stringify(dbHistorial));
           }
+          if (dbPerfil) {
+            safeSetLocalStorage(`espejo_perfil_${user.id}`, JSON.stringify(dbPerfil));
+          }
+          if (dbPlanificaciones.length > 0) {
+            safeSetLocalStorage(planKey, JSON.stringify(dbPlanificaciones));
+          }
           
           setRostro(dbRostro);
           setPrendas(enrichedPrendas);
           setHistorial(dbHistorial);
-          setPlanificaciones(parsedPlanes);
+          setPerfilEstilo(dbPerfil);
+          setPlanificaciones(dbPlanificaciones);
         } else {
           // Local storage user-specific sync
           const rostroKey = `espejo_rostro_${user.id}`;
@@ -574,10 +613,17 @@ export default function App() {
     setIsAuthMock(false);
   };
 
-  const handlePerfilGuardado = (nuevoPerfil: PerfilEstilo) => {
+  const handlePerfilGuardado = async (nuevoPerfil: PerfilEstilo) => {
     setPerfilEstilo(nuevoPerfil);
     if (user) {
       safeSetLocalStorage(`espejo_perfil_${user.id}`, JSON.stringify(nuevoPerfil));
+      if (isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
+        try {
+          await saveUserPerfil(user.id, nuevoPerfil);
+        } catch (err) {
+          console.error("Error saving style profile to Supabase:", err);
+        }
+      }
     }
   };
 
@@ -1027,27 +1073,27 @@ export default function App() {
             <h1 className="font-serif text-3xl sm:text-4xl lg:text-3xl font-extrabold tracking-tight text-white select-none uppercase">
               {activeTab === "espejo" && "TÚ ESPEJO VIRTUAL"}
               {activeTab === "armario" && "TÚ ARMARIO DIGITAL"}
-              {activeTab === "planificador" && "AGENDA & PLANIFICADOR DE LOOKS METEOROLÓGICO"}
-              {activeTab === "costeperwear" && "SARTORIAL FINANCE: COSTE POR USO & ECO"}
-              {activeTab === "asesor" && "✨ PROBADOR DE LOOKS IA"}
+              {activeTab === "planificador" && "AGENDA DE LOOKS"}
+              {activeTab === "costeperwear" && "COSTE POR USO"}
+              {activeTab === "asesor" && "✨ PROBADOR IA"}
               {activeTab === "historial" && "HISTORIAL DE LOOKS"}
-              {activeTab === "auditoria" && "AUDITORÍA DE ARMARIO"}
-              {activeTab === "maleta" && "EQUIPAJE CÁPSULA SMART"}
-              {activeTab === "compras" && "RECOMENDADOR DE TENDENCIAS"}
-              {activeTab === "diagnostico" && "ADN DE ESTILO PERSONAL"}
+              {activeTab === "auditoria" && "AUDITORÍA"}
+              {activeTab === "maleta" && "EQUIPAJE SMART"}
+              {activeTab === "compras" && "TENDENCIAS"}
+              {activeTab === "diagnostico" && "ADN DE ESTILO"}
             </h1>
             
-            <p className="font-sans text-[11px] sm:text-xs uppercase tracking-widest text-[#A89C82] font-normal max-w-3xl mx-auto mt-2 leading-relaxed">
-              {activeTab === "espejo" && "Calibración fisionómica por I.A.: Analiza la forma de tu rostro para optimizar tu corte de cabello, barba y sintonizarlo con tu estilo."}
-              {activeTab === "armario" && "Tu atelier digital: Registra tu colección de prendas reales con la inteligencia de categorización rápida por visión computacional."}
-              {activeTab === "planificador" && "Agenda climática e inteligente: Planifica tus atuendos semanales con sintonía meteorológica interactiva y asesoramiento sastrero por IA."}
-              {activeTab === "costeperwear" && "Finanzas sastreras & Sostenibilidad: Conoce la rentabilidad de tus inversiones mediante el Coste por Uso (CPW), composición textil y asesoramiento de lujo."}
-              {activeTab === "asesor" && "Probador virtual fotorrealista de alta fidelidad: Sube tu foto de cuerpo completo y pruébate de inmediato cualquier combinación de tu armario con tecnología de inteligencia artificial."}
-              {activeTab === "historial" && "Colección privada de atuendos de gala: Guarda tus propuestas favoritas de cada ocasión o evento."}
-              {activeTab === "auditoria" && "Estudio crítico de tu ropero: Descubre el coeficiente de cohesión, lo que realmente necesitas y lo que te sobra."}
-              {activeTab === "maleta" && "Planificador de maletas inteligente: Viaja ultra-ligero con un ropero de cápsula sastrera para cada día de viaje."}
-              {activeTab === "compras" && "Cazador de tendencias y Personal Shopper virtual: Recibe propuestas exclusivas con las compras que encajan con tu ADN."}
-              {activeTab === "diagnostico" && "Estudio de silueta, preferencias, colores activos y metas estéticas para sincronizar todo el atelier virtual."}
+            <p className="font-sans text-[10px] uppercase tracking-widest text-[#A89C82] font-normal max-w-3xl mx-auto mt-2 leading-relaxed">
+              {activeTab === "espejo" && "Analiza tu rostro para optimizar tu estilo."}
+              {activeTab === "armario" && "Registra tu colección de prendas."}
+              {activeTab === "planificador" && "Planifica tus atuendos semanales según el clima."}
+              {activeTab === "costeperwear" && "Conoce la rentabilidad y sostenibilidad de tu ropa."}
+              {activeTab === "asesor" && "Pruébate cualquier combinación con inteligencia artificial."}
+              {activeTab === "historial" && "Guarda tus looks favoritos."}
+              {activeTab === "auditoria" && "Analiza lo que realmente usas y lo que te sobra."}
+              {activeTab === "maleta" && "Tu cápsula sastrera inteligente para viajar ligero."}
+              {activeTab === "compras" && "Prendas recomendadas que encajan con tu perfil."}
+              {activeTab === "diagnostico" && "Tu silueta, preferencias y metas estéticas."}
             </p>
           </motion.div>
 
@@ -1073,110 +1119,11 @@ export default function App() {
                 </span>
                 <div className="space-y-1">
                   <h3 className="font-serif text-sm font-bold tracking-wider text-red-200 uppercase">
-                    Guía de Privacidad y Seguridad: El Bucket requiere permisos para usuarios Autenticados
+                    Error de Almacenamiento
                   </h3>
                   <p className="text-[11px] text-tinta-apagada">
-                    Las imágenes de tus prendas se intentaron guardar en el bucket <code className="bg-red-950/40 px-1 py-0.5 rounded text-red-300 font-mono">prendas_armario</code>, pero falló por las políticas RLS. Además, ¡vamos a asegurar tu privacidad para que nadie más pueda ver tus prendas!
+                    No se pudo guardar la imagen de tu prenda en el servidor de almacenamiento. Por favor, comprueba tu conexión o contacta al administrador de tu atelier.
                   </p>
-                </div>
-              </div>
-
-              <div className="bg-fondo/80 border border-linea/60 rounded-lg p-4 space-y-3 text-xs">
-                <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
-                  🔒 PRIVACIDAD AL 100%: ¿Cómo evitar que otros vean tus prendas?
-                </p>
-                <p className="text-tinta-apagada leading-relaxed text-[11px]">
-                  En tu política RLS actual has configurado <code className="bg-tarjeta px-1 py-0.5 rounded text-white font-mono">auth.role() = 'anon'</code>. Al iniciar sesión en ESPEJO con tu correo electrónico, tu rol pasa a ser <strong className="text-white font-medium">'authenticated'</strong>.
-                </p>
-                <p className="text-tinta-apagada leading-relaxed text-[11px]">
-                  Para que las imágenes se guarden de forma <strong>completamente privada y exclusiva</strong> (de manera que un usuario <strong>solo</strong> pueda ver, editar o borrar sus propias fotos y nunca las de los demás), debes configurar una política que restrinja el acceso a la carpeta de cada usuario (el segundo nivel del path de almacenamiento).
-                </p>
-
-                <div className="space-y-2 pt-2 border-t border-linea/40">
-                  <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
-                    Elige una de estas opciones para tu política en el Panel de Supabase (Storage &gt; prendas_armario &gt; Policies):
-                  </p>
-
-                  {/* Opción A: Ultra Segura */}
-                  <div className="p-3 bg-emerald-950/25 border border-emerald-900/40 rounded-lg space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-emerald-400 text-[10px] uppercase tracking-wider">
-                        Opción A: Máxima Privacidad (Aislado por Usuario) 🔒
-                      </span>
-                      <span className="text-[10px] text-emerald-500 italic">Recomendado</span>
-                    </div>
-                    <p className="text-[10.5px] text-tinta-apagada">
-                      Esta política comprueba que el ID de la carpeta coincida exactamente con el ID del usuario autenticado (<code className="font-mono text-white">auth.uid()</code>). Nadie más podrá ver ni manipular tus imágenes.
-                    </p>
-                    <div className="relative mt-1">
-                      <pre className="bg-[#0b0c10] border border-linea/80 p-2.5 rounded font-mono text-[9.5px] text-emerald-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
-                        {`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public' AND (storage.foldername(name))[2] = (auth.uid())::text`}
-                      </pre>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public' AND (storage.foldername(name))[2] = (auth.uid())::text`);
-                          setCopiedSecureSql(true);
-                          setTimeout(() => setCopiedSecureSql(false), 2000);
-                        }}
-                        className="absolute right-2 top-2 px-2 py-1 bg-tarjeta border border-linea hover:border-laton text-tinta hover:text-laton rounded flex items-center gap-1 cursor-pointer transition text-[8.5px] uppercase tracking-wider font-bold"
-                      >
-                        {copiedSecureSql ? (
-                          <>
-                            <Check size={9} className="text-emerald-400" /> ¡Copiado!
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={9} /> Copiar SQL
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Opción B: Acceso general */}
-                  <div className="p-3 bg-amber-950/25 border border-amber-900/40 rounded-lg space-y-2">
-                    <span className="font-bold text-amber-400 text-[10px] uppercase tracking-wider block">
-                      Opción B: Acceso general para Invitados y Autenticados (Fácil Desarrollo) ⚙️
-                    </span>
-                    <p className="text-[10.5px] text-tinta-apagada">
-                      Permite que cualquier usuario (incluso invitados sin cuenta) guarden fotos bajo la carpeta general public. Útil para desarrollo rápido, pero sin aislamiento por usuario.
-                    </p>
-                    <div className="relative mt-1">
-                      <pre className="bg-[#0b0c10] border border-linea/80 p-2.5 rounded font-mono text-[9.5px] text-amber-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
-                        {`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`}
-                      </pre>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`bucket_id = 'prendas_armario' AND storage."extension"(name) = 'jpg' AND LOWER((storage.foldername(name))[1]) = 'public'`);
-                          setCopiedSql(true);
-                          setTimeout(() => setCopiedSql(false), 2000);
-                        }}
-                        className="absolute right-2 top-2 px-2 py-1 bg-tarjeta border border-linea hover:border-laton text-tinta hover:text-laton rounded flex items-center gap-1 cursor-pointer transition text-[8.5px] uppercase tracking-wider font-bold"
-                      >
-                        {copiedSql ? (
-                          <>
-                            <Check size={9} className="text-emerald-400" /> ¡Copiado!
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={9} /> Copiar SQL
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 pt-2 border-t border-linea/40 text-[11px] text-tinta-apagada">
-                  <p className="font-semibold text-laton uppercase tracking-wider text-[10px]">
-                    Pasos para aplicar la opción elegida:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Entra en <strong className="text-white">Supabase Console &gt; Storage &gt; prendas_armario</strong>.</li>
-                    <li>Haz clic en la pestaña <strong className="text-white">Policies</strong>.</li>
-                    <li>Modifica tu política de subida existente (o crea una nueva) con los permisos de <strong className="text-white">SELECT, INSERT, UPDATE, DELETE</strong> marcados.</li>
-                    <li>Sustituye la expresión por el bloque de SQL que hayas copiado arriba y haz clic en <strong className="text-white">Review</strong> y <strong className="text-white">Save</strong>.</li>
-                  </ol>
                 </div>
               </div>
 
@@ -1185,7 +1132,7 @@ export default function App() {
                   onClick={() => setStorageError(null)}
                   className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest text-tinta-apagada hover:text-white rounded border border-linea/60 cursor-pointer transition font-bold"
                 >
-                  Entendido, ya lo he actualizado
+                  Entendido
                 </button>
               </div>
             </motion.div>

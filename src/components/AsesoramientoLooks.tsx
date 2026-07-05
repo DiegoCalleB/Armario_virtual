@@ -100,6 +100,44 @@ const getResilientMatchingGarments = (id_prendas: string[] | undefined, armario:
   return resolved;
 };
 
+const renderSafeImageOrSvg = (url: string | undefined, alt: string, className: string) => {
+  if (!url) return null;
+  if (url.startsWith("data:image/svg+xml;base64,")) {
+    try {
+      const base64Data = url.substring("data:image/svg+xml;base64,".length);
+      const decodedSvg = atob(base64Data);
+      return (
+        <div 
+          className={`${className} flex items-center justify-center overflow-hidden`}
+          dangerouslySetInnerHTML={{ __html: decodedSvg }} 
+        />
+      );
+    } catch (e) {
+      console.error("Error decoding SVG base64:", e);
+    }
+  } else if (url.startsWith("data:image/svg+xml,")) {
+    try {
+      const svgContent = decodeURIComponent(url.substring("data:image/svg+xml,".length));
+      return (
+        <div 
+          className={`${className} flex items-center justify-center overflow-hidden`}
+          dangerouslySetInnerHTML={{ __html: svgContent }} 
+        />
+      );
+    } catch (e) {
+      console.error("Error decoding SVG raw:", e);
+    }
+  }
+  return (
+    <img
+      src={url}
+      alt={alt}
+      className={className}
+      referrerPolicy="no-referrer"
+    />
+  );
+};
+
 interface AsesoramientoLooksProps {
   armario: Prenda[];
   rostro: Rostro | null;
@@ -1030,12 +1068,7 @@ export default function AsesoramientoLooks({
                                   <div className="space-y-1 text-left">
                                     <span className="text-[9px] uppercase text-laton font-medium font-bold block">Lifting Virtual</span>
                                     <div className="aspect-square bg-fondo border border-laton rounded overflow-hidden relative shadow-lg shadow-black/80">
-                                      <img
-                                        src={selectedLook.simulatedImageUrl}
-                                        alt="Simulated retrato"
-                                        className="w-full h-full object-cover"
-                                        referrerPolicy="no-referrer"
-                                      />
+                                      {renderSafeImageOrSvg(selectedLook.simulatedImageUrl, "Simulated retrato", "w-full h-full object-cover")}
                                       <div className="absolute bottom-1 right-1 bg-laton text-fondo text-[8px] font-bold py-0.5 px-1.5 rounded uppercase">
                                         SIMULADO
                                       </div>
@@ -1740,12 +1773,7 @@ export default function AsesoramientoLooks({
                                       <div className="col-span-12 sm:col-span-7 space-y-1 text-left">
                                         <span className="text-[9px] uppercase text-laton font-medium font-bold block">Vestidor Virtual IA</span>
                                         <div className="aspect-[3/4] bg-fondo border border-laton rounded overflow-hidden relative shadow-lg shadow-black/80">
-                                          <img
-                                            src={selectedLook.simulatedFullBodyImageUrl}
-                                            alt="Simulated body outfit"
-                                            className="w-full h-full object-cover"
-                                            referrerPolicy="no-referrer"
-                                          />
+                                          {renderSafeImageOrSvg(selectedLook.simulatedFullBodyImageUrl, "Simulated body outfit", "w-full h-full object-cover")}
                                           <div className="absolute bottom-1 right-1 bg-laton text-fondo text-[8px] font-bold py-0.5 px-1.5 rounded uppercase">
                                             VIRTUAL FIT
                                           </div>
@@ -1800,12 +1828,13 @@ export default function AsesoramientoLooks({
                           <div className="relative border border-[#3A3225] bg-[#16130E] p-4.5 rounded flex flex-col items-center justify-between shadow-2xl select-none" style={{ minHeight: "330px" }}>
                             {/* Background/Backdrop simulated image */}
                             <div className="absolute inset-0 z-0 opacity-80 overflow-hidden">
-                              <img
-                                src={simulationTab === "cuerpo" ? (selectedLook.simulatedFullBodyImageUrl || selectedLook.simulatedImageUrl || rostro?.imageSrc) : (selectedLook.simulatedImageUrl || rostro?.imageSrc)}
-                                alt="Magazine Model"
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
+                              {renderSafeImageOrSvg(
+                                simulationTab === "cuerpo" 
+                                  ? (selectedLook.simulatedFullBodyImageUrl || selectedLook.simulatedImageUrl || rostro?.imageSrc || undefined) 
+                                  : (selectedLook.simulatedImageUrl || rostro?.imageSrc || undefined),
+                                "Magazine Model",
+                                "w-full h-full object-cover"
+                              )}
                               <div className="absolute inset-0 bg-gradient-to-t from-[#16130E] via-transparent to-[#16130E]/60" />
                             </div>
 
@@ -1873,9 +1902,11 @@ export default function AsesoramientoLooks({
                               onClick={() => {
                                 const targetUrl = simulationTab === "cuerpo" ? (selectedLook.simulatedFullBodyImageUrl || rostro?.imageSrc) : (selectedLook.simulatedImageUrl || rostro?.imageSrc);
                                 if (!targetUrl) return;
+                                const isSvg = targetUrl.startsWith("data:image/svg+xml");
+                                const ext = isSvg ? "svg" : "png";
                                 const link = document.createElement("a");
                                 link.href = targetUrl;
-                                link.download = `ESPEJO_PortadaRevista_${selectedLook.titulo.replace(/\s+/g, '_')}.png`;
+                                link.download = `ESPEJO_PortadaRevista_${selectedLook.titulo.replace(/\s+/g, '_')}.${ext}`;
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);

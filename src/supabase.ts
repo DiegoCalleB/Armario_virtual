@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { Rostro, Prenda, HistorialLook } from "./types";
+import { Rostro, Prenda, HistorialLook, PerfilEstilo, LookPlanificado } from "./types";
 
 // Check if keys are set in environmental or window variables
 // @ts-ignore
@@ -258,6 +258,9 @@ export async function fetchUserPrendas(userId: string): Promise<Prenda[]> {
       descripcion: d.descripcion || undefined,
       tejido: d.tejido || undefined,
       tags: d.tags || [],
+      precio_compra: d.precio_compra !== null && d.precio_compra !== undefined ? Number(d.precio_compra) : undefined,
+      veces_puesto: d.veces_puesto !== null && d.veces_puesto !== undefined ? Number(d.veces_puesto) : undefined,
+      composicion_tejido: d.composicion_tejido || undefined,
     }));
   } catch (err) {
     console.error("Critical error in fetchUserPrendas:", err);
@@ -287,6 +290,9 @@ export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<Pr
       descripcion: prenda.descripcion || null,
       tejido: prenda.tejido || null,
       tags: prenda.tags || [],
+      precio_compra: prenda.precio_compra !== undefined ? prenda.precio_compra : null,
+      veces_puesto: prenda.veces_puesto !== undefined ? prenda.veces_puesto : 0,
+      composicion_tejido: prenda.composicion_tejido || null,
       created_at: new Date().toISOString(),
     });
 
@@ -323,6 +329,9 @@ export async function updateUserPrenda(userId: string, prenda: Prenda): Promise<
         descripcion: prenda.descripcion || null,
         tejido: prenda.tejido || null,
         tags: prenda.tags || [],
+        precio_compra: prenda.precio_compra !== undefined ? prenda.precio_compra : null,
+        veces_puesto: prenda.veces_puesto !== undefined ? prenda.veces_puesto : 0,
+        composicion_tejido: prenda.composicion_tejido || null,
       })
       .eq("id", prenda.id)
       .eq("user_id", userId);
@@ -546,9 +555,146 @@ export async function resetUserAllData(userId: string): Promise<void> {
     const deleteRostro = supabase.from("rostro").delete().eq("user_id", userId);
     const deletePrendas = supabase.from("prendas").delete().eq("user_id", userId);
     const deleteHistorial = supabase.from("historial").delete().eq("user_id", userId);
+    const deletePerfil = supabase.from("perfil_estilo").delete().eq("user_id", userId);
+    const deletePlanificaciones = supabase.from("planificaciones").delete().eq("user_id", userId);
 
-    await Promise.all([deleteRostro, deletePrendas, deleteHistorial]);
+    await Promise.all([deleteRostro, deletePrendas, deleteHistorial, deletePerfil, deletePlanificaciones]);
   } catch (err) {
     console.error("Critical error resetting user data in Supabase:", err);
+  }
+}
+
+// 5. PERFIL DE ESTILO (ADN ESTILO) HELPERS
+export async function fetchUserPerfil(userId: string): Promise<PerfilEstilo | null> {
+  if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
+    return null;
+  }
+  try {
+    const { data, error } = await supabase
+      .from("perfil_estilo")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching user style profile from Supabase:", error);
+      return null;
+    }
+
+    if (!data) return null;
+
+    return {
+      estiloVibe: data.estilo_vibe || undefined,
+      formaSer: data.forma_ser || undefined,
+      estiloObjetivo: data.estilo_objetivo || undefined,
+      estiloPresupuesto: data.estilo_presupuesto || undefined,
+      detallesLibres: data.detalles_libres || undefined,
+      respuestasQuiz: data.respuestas_quiz || undefined,
+    };
+  } catch (err) {
+    console.error("Critical error in fetchUserPerfil:", err);
+    return null;
+  }
+}
+
+export async function saveUserPerfil(userId: string, perfil: PerfilEstilo): Promise<PerfilEstilo> {
+  if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
+    return perfil;
+  }
+  try {
+    const { error } = await supabase.from("perfil_estilo").upsert({
+      user_id: userId,
+      estilo_vibe: perfil.estiloVibe || null,
+      forma_ser: perfil.formaSer || null,
+      estilo_objetivo: perfil.estiloObjetivo || null,
+      estilo_presupuesto: perfil.estiloPresupuesto || null,
+      detalles_libres: perfil.detallesLibres || null,
+      respuestas_quiz: perfil.respuestasQuiz || null,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Error saving user style profile to Supabase:", error);
+    }
+    return perfil;
+  } catch (err) {
+    console.error("Critical error in saveUserPerfil:", err);
+    return perfil;
+  }
+}
+
+// 6. PLANIFICACIONES (WEEKLY PLANNER) HELPERS
+export async function fetchUserPlanificaciones(userId: string): Promise<LookPlanificado[]> {
+  if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
+    return [];
+  }
+  try {
+    const { data, error } = await supabase
+      .from("planificaciones")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching user planificaciones from Supabase:", error);
+      return [];
+    }
+
+    if (!data) return [];
+
+    return data.map((d: any) => ({
+      id: d.id,
+      fecha: d.fecha,
+      nombre_look: d.nombre_look,
+      prendasIds: d.prendas_ids || [],
+      clima_simulado: d.clima_simulado,
+      comentarios_sastre: d.comentarios_sastre || undefined,
+    }));
+  } catch (err) {
+    console.error("Critical error in fetchUserPlanificaciones:", err);
+    return [];
+  }
+}
+
+export async function saveUserPlanificacion(userId: string, plan: LookPlanificado): Promise<void> {
+  if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
+    return;
+  }
+  try {
+    const { error } = await supabase.from("planificaciones").insert({
+      id: plan.id,
+      user_id: userId,
+      fecha: plan.fecha,
+      nombre_look: plan.nombre_look,
+      prendas_ids: plan.prendasIds,
+      clima_simulado: plan.clima_simulado,
+      comentarios_sastre: plan.comentarios_sastre || null,
+      created_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Error inserting planificacion into Supabase:", error);
+    }
+  } catch (err) {
+    console.error("Critical error in saveUserPlanificacion:", err);
+  }
+}
+
+export async function deleteUserPlanificacion(userId: string, planId: string): Promise<void> {
+  if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
+    return;
+  }
+  try {
+    const { error } = await supabase
+      .from("planificaciones")
+      .delete()
+      .eq("id", planId)
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("Error deleting planificacion from Supabase:", error);
+    }
+  } catch (err) {
+    console.error("Critical error in deleteUserPlanificacion:", err);
   }
 }

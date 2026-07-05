@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS public.prendas (
     descripcion TEXT, -- Observaciones o ficha sastrera
     tejido TEXT, -- Clasificación de tejido inteligente (ej: Lino, Lana Peinada)
     tags TEXT[], -- Etiquetas de corte y silueta estructuradas
+    precio_compra NUMERIC, -- Coste en euros para calcular Cost-per-Wear
+    veces_puesto INTEGER NOT NULL DEFAULT 0, -- Contador de usos
+    composicion_tejido TEXT, -- Algodón, lana, sintético, cuero, etc.
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -121,3 +124,74 @@ CREATE POLICY "Permitir actualización individual de historial"
 CREATE POLICY "Permitir borrado individual de historial" 
     ON public.historial FOR DELETE 
     USING (auth.uid() = user_id);
+
+
+-- -------------------------------------------------------------------------
+-- 4. CONFIGURACIÓN DE LA TABLA 'perfil_estilo' (ADN de Estilo / Perfil de Estilo)
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.perfil_estilo (
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    estilo_vibe TEXT,
+    forma_ser TEXT,
+    estilo_objetivo TEXT,
+    estilo_presupuesto TEXT,
+    detalles_libres TEXT,
+    respuestas_quiz JSONB, -- Almacena silueta, colores, rutina, edad, etc.
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar Row Level Security (RLS)
+ALTER TABLE public.perfil_estilo ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para 'perfil_estilo'
+CREATE POLICY "Permitir lectura individual de perfil_estilo" 
+    ON public.perfil_estilo FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir inserción individual de perfil_estilo" 
+    ON public.perfil_estilo FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Permitir actualización individual de perfil_estilo" 
+    ON public.perfil_estilo FOR UPDATE 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir borrado individual de perfil_estilo" 
+    ON public.perfil_estilo FOR DELETE 
+    USING (auth.uid() = user_id);
+
+
+-- -------------------------------------------------------------------------
+-- 5. CONFIGURACIÓN DE LA TABLA 'planificaciones' (Agenda de Looks & Clima)
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.planificaciones (
+    id TEXT PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    fecha TEXT NOT NULL,
+    nombre_look TEXT NOT NULL,
+    prendas_ids TEXT[] NOT NULL DEFAULT '{}',
+    clima_simulado JSONB NOT NULL, -- Almacena temp, condicion, ciudad, etc.
+    comentarios_sastre TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar Row Level Security (RLS)
+ALTER TABLE public.planificaciones ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para 'planificaciones'
+CREATE POLICY "Permitir lectura individual de planificaciones" 
+    ON public.planificaciones FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir inserción individual de planificaciones" 
+    ON public.planificaciones FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Permitir actualización individual de planificaciones" 
+    ON public.planificaciones FOR UPDATE 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir borrado individual de planificaciones" 
+    ON public.planificaciones FOR DELETE 
+    USING (auth.uid() = user_id);
+

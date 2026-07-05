@@ -822,41 +822,12 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
           </div>
         </div>
         
-        {/* Código para compartir el armario con amigas */}
-        <div className="flex items-center gap-2.5 bg-tarjeta border border-linea px-3.5 py-2 rounded-lg self-start sm:self-center shadow-sm">
-          <div className="text-left">
-            <span className="text-[8.5px] uppercase tracking-widest text-laton font-bold block leading-none mb-1">
-              Compartir Armario con Amigas:
-            </span>
-            <span className="font-mono text-xs font-bold text-tinta tracking-widest leading-none">
-              {getShareCodeFromEmail(userEmail)}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(getShareCodeFromEmail(userEmail));
-              setCopiedOwnCode(true);
-              setTimeout(() => setCopiedOwnCode(false), 2000);
-            }}
-            className="ml-2 px-2.5 py-1 text-[8.5px] uppercase font-bold tracking-wider rounded bg-laton text-fondo hover:bg-white hover:text-laton transition duration-150 select-none flex items-center gap-1 shrink-0"
-          >
-            {copiedOwnCode ? "¡Copiado! ✓" : (
-              <>
-                <Clipboard size={10} /> Copiar Código
-              </>
-            )}
-          </button>
-        </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Garment Uploader - Column 1 */}
         <div className="lg:col-span-1">
-          <p className="text-tinta-apagada text-sm mb-4">
-            Registra tu armario para que el sastre digital elabore las mejores propuestas visuales.
-          </p>
-
           {/* Tab Selector */}
           <div className="flex border-b border-linea mb-5 select-none font-sans overflow-x-auto no-scrollbar gap-1">
             <button
@@ -1042,13 +1013,13 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
                 {/* Multiple garments switch inside IA panel */}
                 <div className="bg-tarjeta border border-linea p-3.5 rounded-lg select-none text-left">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1 text-left">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-0.5 text-left">
                       <span className="text-[10px] font-bold text-tinta uppercase tracking-widest block font-sans">
-                        ¿Foto grupal de prendas?
+                        Modo Lote (Desglose IA)
                       </span>
-                      <span className="text-[9.5px] text-tinta-apagada block font-sans font-light leading-relaxed">
-                        Actívalo si en la misma fotografía aparecen varias prendas juntas (ej. 6 camisetas juntas). ESPEJO desglosará cada una con IA en fichas independientes automáticamente. (Solo se añaden prendas de vestir y calzado; los accesorios deben agregarse individualmente).
+                      <span className="text-[9.5px] text-tinta-apagada block font-sans font-light leading-snug">
+                        Sube una foto con varias prendas juntas y la IA las separará por ti.
                       </span>
                     </div>
                     <button
@@ -1066,13 +1037,10 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     </button>
                   </div>
                   {isMultiMode && (
-                    <div className="flex flex-col gap-1 items-center bg-fondo p-2 rounded border border-laton/20 text-laton text-[8.5px] mt-2.5 font-sans">
+                    <div className="flex flex-col gap-1 items-center bg-fondo p-2 rounded border border-laton/20 text-laton text-[8px] mt-2 font-sans">
                       <div className="flex items-center gap-1.5 font-medium justify-center">
-                        <span className="w-1.5 h-1.5 rounded-full bg-laton animate-ping" />
-                        Modo Desglose Express activo. Se extraerán múltiples fichas.
-                      </div>
-                      <div className="text-[8px] text-tinta-apagada font-light text-center">
-                        ⚠️ Solo se extraerán prendas de vestir y calzado. Los accesorios se deben registrar por separado.
+                        <span className="w-1 h-1 rounded-full bg-laton animate-ping" />
+                        Desglose Express activo. Se extraerán múltiples fichas de ropa y calzado.
                       </div>
                     </div>
                   )}
@@ -1776,15 +1744,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             </div>
           )}
 
-          <div className="mt-6 p-4 bg-tarjeta/30 border border-linea rounded-md text-xs space-y-2">
-            <span className="text-laton font-medium flex items-center gap-1">
-              <Star size={11} className="fill-laton text-laton" /> Pauta del Estilista
-            </span>
-            <p className="text-tinta-apagada font-light leading-relaxed">
-              Registra diferentes niveles de formalidad. Lograrás mayor polivalencia al confeccionar propuestas
-              para mañanas frías, bodas de tarde o cenas casuales.
-            </p>
-          </div>
+
         </div>
 
         {/* Garment Catalog & Filtering - Columns 2 & 3 */}

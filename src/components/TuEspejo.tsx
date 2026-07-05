@@ -201,8 +201,7 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
             transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
           >
             <p className="text-tinta-apagada text-sm mb-6 max-w-xl">
-              Toma un retrato o sube tu foto para que la IA identifique las proporciones de tu fisionomía,
-              forma craneal y te ofrezca un asesoramiento capilar y de barba exclusivo.
+              Sube una foto o retrato para analizar tus rasgos.
             </p>
 
             <div
