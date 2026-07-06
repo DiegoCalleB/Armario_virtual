@@ -913,7 +913,7 @@ export default function App() {
               <Database size={8} className="text-laton" />
             </span>
           </div>
-          <h2 className="font-serif text-xl font-bold uppercase tracking-widest text-[#F3ECDD]">
+          <h2 className="font-serif text-xl font-bold uppercase tracking-widest text-[#09090B]">
             SARTORÍAL SYNC
           </h2>
           <div className="w-12 h-px bg-laton mx-auto opacity-50" />
@@ -932,15 +932,15 @@ export default function App() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] bg-radial from-laton/5 via-transparent to-transparent pointer-events-none z-0" />
 
       {/* 1. PERSISTENT SIDEBAR FOR LAPTOPS / DESKTOPS */}
-      <aside className="hidden lg:flex flex-col w-72 h-screen fixed top-0 left-0 bg-tarjeta/95 border-r border-linea/80 z-40 p-6 flex-shrink-0 justify-between">
+      <aside className="hidden lg:flex flex-col w-72 h-screen fixed top-0 left-0 bg-tarjeta border-r border-linea z-40 p-6 flex-shrink-0 justify-between">
         <div className="space-y-8 overflow-y-auto no-scrollbar py-2">
           {/* Brand/Logo */}
-          <div className="text-left py-2 border-b border-linea/40 pb-4">
-            <span className="text-[10px] tracking-widest text-[#C9A35B] uppercase font-bold block mb-1">ATELIER PRIVADO</span>
+          <div className="text-left py-2 border-b border-linea pb-4">
+            <span className="text-[10px] tracking-widest text-laton uppercase font-bold block mb-1">ATELIER ESPEJO</span>
             <h1 className="font-serif text-xl sm:text-2xl font-black tracking-tight text-tinta uppercase select-none leading-tight">
-              Armario Inteligente
+              Armario Digital
             </h1>
-            <p className="font-sans text-[9px] tracking-wider text-tinta-apagada uppercase mt-1">Sastrería Inteligente IA</p>
+            <p className="font-sans text-[9px] tracking-wider text-tinta-apagada uppercase mt-1">Estilismo & Imagen Personal IA</p>
           </div>
 
           {/* Sync Stats Bar */}
@@ -1000,7 +1000,7 @@ export default function App() {
                     <p className={`text-[11px] uppercase tracking-wider font-bold ${isSelected ? "text-white" : ""}`}>
                       {tab.label}
                     </p>
-                    <p className="text-[9px] text-[#A89C82]/70 font-mono">
+                    <p className="text-[9px] text-[#52525B]/70 font-mono">
                       {tab.desc}
                     </p>
                   </div>
@@ -1034,7 +1034,7 @@ export default function App() {
         {/* COMPACT TOP BAR FOR MOBILE/TABLET */}
         <div className="lg:hidden flex items-center justify-between bg-tarjeta/95 border-b border-linea/60 px-4 py-3 sticky top-0 z-30 backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <h1 className="font-serif text-sm font-black uppercase tracking-wider text-[#F3ECDD]">
+            <h1 className="font-serif text-sm font-black uppercase tracking-wider text-[#09090B]">
               ARMARIO INTELIGENTE
             </h1>
             <span className="text-[8px] font-mono text-laton uppercase tracking-[0.2em] bg-laton/5 border border-laton/25 px-1.5 py-0.5 rounded leading-none shrink-0">
@@ -1083,7 +1083,7 @@ export default function App() {
               {activeTab === "diagnostico" && "ADN DE ESTILO"}
             </h1>
             
-            <p className="font-sans text-[10px] uppercase tracking-widest text-[#A89C82] font-normal max-w-3xl mx-auto mt-2 leading-relaxed">
+            <p className="font-sans text-[10px] uppercase tracking-widest text-[#52525B] font-normal max-w-3xl mx-auto mt-2 leading-relaxed">
               {activeTab === "espejo" && "Analiza tu rostro para optimizar tu estilo."}
               {activeTab === "armario" && "Registra tu colección de prendas."}
               {activeTab === "planificador" && "Planifica tus atuendos semanales según el clima."}
@@ -1318,8 +1318,8 @@ export default function App() {
 
           {/* Footnote inside Main Panel */}
           <footer className="text-center pt-10 pb-8 text-[11px] font-sans text-tinta-apagada/40 leading-relaxed max-w-sm mx-auto select-none">
-            <p className="font-serif italic font-medium text-laton">Tu Armario Inteligente</p>
-            <p>Atelier de Asesoría de Imagen & Sastrería Digital Inteligente.</p>
+            <p className="font-serif italic font-medium text-laton">Atelier Espejo</p>
+            <p>Atelier de Asesoría de Imagen & Estilismo Digital Inclusivo.</p>
             <p className="mt-0.5 text-laton/80 font-medium">Diseñado y Desarrollado por <span className="font-bold">AIron Labs</span>.</p>
             <p className="mt-1">© 2026. Todos los derechos reservados.</p>
           </footer>

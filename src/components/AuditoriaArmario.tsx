@@ -513,7 +513,7 @@ export default function AuditoriaArmario({
                 <div className="p-5 border-r border-linea/60 bg-fondo">
                   <div className="border border-linea/80 rounded-2xl w-full aspect-[9/16] bg-[#f2f2f2] text-black overflow-hidden flex flex-col shadow-inner relative max-w-[220px] mx-auto">
                     {/* Top Notch/Speaker */}
-                    <div className="h-4 bg-[#1e1a13] w-full flex justify-center items-center">
+                    <div className="h-4 bg-[#F4F4F5] w-full flex justify-center items-center">
                       <div className="w-16 h-2 bg-[#333] rounded-full mt-1" />
                     </div>
 
@@ -686,7 +686,7 @@ export default function AuditoriaArmario({
 
                             {/* Fast Copy Individual Fields Board */}
                             <div className="bg-[#1C1813] p-2.5 border border-linea rounded space-y-2.5 text-left">
-                              <p className="text-[8.5px] uppercase tracking-widest text-[#C9A35B] font-bold">
+                              <p className="text-[8.5px] uppercase tracking-widest text-[#18181B] font-bold">
                                 Copias Individuales Rápidas:
                               </p>
                               <p className="text-[7.5px] text-tinta-apagada -mt-2">

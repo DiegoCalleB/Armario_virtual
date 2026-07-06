@@ -258,7 +258,7 @@ export default function PlanificadorLooks({
   return (
     <div className="space-y-6">
       <div className="mb-6 text-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#1e1a13] text-[#C9A35B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#F4F4F5] text-[#18181B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
           <Calendar size={11} className="text-laton animate-pulse" />
           <span>Sartorial Agenda & Weather Tracker</span>
         </div>

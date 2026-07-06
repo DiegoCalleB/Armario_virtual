@@ -406,7 +406,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 setErrorMsg(null);
                 setInfoMsg(null);
               }}
-              className="text-[#C9A35B] hover:underline font-bold cursor-pointer"
+              className="text-[#18181B] hover:underline font-bold cursor-pointer"
             >
               {isSignUp ? "Inicia Sesión" : "Crea tu Cuenta"}
             </button>

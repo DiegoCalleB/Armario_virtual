@@ -89,7 +89,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
             <Sparkles size={20} className="animate-pulse" />
           </div>
           <div>
-            <h3 className="font-serif text-xl font-bold uppercase tracking-wider text-[#F3ECDD]">
+            <h3 className="font-serif text-xl font-bold uppercase tracking-wider text-[#09090B]">
               DIAGNÓSTICO & DOSSIER DE ESTILO
             </h3>
             <p className="font-mono text-[9px] text-laton uppercase tracking-widest mt-0.5">
@@ -115,7 +115,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Rutina Diaria */}
           <div className="space-y-3">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82]">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B]">
               ¿Cuál es tu rutina diaria o labor principal?
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -143,7 +143,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Silueta Corporal */}
           <div className="space-y-3">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82]">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B]">
               ¿Cuál es la forma o estructura de tu silueta?
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -175,7 +175,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Vibe preferida */}
           <div className="space-y-3">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82]">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B]">
               Estilo de Preferencia (Vibe)
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -203,7 +203,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Rango de Edad */}
           <div className="space-y-3">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82]">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B]">
               Estilo Generacional (Edad de imagen)
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -226,7 +226,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Colores */}
           <div className="space-y-3">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82] flex items-center gap-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B] flex items-center gap-1.5">
               <Palette size={12} className="text-laton" /> Paleta de Colores Preferida
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -268,7 +268,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Personalidad / Forma de Ser */}
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82]">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B]">
               ¿Cómo describirías tu forma de ser / personalidad?
             </label>
             <input
@@ -282,7 +282,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Estilo Objetivo */}
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82]">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B]">
               ¿Qué estilo te gustaría conseguir? (Objetivo)
             </label>
             <input
@@ -296,7 +296,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Budget */}
           <div className="space-y-3">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82]">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B]">
               Filosofía o Presupuesto de Compra
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -323,7 +323,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
 
           {/* Detalles Libres Textarea */}
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#A89C82] flex items-center justify-between">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#52525B] flex items-center justify-between">
               <span>Descripción libre (gustos, fobias o notas)</span>
               <span className="text-[9px] text-tinta-apagada font-normal lowercase">Opcional</span>
             </label>

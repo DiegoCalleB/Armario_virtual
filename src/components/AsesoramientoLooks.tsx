@@ -579,7 +579,7 @@ export default function AsesoramientoLooks({
   const accesorios = matchingGarments.filter(p => p.categoria === "accesorio");
 
   const renderPrendaCardItem = (item: Prenda, compact = false) => (
-    <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#C9A35B]/50 transition duration-200 shadow-md">
+    <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#18181B]/50 transition duration-200 shadow-md">
       <div className={`${compact ? "w-9 h-9" : "w-12 h-12"} rounded overflow-hidden border border-linea/40 shrink-0 bg-fondo`}>
         <img
           src={item.imageSrc}
@@ -590,7 +590,7 @@ export default function AsesoramientoLooks({
       </div>
       <div className="min-w-0 flex-1 text-left">
         <div className="flex items-center justify-between gap-1">
-          <p className="text-[8px] uppercase tracking-wider text-[#C9A35B]/80 font-bold leading-none">
+          <p className="text-[8px] uppercase tracking-wider text-[#18181B]/80 font-bold leading-none">
             {item.categoria === "top" ? "Prenda Superior" : item.categoria === "pantalon" ? "Prenda Inferior" : item.categoria === "calzado" ? "Calzado" : "Accesorio"}
           </p>
           <span className="text-[8px] text-tinta-apagada px-1.5 py-0.5 rounded bg-fondo font-medium uppercase font-sans">
@@ -633,7 +633,7 @@ export default function AsesoramientoLooks({
           <Camera size={26} className="text-laton-apagado mx-auto mb-3" />
           <h3 className="font-serif text-base font-semibold text-tinta">Espejo no calibrado</h3>
           <p className="text-xs text-tinta-apagada mt-1.5 max-w-sm mx-auto">
-            Por favor, sube tu retrato facial en la sección <strong>Tu Espejo</strong> primero. El estilista necesita comprender la fisionomía de tu rostro para aconsejarte cortes, peinados y rasgos de estilismo ideales.
+            Por favor, sube tu retrato facial en la sección <strong>Tu Espejo</strong> primero. El estilista necesita comprender la fisionomía de tu rostro para aconsejarte estilos idóneos, y servirá de referencia de identidad para que el extractor de prendas te reconozca con precisión al subir tus fotos personales.
           </p>
         </div>
       )}
@@ -786,7 +786,7 @@ export default function AsesoramientoLooks({
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className="text-[9px] bg-[#C9A35B] text-fondo px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans animate-pulse">
+                        <span className="text-[9px] bg-[#18181B] text-fondo px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans animate-pulse">
                           Bespoke por Gemini sastre IA
                         </span>
                         <span className="text-[10px] text-laton font-medium">Coordinación Exclusiva</span>
@@ -812,7 +812,7 @@ export default function AsesoramientoLooks({
                       const accesorios = matchingGarments.filter(p => p.categoria === "accesorio");
 
                       const renderPrendaCardItem = (item: Prenda, compact = false) => (
-                        <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#C9A35B]/50 transition duration-200 shadow-md">
+                        <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#18181B]/50 transition duration-200 shadow-md">
                           <div className={`${compact ? "w-9 h-9" : "w-12 h-12"} rounded overflow-hidden border border-linea/40 shrink-0 bg-fondo`}>
                             <img
                               src={item.imageSrc}
@@ -823,7 +823,7 @@ export default function AsesoramientoLooks({
                           </div>
                           <div className="min-w-0 flex-1 text-left">
                             <div className="flex items-center justify-between gap-1">
-                              <p className="text-[8px] uppercase tracking-wider text-[#C9A35B]/80 font-bold leading-none">
+                              <p className="text-[8px] uppercase tracking-wider text-[#18181B]/80 font-bold leading-none">
                                 {item.categoria === "top" ? "Prenda Superior" : item.categoria === "pantalon" ? "Prenda Inferior" : item.categoria === "calzado" ? "Calzado" : "Accesorio"}
                               </p>
                               <span className="text-[8px] text-tinta-apagada px-1.5 py-0.5 rounded bg-fondo font-medium uppercase font-sans">
@@ -854,19 +854,19 @@ export default function AsesoramientoLooks({
                       return (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between border-b border-linea/60 pb-2">
-                            <h4 className="text-xs uppercase tracking-widest text-[#C9A35B] font-bold">Galán de Noche (Perchero Virtual)</h4>
+                            <h4 className="text-xs uppercase tracking-widest text-[#18181B] font-bold">Galán de Noche (Perchero Virtual)</h4>
                             <span className="text-[9px] font-mono text-tinta-apagada">SARTORIAL SCHEMATIC</span>
                           </div>
                           
                           <div className="relative bg-[#1a1610] rounded-xl border border-linea/80 p-5 overflow-hidden">
                             {/* Decorative background brass rod */}
-                            <div className="absolute top-10 bottom-10 left-1/2 w-0.5 bg-gradient-to-b from-[#C9A35B]/40 via-[#8C7440]/10 to-[#C9A35B]/40 -translate-x-1/2 hidden sm:block pointer-events-none" />
+                            <div className="absolute top-10 bottom-10 left-1/2 w-0.5 bg-gradient-to-b from-[#18181B]/40 via-[#71717A]/10 to-[#18181B]/40 -translate-x-1/2 hidden sm:block pointer-events-none" />
 
                             <div className="space-y-6 relative z-10">
                               {/* 1. TOP SLOT (CAMISETA / CHAQUETA / ETC) */}
                               <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <div className="shrink-0 w-24 text-center sm:text-right">
-                                  <span className="text-[9px] uppercase tracking-widest text-[#C9A35B] font-extrabold block">01 / SUPERIOR</span>
+                                  <span className="text-[9px] uppercase tracking-widest text-[#18181B] font-extrabold block">01 / SUPERIOR</span>
                                   <span className="text-[8px] text-tinta-apagada block italic font-light">Tops & Abrigos</span>
                                 </div>
                                 <div className="flex-1 w-full flex flex-col gap-2">
@@ -881,7 +881,7 @@ export default function AsesoramientoLooks({
                               {/* 2. MIDDLE SLOT (PANTALÓN / BERMUDA / ETC) */}
                               <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <div className="shrink-0 w-24 text-center sm:text-right">
-                                  <span className="text-[9px] uppercase tracking-widest text-[#C9A35B] font-extrabold block">02 / INFERIOR</span>
+                                  <span className="text-[9px] uppercase tracking-widest text-[#18181B] font-extrabold block">02 / INFERIOR</span>
                                   <span className="text-[8px] text-tinta-apagada block italic font-light">Pantalones</span>
                                 </div>
                                 <div className="flex-1 w-full flex flex-col gap-2">
@@ -896,7 +896,7 @@ export default function AsesoramientoLooks({
                               {/* 3. BOTTOM SLOT (CALZADO / ZAPATOS / DEPORTIVAS) */}
                               <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <div className="shrink-0 w-24 text-center sm:text-right">
-                                  <span className="text-[9px] uppercase tracking-widest text-[#C9A35B] font-extrabold block">03 / CALZADO</span>
+                                  <span className="text-[9px] uppercase tracking-widest text-[#18181B] font-extrabold block">03 / CALZADO</span>
                                   <span className="text-[8px] text-tinta-apagada block italic font-light">Zapatos & Sneakers</span>
                                 </div>
                                 <div className="flex-1 w-full flex flex-col gap-2">
@@ -910,10 +910,10 @@ export default function AsesoramientoLooks({
 
                               {/* 4. ACCESSORIES SHELF (ACCESORIOS) */}
                               {accesorios.length > 0 && (
-                                <div className="border-t border-[#3A3225]/40 pt-4 mt-2">
+                                <div className="border-t border-[#E4E4E7]/40 pt-4 mt-2">
                                   <div className="flex flex-col sm:flex-row items-center gap-4">
                                     <div className="shrink-0 w-24 text-center sm:text-right">
-                                      <span className="text-[9px] uppercase tracking-widest text-[#C9A35B] font-extrabold block">DETALLES</span>
+                                      <span className="text-[9px] uppercase tracking-widest text-[#18181B] font-extrabold block">DETALLES</span>
                                       <span className="text-[8px] text-tinta-apagada block italic font-light">Bespoke Accs</span>
                                     </div>
                                     <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -968,7 +968,7 @@ export default function AsesoramientoLooks({
 
                     <div className="space-y-5 font-sans">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <span className="text-xs uppercase tracking-widest text-[#C9A35B] font-bold block text-left">
+                        <span className="text-xs uppercase tracking-widest text-[#18181B] font-bold block text-left">
                           Espejo de Simulación IA
                         </span>
                         
@@ -1078,8 +1078,8 @@ export default function AsesoramientoLooks({
                                 </div>
 
                                 {selectedLook.simulatedImageUrl?.startsWith("data:image/svg+xml") && (
-                                  <div className="p-3 bg-[#1e1a13] border border-laton/20 rounded-md text-left text-[11px] font-sans">
-                                    <div className="flex items-center gap-1.5 text-[#C9A35B] font-bold uppercase tracking-wider text-[9.5px] mb-1">
+                                  <div className="p-3 bg-[#F4F4F5] border border-laton/20 rounded-md text-left text-[11px] font-sans">
+                                    <div className="flex items-center gap-1.5 text-[#18181B] font-bold uppercase tracking-wider text-[9.5px] mb-1">
                                       <AlertCircle size={12} className="shrink-0 text-laton" />
                                       <span>BOCETO EDITORIAL ACTIVO</span>
                                     </div>
@@ -1094,7 +1094,7 @@ export default function AsesoramientoLooks({
                                   <button
                                     type="button"
                                     onClick={() => triggerSimulation(activeLookIndex, selectedLook, false)}
-                                    className="text-[10px] text-[#C9A35B] hover:underline font-bold"
+                                    className="text-[10px] text-[#18181B] hover:underline font-bold"
                                   >
                                     Volver a Proyectar Rostro
                                   </button>
@@ -1104,9 +1104,9 @@ export default function AsesoramientoLooks({
                           ) : (
                             /* CUERPO COMPLETO SIMULATION */
                             <div className="space-y-4 text-left">
-                              <div className="p-3 bg-[#1e1a13] border border-linea/60 rounded-lg space-y-3">
+                              <div className="p-3 bg-[#F4F4F5] border border-linea/60 rounded-lg space-y-3">
                                 <div className="flex justify-between items-center flex-wrap gap-2">
-                                  <span className="text-[10px] text-[#C9A35B] font-bold uppercase tracking-wider block">Probador de Sastrería Digital</span>
+                                  <span className="text-[10px] text-[#18181B] font-bold uppercase tracking-wider block">Probador de Sastrería Digital</span>
                                   
                                   {/* Custom Switcher between Interactive and AI modes */}
                                   <div className="flex gap-1 bg-fondo p-0.5 rounded border border-linea">
@@ -1138,7 +1138,7 @@ export default function AsesoramientoLooks({
 
                                 {/* Custom body file picker */}
                                 <div className="flex items-center gap-3 bg-fondo p-2.5 rounded border border-linea/60">
-                                  <div className="w-10 h-10 rounded overflow-hidden bg-[#1e1a13] border border-linea/80 shrink-0 flex items-center justify-center relative">
+                                  <div className="w-10 h-10 rounded overflow-hidden bg-[#F4F4F5] border border-linea/80 shrink-0 flex items-center justify-center relative">
                                     {customFullBodyPhoto ? (
                                       <img src={customFullBodyPhoto} alt="Cuerpo propio" className="w-full h-full object-cover" />
                                     ) : (
@@ -1205,9 +1205,9 @@ export default function AsesoramientoLooks({
                                         className="w-full h-full object-cover pointer-events-none select-none"
                                       />
                                     ) : (
-                                      <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-[#1E1A13]/90 to-[#16130E] relative pointer-events-none">
+                                      <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-[#F4F4F5]/90 to-[#FAFAFA] relative pointer-events-none">
                                         {/* Vector sketch mannequin background */}
-                                        <svg className="absolute inset-0 w-full h-full opacity-15" viewBox="0 0 100 100" fill="none" stroke="#C9A35B" strokeWidth="0.5">
+                                        <svg className="absolute inset-0 w-full h-full opacity-15" viewBox="0 0 100 100" fill="none" stroke="#18181B" strokeWidth="0.5">
                                           <circle cx="50" cy="18" r="8" />
                                           <line x1="50" y1="26" x2="50" y2="75" />
                                           <line x1="30" y1="36" x2="70" y2="36" />
@@ -1294,7 +1294,7 @@ export default function AsesoramientoLooks({
                                       );
                                     })}
                                     
-                                    <div className="absolute bottom-2 left-2 bg-black/75 px-2 py-0.5 rounded text-[8px] text-[#A89C82] font-mono tracking-widest select-none uppercase">
+                                    <div className="absolute bottom-2 left-2 bg-black/75 px-2 py-0.5 rounded text-[8px] text-[#52525B] font-mono tracking-widest select-none uppercase">
                                       PROBADOR REAL
                                     </div>
                                   </div>
@@ -1417,7 +1417,7 @@ export default function AsesoramientoLooks({
                                         if (alternatives.length === 0) return null;
                                         return (
                                           <div className="w-full bg-fondo/60 border border-linea/50 rounded-lg p-2.5 space-y-2 mt-1">
-                                            <div className="flex items-center gap-1.5 text-[10px] text-[#C9A35B] font-bold uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5 text-[10px] text-[#18181B] font-bold uppercase tracking-wider">
                                               <RefreshCw size={11} className="text-laton animate-spin-slow" />
                                               <span>Sustituir prenda ({currentGarment.categoria})</span>
                                             </div>
@@ -1449,7 +1449,7 @@ export default function AsesoramientoLooks({
                                       {/* Blend & Transparancy options (Remover Fondos) */}
                                       <div className="space-y-1.5">
                                         <div className="flex justify-between items-baseline">
-                                          <span className="text-[9px] text-[#A89C82] font-mono uppercase tracking-wider">Acople de Fondo (Fusión Inteligente)</span>
+                                          <span className="text-[9px] text-[#52525B] font-mono uppercase tracking-wider">Acople de Fondo (Fusión Inteligente)</span>
                                           <span className="text-[8px] text-laton font-mono uppercase">
                                             {(garmentPositions[selectedGarmentId].blendMode === "multiply") ? "Limpia fondo blanco" : (garmentPositions[selectedGarmentId].blendMode === "screen") ? "Limpia fondo negro" : "Fondo original"}
                                           </span>
@@ -1509,9 +1509,9 @@ export default function AsesoramientoLooks({
                                       {/* Position controls */}
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-1 border-t border-linea/40">
                                         <div className="space-y-1">
-                                          <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                          <div className="flex justify-between text-[9px] text-[#52525B]">
                                             <span>Mover Horizontal (X)</span>
-                                            <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].x}%</span>
+                                            <span className="font-mono text-[#18181B]">{garmentPositions[selectedGarmentId].x}%</span>
                                           </div>
                                           <input
                                             type="range"
@@ -1526,14 +1526,14 @@ export default function AsesoramientoLooks({
                                                 [selectedGarmentId!]: { ...prev[selectedGarmentId!], x: val }
                                               }));
                                             }}
-                                            className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-ew-resize"
+                                            className="w-full accent-[#18181B] h-1.5 bg-fondo rounded cursor-ew-resize"
                                           />
                                         </div>
 
                                         <div className="space-y-1">
-                                          <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                          <div className="flex justify-between text-[9px] text-[#52525B]">
                                             <span>Mover Vertical (Y)</span>
-                                            <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].y}%</span>
+                                            <span className="font-mono text-[#18181B]">{garmentPositions[selectedGarmentId].y}%</span>
                                           </div>
                                           <input
                                             type="range"
@@ -1548,13 +1548,13 @@ export default function AsesoramientoLooks({
                                                 [selectedGarmentId!]: { ...prev[selectedGarmentId!], y: val }
                                               }));
                                             }}
-                                            className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-ns-resize"
+                                            className="w-full accent-[#18181B] h-1.5 bg-fondo rounded cursor-ns-resize"
                                           />
                                         </div>
 
                                         {/* Aspect ratio control toggles */}
                                         <div className="sm:col-span-2 flex items-center justify-between py-1 border-b border-linea/30">
-                                          <span className="text-[9px] text-[#A89C82] font-mono uppercase tracking-wider">Dimensiones de Prenda</span>
+                                          <span className="text-[9px] text-[#52525B] font-mono uppercase tracking-wider">Dimensiones de Prenda</span>
                                           <button
                                             type="button"
                                             onClick={() => setLockAspectRatio(!lockAspectRatio)}
@@ -1566,9 +1566,9 @@ export default function AsesoramientoLooks({
 
                                         {lockAspectRatio ? (
                                           <div className="sm:col-span-2 space-y-1">
-                                            <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                            <div className="flex justify-between text-[9px] text-[#52525B]">
                                               <span>Avanzado: Escala / Tamaño Completo</span>
-                                              <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].scale}%</span>
+                                              <span className="font-mono text-[#18181B]">{garmentPositions[selectedGarmentId].scale}%</span>
                                             </div>
                                             <input
                                               type="range"
@@ -1588,15 +1588,15 @@ export default function AsesoramientoLooks({
                                                   }
                                                 }));
                                               }}
-                                              className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-pointer"
+                                              className="w-full accent-[#18181B] h-1.5 bg-fondo rounded cursor-pointer"
                                             />
                                           </div>
                                         ) : (
                                           <>
                                             <div className="space-y-1">
-                                              <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                              <div className="flex justify-between text-[9px] text-[#52525B]">
                                                 <span>Ajustar Ancho (Hombro/Cintura)</span>
-                                                <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].scaleX ?? 100}%</span>
+                                                <span className="font-mono text-[#18181B]">{garmentPositions[selectedGarmentId].scaleX ?? 100}%</span>
                                               </div>
                                               <input
                                                 type="range"
@@ -1611,14 +1611,14 @@ export default function AsesoramientoLooks({
                                                     [selectedGarmentId!]: { ...prev[selectedGarmentId!], scaleX: val }
                                                   }));
                                                 }}
-                                                className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-pointer"
+                                                className="w-full accent-[#18181B] h-1.5 bg-fondo rounded cursor-pointer"
                                               />
                                             </div>
 
                                             <div className="space-y-1">
-                                              <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                              <div className="flex justify-between text-[9px] text-[#52525B]">
                                                 <span>Ajustar Alto (Manga/Pierna)</span>
-                                                <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].scaleY ?? 100}%</span>
+                                                <span className="font-mono text-[#18181B]">{garmentPositions[selectedGarmentId].scaleY ?? 100}%</span>
                                               </div>
                                               <input
                                                 type="range"
@@ -1633,16 +1633,16 @@ export default function AsesoramientoLooks({
                                                     [selectedGarmentId!]: { ...prev[selectedGarmentId!], scaleY: val }
                                                   }));
                                                 }}
-                                                className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded cursor-pointer"
+                                                className="w-full accent-[#18181B] h-1.5 bg-fondo rounded cursor-pointer"
                                               />
                                             </div>
                                           </>
                                         )}
 
                                         <div className="space-y-1 border-t border-linea/20 pt-2 sm:col-span-2">
-                                          <div className="flex justify-between text-[9px] text-[#A89C82]">
+                                          <div className="flex justify-between text-[9px] text-[#52525B]">
                                             <span>Rotar Prenda (Orientación / Ángulo)</span>
-                                            <span className="font-mono text-[#C9A35B]">{garmentPositions[selectedGarmentId].rotation}°</span>
+                                            <span className="font-mono text-[#18181B]">{garmentPositions[selectedGarmentId].rotation}°</span>
                                           </div>
                                           <input
                                             type="range"
@@ -1657,13 +1657,13 @@ export default function AsesoramientoLooks({
                                                 [selectedGarmentId!]: { ...prev[selectedGarmentId!], rotation: val }
                                               }));
                                             }}
-                                            className="w-full accent-[#C9A35B] h-1.5 bg-fondo rounded"
+                                            className="w-full accent-[#18181B] h-1.5 bg-fondo rounded"
                                           />
                                         </div>
 
                                         {/* Photographic tuning filters */}
                                         <div className="sm:col-span-2 pt-2 border-t border-linea/40">
-                                          <span className="text-[9px] text-[#A89C82] font-mono uppercase tracking-wider block mb-2">Integración Fotográfica (Ajustes de Luz)</span>
+                                          <span className="text-[9px] text-[#52525B] font-mono uppercase tracking-wider block mb-2">Integración Fotográfica (Ajustes de Luz)</span>
                                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                             <div className="space-y-1">
                                               <div className="flex justify-between text-[8px] text-tinta-apagada font-mono">
@@ -1683,7 +1683,7 @@ export default function AsesoramientoLooks({
                                                     [selectedGarmentId!]: { ...prev[selectedGarmentId!], brightness: val }
                                                   }));
                                                 }}
-                                                className="w-full accent-[#C9A35B] h-1 bg-fondo rounded cursor-pointer"
+                                                className="w-full accent-[#18181B] h-1 bg-fondo rounded cursor-pointer"
                                               />
                                             </div>
 
@@ -1705,7 +1705,7 @@ export default function AsesoramientoLooks({
                                                     [selectedGarmentId!]: { ...prev[selectedGarmentId!], contrast: val }
                                                   }));
                                                 }}
-                                                className="w-full accent-[#C9A35B] h-1 bg-fondo rounded cursor-pointer"
+                                                className="w-full accent-[#18181B] h-1 bg-fondo rounded cursor-pointer"
                                               />
                                             </div>
 
@@ -1727,7 +1727,7 @@ export default function AsesoramientoLooks({
                                                     [selectedGarmentId!]: { ...prev[selectedGarmentId!], opacity: val }
                                                   }));
                                                 }}
-                                                className="w-full accent-[#C9A35B] h-1 bg-fondo rounded cursor-pointer"
+                                                className="w-full accent-[#18181B] h-1 bg-fondo rounded cursor-pointer"
                                               />
                                             </div>
                                           </div>
@@ -1783,8 +1783,8 @@ export default function AsesoramientoLooks({
                                     </div>
 
                                     {selectedLook.simulatedFullBodyImageUrl?.startsWith("data:image/svg+xml") && (
-                                      <div className="p-3 bg-[#1e1a13] border border-laton/20 rounded-md text-left text-[11px] font-sans">
-                                        <div className="flex items-center gap-1.5 text-[#C9A35B] font-bold uppercase tracking-wider text-[9.5px] mb-1.5">
+                                      <div className="p-3 bg-[#F4F4F5] border border-laton/20 rounded-md text-left text-[11px] font-sans">
+                                        <div className="flex items-center gap-1.5 text-[#18181B] font-bold uppercase tracking-wider text-[9.5px] mb-1.5">
                                           <AlertCircle size={12} className="shrink-0 text-laton" />
                                           <span>BOCETO EDITORIAL ACTIVO (MODO DE RESERVA)</span>
                                         </div>
@@ -1802,7 +1802,7 @@ export default function AsesoramientoLooks({
                                       <button
                                         type="button"
                                         onClick={() => triggerSimulation(activeLookIndex, selectedLook, true)}
-                                        className="text-[10px] text-[#C9A35B] hover:underline font-bold"
+                                        className="text-[10px] text-[#18181B] hover:underline font-bold"
                                       >
                                         Volver a Proyectar Look con IA
                                       </button>
@@ -1817,8 +1817,8 @@ export default function AsesoramientoLooks({
 
                       {/* Portada Editorial de Revista (VIRAL FACTOR) */}
                       {!simulating && (selectedLook.simulatedImageUrl || selectedLook.simulatedFullBodyImageUrl) && (
-                        <div className="bg-[#1E1A13] border border-linea p-4 rounded-lg space-y-3 font-sans text-left relative overflow-hidden mt-6">
-                          <p className="text-[9.5px] uppercase tracking-widest text-[#C9A35B] font-bold">
+                        <div className="bg-[#F4F4F5] border border-linea p-4 rounded-lg space-y-3 font-sans text-left relative overflow-hidden mt-6">
+                          <p className="text-[9.5px] uppercase tracking-widest text-[#18181B] font-bold">
                             Estudio Editorial ESPEJO (Ficha Viral)
                           </p>
                           <p className="text-[10px] text-tinta-apagada leading-relaxed font-light">
@@ -1826,7 +1826,7 @@ export default function AsesoramientoLooks({
                           </p>
 
                           {/* The actual styled magazine mockup! */}
-                          <div className="relative border border-[#3A3225] bg-[#16130E] p-4.5 rounded flex flex-col items-center justify-between shadow-2xl select-none" style={{ minHeight: "330px" }}>
+                          <div className="relative border border-[#E4E4E7] bg-[#FAFAFA] p-4.5 rounded flex flex-col items-center justify-between shadow-2xl select-none" style={{ minHeight: "330px" }}>
                             {/* Background/Backdrop simulated image */}
                             <div className="absolute inset-0 z-0 opacity-80 overflow-hidden">
                               {renderSafeImageOrSvg(
@@ -1836,15 +1836,15 @@ export default function AsesoramientoLooks({
                                 "Magazine Model",
                                 "w-full h-full object-cover"
                               )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-[#16130E] via-transparent to-[#16130E]/60" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#FAFAFA] via-transparent to-[#FAFAFA]/60" />
                             </div>
 
                             {/* Magazine logo header */}
                             <div className="w-full text-center z-10 pt-1 pb-4">
-                              <h4 className="font-serif text-3xl font-extrabold tracking-[0.25em] text-[#F3ECDD] uppercase leading-none select-none">
+                              <h4 className="font-serif text-3xl font-extrabold tracking-[0.25em] text-[#09090B] uppercase leading-none select-none">
                                 ESPEJO
                               </h4>
-                              <div className="flex justify-between items-center text-[7px] text-[#A89C82] tracking-wider uppercase border-t border-b border-[#3A3225]/40 mt-1 px-1 py-0.5 font-sans">
+                              <div className="flex justify-between items-center text-[7px] text-[#52525B] tracking-wider uppercase border-t border-b border-[#E4E4E7]/40 mt-1 px-1 py-0.5 font-sans">
                                 <span>VOL. 04 / EDICIÓN ESPECIAL</span>
                                 <span>SARTORIAL MALE</span>
                               </div>
@@ -1852,27 +1852,27 @@ export default function AsesoramientoLooks({
 
                             {/* Magazine highlights and headlines */}
                             <div className="w-full z-10 text-left space-y-3 pt-8">
-                              <div className="max-w-[85%] bg-[#16130E]/50 p-2.5 rounded border border-linea/20 backdrop-blur-sm">
-                                <span className="text-[7.5px] bg-[#C9A35B] text-[#16130E] font-bold uppercase tracking-widest py-0.5 px-1.5 rounded-sm">
+                              <div className="max-w-[85%] bg-[#FAFAFA]/50 p-2.5 rounded border border-linea/20 backdrop-blur-sm">
+                                <span className="text-[7.5px] bg-[#18181B] text-[#FAFAFA] font-bold uppercase tracking-widest py-0.5 px-1.5 rounded-sm">
                                   PORTADA EXCLUSIVA
                                 </span>
-                                <h5 className="font-serif text-lg font-bold tracking-tight text-[#F3ECDD] uppercase leading-tight mt-1 italic">
+                                <h5 className="font-serif text-lg font-bold tracking-tight text-[#09090B] uppercase leading-tight mt-1 italic">
                                   {selectedLook.titulo}
                                 </h5>
-                                <p className="text-[8.5px] text-[#A89C82] font-light leading-relaxed mt-0.5">
+                                <p className="text-[8.5px] text-[#52525B] font-light leading-relaxed mt-0.5">
                                   Recibiendo asesoramiento real coordinando su armario con la IA de ESPEJO.
                                 </p>
                               </div>
 
                               {/* Fisiognomy details sidebar */}
-                              <div className="flex justify-between items-end border-t border-[#3A3225]/40 pt-1.5 w-full text-[7.5px] text-[#A89C82]">
-                                <div className="space-y-0.5 text-left bg-[#16130E]/40 p-1 rounded-sm">
-                                  <p className="font-bold text-[#F3ECDD] uppercase tracking-[0.05em] text-[7px]">FISIOLOGÍA REVELADA</p>
-                                  <p>Forma de rostro: <span className="text-[#C9A35B]">{rostro?.forma_cara || "Clásico"}</span></p>
-                                  <p>Corte: <span className="text-[#C9A35B] truncate max-w-[80px] inline-block align-bottom">{selectedLook.pelo_sugerido}</span></p>
+                              <div className="flex justify-between items-end border-t border-[#E4E4E7]/40 pt-1.5 w-full text-[7.5px] text-[#52525B]">
+                                <div className="space-y-0.5 text-left bg-[#FAFAFA]/40 p-1 rounded-sm">
+                                  <p className="font-bold text-[#09090B] uppercase tracking-[0.05em] text-[7px]">FISIOLOGÍA REVELADA</p>
+                                  <p>Forma de rostro: <span className="text-[#18181B]">{rostro?.forma_cara || "Clásico"}</span></p>
+                                  <p>Corte: <span className="text-[#18181B] truncate max-w-[80px] inline-block align-bottom">{selectedLook.pelo_sugerido}</span></p>
                                 </div>
-                                <div className="text-right bg-[#16130E]/40 p-1 rounded-sm">
-                                  <p className="font-mono text-[7px] text-[#8C7440] leading-none">00000 120531 2026</p>
+                                <div className="text-right bg-[#FAFAFA]/40 p-1 rounded-sm">
+                                  <p className="font-mono text-[7px] text-[#71717A] leading-none">00000 120531 2026</p>
                                   <p className="text-[7px] uppercase mt-0.5">{ocasion} • {clima}</p>
                                 </div>
                               </div>

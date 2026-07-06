@@ -90,7 +90,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
     <div className="w-full max-w-5xl mx-auto px-4 py-6 font-sans text-tinta" id="seccion-asistente-maleta">
       {/* Intro Header */}
       <div className="mb-6 text-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#1e1a13] text-[#C9A35B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#F4F4F5] text-[#18181B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
           <Briefcase size={11} className="text-laton" />
           <span>Equipaje de Cápsula Minimalista</span>
         </div>
@@ -231,7 +231,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                 {/* Destino Card Analysis */}
                 <div className="bg-tarjeta border border-linea rounded p-5 space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded bg-[#1e1a13] border border-laton/20 flex items-center justify-center text-laton shrink-0">
+                    <div className="w-10 h-10 rounded bg-[#F4F4F5] border border-laton/20 flex items-center justify-center text-laton shrink-0">
                       <MapPin size={18} />
                     </div>
                     <div>
@@ -248,7 +248,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                 {/* Seleccion de Prendas Reales */}
                 <div className="bg-tarjeta border border-linea rounded p-5 space-y-3">
                   <h4 className="font-serif text-xs font-bold text-white uppercase tracking-wider pb-1 border-b border-linea/60 flex items-center gap-1.5">
-                    <CheckCircle size={13} className="text-[#C9A35B]" />
+                    <CheckCircle size={13} className="text-[#18181B]" />
                     <span>Prendas de tu Armario para Empacar ({result.prendas_seleccionadas.length})</span>
                   </h4>
 
@@ -298,7 +298,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                 {/* Daily Combinations */}
                 <div className="bg-tarjeta border border-linea rounded p-5 space-y-3">
                   <h4 className="font-serif text-xs font-bold text-white uppercase tracking-wider pb-1 border-b border-linea/60 flex items-center gap-1.5">
-                    <Flame size={13} className="text-[#C9A35B]" />
+                    <Flame size={13} className="text-[#18181B]" />
                     <span>Propuestas de Outfit por Jornada ({result.combinaciones.length})</span>
                   </h4>
 

@@ -219,36 +219,36 @@ const generateGarmentSVG = (categoria: CategoriaPrenda, color: string): string =
   if (categoria === "top") {
     // Elegant blazer/shirt silhouette
     paths = `<path d="M50 15 L20 40 L20 85 L80 85 L80 40 Z" fill="${color}" opacity="0.9" />
-             <path d="M50 15 L35 48 L50 85 L65 48 Z" fill="#221D15" stroke="${color}" stroke-width="1" />
-             <path d="M45 15 L50 25 L55 15" fill="none" stroke="#F3ECDD" stroke-width="1.5" />
-             <line x1="50" y1="25" x2="50" y2="85" stroke="#F3ECDD" stroke-width="1.5" stroke-dasharray="3,3" />`;
+             <path d="M50 15 L35 48 L50 85 L65 48 Z" fill="#FFFFFF" stroke="${color}" stroke-width="1" />
+             <path d="M45 15 L50 25 L55 15" fill="none" stroke="#09090B" stroke-width="1.5" />
+             <line x1="50" y1="25" x2="50" y2="85" stroke="#09090B" stroke-width="1.5" stroke-dasharray="3,3" />`;
   } else if (categoria === "pantalon") {
     // Tailored trousers silhouette
     paths = `<path d="M30 15 L70 15 L78 85 L54 85 L50 48 L46 85 L22 85 Z" fill="${color}" opacity="0.9" />
-             <line x1="50" y1="15" x2="50" y2="48" stroke="#F3ECDD" stroke-width="1.5" stroke-dasharray="3,3" />
+             <line x1="50" y1="15" x2="50" y2="48" stroke="#09090B" stroke-width="1.5" stroke-dasharray="3,3" />
              <line x1="38" y1="15" x2="38" y2="85" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
              <line x1="62" y1="15" x2="62" y2="85" stroke="rgba(255,255,255,0.15)" stroke-width="1" />`;
   } else if (categoria === "calzado") {
     // Classic Oxford shoe silhouette
     paths = `<path d="M15 65 C15 65 30 45 65 52 C75 54 85 62 85 75 L80 75 C80 75 75 70 65 70 L30 70 L25 75 L15 75 Z" fill="${color}" opacity="0.9" />
-             <rect x="70" y="75" width="12" height="4" fill="#16130E" />
-             <path d="M45 55 L58 58" fill="none" stroke="#F3ECDD" stroke-width="1.5" />
-             <path d="M46 60 L56 62" fill="none" stroke="#F3ECDD" stroke-width="1.5" />`;
+             <rect x="70" y="75" width="12" height="4" fill="#FAFAFA" />
+             <path d="M45 55 L58 58" fill="none" stroke="#09090B" stroke-width="1.5" />
+             <path d="M46 60 L56 62" fill="none" stroke="#09090B" stroke-width="1.5" />`;
   } else {
     // Elegant accessory Watch silhouette
     paths = `<circle cx="50" cy="50" r="30" fill="none" stroke="${color}" stroke-width="10" />
-             <circle cx="50" cy="50" r="23" fill="#221D15" />
-             <line x1="50" y1="50" x2="50" y2="35" stroke="#F3ECDD" stroke-width="2.5" />
+             <circle cx="50" cy="50" r="23" fill="#FFFFFF" />
+             <line x1="50" y1="50" x2="50" y2="35" stroke="#09090B" stroke-width="2.5" />
              <line x1="50" y1="50" x2="62" y2="50" stroke="rgba(243, 236, 221, 0.7)" stroke-width="2" />
-             <circle cx="50" cy="50" r="3" fill="#C9A35B" />`;
+             <circle cx="50" cy="50" r="3" fill="#18181B" />`;
   }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-    <rect width="100" height="100" fill="#221D15" />
+    <rect width="100" height="100" fill="#FFFFFF" />
     <g transform="translate(0, 0)">
       ${paths}
     </g>
-    <rect x="2" y="2" width="96" height="96" fill="none" stroke="#3A3225" stroke-width="1" opacity="0.5" />
+    <rect x="2" y="2" width="96" height="96" fill="none" stroke="#E4E4E7" stroke-width="1" opacity="0.5" />
   </svg>`;
   
   return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
@@ -616,7 +616,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             id: "prenda_" + Date.now() + "_" + idx + "_" + Math.floor(Math.random() * 1000),
             nombre: item.nombre || "Prenda identificada con IA",
             categoria: (item.categoria as CategoriaPrenda) || "top",
-            color: item.color || "#C9A35B",
+            color: item.color || "#18181B",
             formalidad: isNaN(formalidadVal) ? 3 : Math.max(1, Math.min(5, formalidadVal)),
             temporada: (item.temporada as TemporadaPrenda) || "todo",
             imageSrc: croppedImg,
@@ -726,7 +726,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 id: "prenda_" + Date.now() + "_" + i + "_" + idx + "_" + Math.floor(Math.random() * 1000),
                 nombre: item.nombre || "Prenda identificada con IA",
                 categoria: (item.categoria as CategoriaPrenda) || "top",
-                color: item.color || "#C9A35B",
+                color: item.color || "#18181B",
                 formalidad: isNaN(formalidadVal) ? 3 : Math.max(1, Math.min(5, formalidadVal)),
                 temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
@@ -761,7 +761,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             id: "prenda_f_" + Date.now() + "_" + i + "_" + Math.floor(Math.random() * 1000),
             nombre: "Prenda registrada (Ajustar manual)",
             categoria: "top",
-            color: "#3A3225",
+            color: "#E4E4E7",
             formalidad: 3,
             temporada: "todo",
             imageSrc: processedFallbackImg,
@@ -911,7 +911,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 id: "prenda_" + Date.now() + "_" + idx + "_" + Math.floor(Math.random() * 1000),
                 nombre: item.nombre || "Prenda identificada con IA",
                 categoria: (item.categoria as CategoriaPrenda) || "top",
-                color: item.color || "#C9A35B",
+                color: item.color || "#18181B",
                 formalidad: item.formalidad !== undefined ? item.formalidad : 3,
                 temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
@@ -1656,7 +1656,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                             id: "friend_empty",
                             nombre: "Aún no hay prendas en este vestidor para compartir",
                             categoria: "top" as CategoriaPrenda,
-                            color: "#C9A35B",
+                            color: "#18181B",
                             formalidad: 3,
                             temporada: "todo" as TemporadaPrenda,
                             tejido: "Ninguno",
@@ -1896,18 +1896,18 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
         <div className="lg:col-span-2">
 
           {/* Section for Encapsulated Wardrobes */}
-          <div className="mb-6 p-4 bg-[#1e1a13]/60 border border-laton/15 rounded-lg space-y-3 shadow-sm">
+          <div className="mb-6 p-4 bg-[#F4F4F5]/60 border border-laton/15 rounded-lg space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Briefcase size={12} className="text-laton animate-pulse" />
-                <span className="text-[10px] font-extrabold text-[#C9A35B] uppercase tracking-widest">
+                <span className="text-[10px] font-extrabold text-[#18181B] uppercase tracking-widest">
                   Armarios Encapsulados (Cápsulas IA)
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleCrearArmario}
-                className="text-[9px] font-extrabold text-[#C9A35B] hover:text-white transition flex items-center gap-1 uppercase tracking-wider"
+                className="text-[9px] font-extrabold text-[#18181B] hover:text-white transition flex items-center gap-1 uppercase tracking-wider"
               >
                 <Plus size={10} /> Crear Armario
               </button>
@@ -2280,7 +2280,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                               <span className="text-[9px] uppercase tracking-wider text-laton font-medium block">Estilo & Silueta Automáticos</span>
                               <div className="flex flex-wrap gap-1">
                                 {selectedPrenda.tags.map((tg, iIdx) => (
-                                  <span key={iIdx} className="text-[9px] font-sans px-2 py-0.5 rounded bg-[#1e1a13] text-[#C9A35B] border border-laton/20">
+                                  <span key={iIdx} className="text-[9px] font-sans px-2 py-0.5 rounded bg-[#F4F4F5] text-[#18181B] border border-laton/20">
                                     #{tg}
                                   </span>
                                 ))}
@@ -2291,7 +2291,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       )}
 
                       {/* Wardrobe Capsules Membership */}
-                      <div className="space-y-2 p-3 bg-[#1e1a13]/30 border border-laton/10 rounded">
+                      <div className="space-y-2 p-3 bg-[#F4F4F5]/30 border border-laton/10 rounded">
                         <span className="text-[9px] uppercase tracking-wider text-laton font-extrabold block">
                           Clasificación de Armario (Cápsulas)
                         </span>
@@ -2450,7 +2450,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                               type="number"
                               value={vintedDraft.precio}
                               onChange={(e) => setVintedDraft({ ...vintedDraft, precio: parseInt(e.target.value) || 0 })}
-                              className="w-20 text-xs font-sans bg-fondo border border-[#3a3225] text-tinta p-2 rounded focus:border-laton focus:outline-none"
+                              className="w-20 text-xs font-sans bg-fondo border border-[#E4E4E7] text-tinta p-2 rounded focus:border-laton focus:outline-none"
                             />
                             <span className="text-[10px] text-tinta-apagada italic">Valoración recomendada</span>
                           </div>
@@ -2531,7 +2531,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
                                   {/* Fast Copy Individual Fields Board */}
                                   <div className="bg-fondo p-3 border border-linea rounded space-y-3 text-left font-sans">
-                                    <p className="text-[9px] uppercase tracking-widest text-[#C9A35B] font-bold">
+                                    <p className="text-[9px] uppercase tracking-widest text-[#18181B] font-bold">
                                       Copias Individuales Rápidas:
                                     </p>
                                     <p className="text-[8px] text-tinta-apagada -mt-2">
@@ -2542,8 +2542,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                       {/* Título copy row */}
                                       <div className="flex items-center gap-2 bg-tarjeta p-1 px-2 border border-linea/60 rounded justify-between">
                                         <div className="overflow-hidden w-full text-left">
-                                          <span className="text-[7px] text-[#A89C82] block uppercase font-bold tracking-wider">Título</span>
-                                          <span className="text-[9.5px] text-[#F3ECDD] truncate block">{vintedDraft?.titulo}</span>
+                                          <span className="text-[7px] text-[#52525B] block uppercase font-bold tracking-wider">Título</span>
+                                          <span className="text-[9.5px] text-[#09090B] truncate block">{vintedDraft?.titulo}</span>
                                         </div>
                                         <button
                                           type="button"
@@ -2563,7 +2563,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                       {/* Precio copy row */}
                                       <div className="flex items-center gap-2 bg-tarjeta p-1 px-2 border border-linea/60 rounded justify-between">
                                         <div className="overflow-hidden w-full text-left">
-                                          <span className="text-[7px] text-[#A89C82] block uppercase font-bold tracking-wider">Precio (Número Limpio)</span>
+                                          <span className="text-[7px] text-[#52525B] block uppercase font-bold tracking-wider">Precio (Número Limpio)</span>
                                           <span className="text-[9.5px] text-laton font-bold">{vintedDraft?.precio} €</span>
                                         </div>
                                         <button
@@ -2584,7 +2584,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                       {/* Descripción copy row */}
                                       <div className="flex flex-col gap-1 bg-tarjeta p-2 border border-linea/60 rounded">
                                         <div className="flex items-center justify-between">
-                                          <span className="text-[7px] text-[#A89C82] uppercase font-bold tracking-wider">Descripción del sastre</span>
+                                          <span className="text-[7px] text-[#52525B] uppercase font-bold tracking-wider">Descripción del sastre</span>
                                           <button
                                             type="button"
                                             onClick={async () => {

@@ -91,7 +91,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
     <div className="w-full max-w-5xl mx-auto px-4 py-6 font-sans text-tinta" id="seccion-asesor-compras">
       {/* Editorial Header */}
       <div className="mb-6 text-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#1e1a13] text-[#C9A35B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#F4F4F5] text-[#18181B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
           <TrendingUp size={11} className="text-laton" />
           <span>Personal Shopper & Multi-Brand Connector</span>
         </div>
@@ -112,7 +112,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
             exit={{ opacity: 0, scale: 0.98 }}
             className="border border-dashed border-linea rounded-lg bg-tarjeta/60 p-10 text-center max-w-xl mx-auto flex flex-col items-center space-y-4"
           >
-            <div className="w-14 h-14 rounded-full bg-[#1e1a13] border border-laton/20 flex items-center justify-center text-laton">
+            <div className="w-14 h-14 rounded-full bg-[#F4F4F5] border border-laton/20 flex items-center justify-center text-laton">
               <ShoppingBag size={24} />
             </div>
             <h3 className="font-serif text-base font-bold text-white">¿Qué básicos faltan en tu armario?</h3>
@@ -232,7 +232,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                           <div key={idx} className="bg-black/40 border border-linea rounded p-2.5 flex flex-col justify-between space-y-2">
                             <div>
                               <div className="flex justify-between items-start gap-1">
-                                <span className="text-[9.5px] font-mono text-laton font-bold bg-[#1e1a13] px-1.5 py-0.5 rounded border border-laton/10">
+                                <span className="text-[9.5px] font-mono text-laton font-bold bg-[#F4F4F5] px-1.5 py-0.5 rounded border border-laton/10">
                                   {prop.marca}
                                 </span>
                                 <span className="text-[10px] font-mono text-white">{prop.precio_aproximado}</span>
@@ -290,7 +290,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                     <Tag size={13} className="text-laton" />
                     <span>Multiplicadores de Armario</span>
                   </h3>
-                  <span className="text-[9.5px] font-bold text-laton/80 uppercase font-mono bg-[#1e1a13] px-2 py-0.5 rounded border border-laton/10">
+                  <span className="text-[9.5px] font-bold text-laton/80 uppercase font-mono bg-[#F4F4F5] px-2 py-0.5 rounded border border-laton/10">
                     Gaps de Base
                   </span>
                 </div>
@@ -305,7 +305,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                         <h4 className="font-serif text-xs font-bold text-white leading-tight max-w-[180px]">
                           {missing.nombre_prenda}
                         </h4>
-                        <span className="text-[8.5px] text-laton uppercase font-mono font-bold bg-[#1e1a13] px-1.5 py-0.5 rounded">
+                        <span className="text-[8.5px] text-laton uppercase font-mono font-bold bg-[#F4F4F5] px-1.5 py-0.5 rounded">
                           {missing.categoria}
                         </span>
                       </div>

@@ -1,6 +1,6 @@
 {
   "name": "Tu armario inteligente (IA)",
-  "description": "Estilista de imagen masculina con IA para eventos concretos, analizando tipo de rostro, opciones de corte de cabello/barba, looks curados de tu propio armario y simulación de imagen.",
+  "description": "Estilista personal de imagen con IA para todo tipo de público y género. Ofrece visajismo, análisis de rasgos, looks curados de tu propio armario y simulación de imagen.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
