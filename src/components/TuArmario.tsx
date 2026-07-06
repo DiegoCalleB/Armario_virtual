@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
 import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
 import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
-import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder, Search } from "lucide-react";
+import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import GooglePhotosPicker from "./GooglePhotosPicker";
 
@@ -339,6 +339,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   });
 
   const [activeArmarioFilter, setActiveArmarioFilter] = useState<string>("all");
+  const [isArmariosExpanded, setIsArmariosExpanded] = useState<boolean>(false);
 
   const saveArmariosLista = (lista: string[]) => {
     setArmariosDisponibles(lista);
@@ -1012,19 +1013,17 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   });
 
   return (
-    <section id="tu-armario-sección" className="border-t border-linea pt-8 pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-linea/30 pb-4">
-        <div className="flex items-center gap-3">
-          <span className="font-serif italic text-laton font-medium text-lg">02</span>
-          <div>
-            <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Tu Armario</h2>
-            <p className="text-[10px] text-tinta-apagada font-sans tracking-wide uppercase">DIGITAL WARDROBE</p>
-          </div>
+    <section id="tu-armario-sección" className="border-t border-linea pt-2 pb-6">
+      <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-linea/20">
+        <div className="flex items-center gap-2">
+          <span className="font-serif italic text-laton font-semibold text-base">02</span>
+          <h2 className="font-serif text-lg font-bold tracking-tight text-tinta">Tu Armario</h2>
+          <span className="text-[9px] text-tinta-apagada font-mono uppercase tracking-widest ml-1 hidden sm:inline">DIGITAL WARDROBE</span>
         </div>
       </div>
 
       {/* SEARCH AND FILTERS (AI CLOSET STYLE) */}
-      <div className="space-y-4 mb-8">
+      <div className="space-y-2.5 mb-4">
         {/* Search Input */}
         <div className="relative w-full max-w-xl mx-auto">
           <input
@@ -1032,31 +1031,31 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             placeholder="Buscar en tu armario (nombre, tejido, etiquetas...)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#F4F4F5] text-[#18181B] pl-11 pr-11 py-3.5 rounded-full border border-[#E4E4E7] focus:border-[#18181B] focus:outline-none focus:ring-1 focus:ring-[#18181B] transition font-sans text-sm shadow-inner"
+            className="w-full bg-fondo2 text-tinta pl-9 pr-9 py-2 rounded-full border border-linea focus:border-laton focus:outline-none focus:ring-1 focus:ring-laton transition font-sans text-xs shadow-inner"
           />
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#71717A]">
-            <Search size={18} />
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-tinta-apagada">
+            <Search size={14} />
           </div>
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#18181B]"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-tinta-apagada hover:text-tinta"
             >
-              <X size={16} />
+              <X size={13} />
             </button>
           )}
         </div>
 
         {/* Category Pills (Row 1) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2.5 scrollbar-none no-scrollbar justify-start sm:justify-center">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none no-scrollbar justify-start sm:justify-center">
           <button
             type="button"
             onClick={() => setActiveCategoryFilter("all")}
-            className={`px-5 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition shrink-0 border ${
+            className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider transition shrink-0 border ${
               activeCategoryFilter === "all"
-                ? "bg-[#18181B] border-[#18181B] text-white shadow"
-                : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+                ? "bg-tinta border-tinta text-white shadow-sm"
+                : "bg-white border-linea text-tinta-apagada hover:text-tinta hover:border-laton/40"
             }`}
           >
             Todo ({prendas.length})
@@ -1066,83 +1065,83 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               key={cat}
               type="button"
               onClick={() => setActiveCategoryFilter(cat)}
-              className={`px-5 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition shrink-0 border ${
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider transition shrink-0 border ${
                 activeCategoryFilter === cat
-                  ? "bg-[#18181B] border-[#18181B] text-white shadow"
-                  : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+                  ? "bg-tinta border-tinta text-white shadow-sm"
+                  : "bg-white border-linea text-tinta-apagada hover:text-tinta hover:border-laton/40"
               }`}
             >
-              {getCategoryLabel(cat) === "Parte Superior" ? "Parte superior" : getCategoryLabel(cat) === "Parte Inferior" ? "Parte inferior" : getCategoryLabel(cat)} ({prendas.filter((p) => p.categoria === cat).length})
+              {getCategoryLabel(cat) === "Parte Superior" ? "P. Superior" : getCategoryLabel(cat) === "Parte Inferior" ? "P. Inferior" : getCategoryLabel(cat)} ({prendas.filter((p) => p.categoria === cat).length})
             </button>
           ))}
         </div>
 
         {/* Color Pills (Row 2) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 scrollbar-none no-scrollbar justify-start sm:justify-center border-b border-[#E4E4E7]/60">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none no-scrollbar justify-start sm:justify-center border-b border-linea">
           <button
             type="button"
             onClick={() => setActiveColorFilter("all")}
-            className={`px-4 py-1.5 rounded-full text-xs font-medium transition shrink-0 border ${
+            className={`px-3 py-1 rounded-full text-[11px] font-medium transition shrink-0 border ${
               activeColorFilter === "all"
-                ? "bg-[#18181B] border-[#18181B] text-white shadow-sm"
-                : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+                ? "bg-tinta border-tinta text-white shadow-sm"
+                : "bg-white border-linea text-tinta-apagada hover:text-tinta hover:border-laton/40"
             }`}
           >
             Todos los Colores
           </button>
           {[
-            { id: "blanco", label: "Blanco", dot: "bg-white border border-[#E4E4E7]" },
-            { id: "beige", label: "Beige", dot: "bg-[#C3B091]" },
-            { id: "marron", label: "Marrón", dot: "bg-[#3A2A1A]" },
-            { id: "negro", label: "Negro", dot: "bg-[#111111]" },
-            { id: "azul", label: "Azul", dot: "bg-[#1D2B42]" },
-            { id: "gris", label: "Gris", dot: "bg-[#7F8C8D]" },
+            { id: "blanco", label: "Blanco", dot: "bg-white border border-linea" },
+            { id: "beige", label: "Beige", dot: "bg-[#E6D5BC] border border-linea" },
+            { id: "marron", label: "Marrón", dot: "bg-[#7E5C45]" },
+            { id: "negro", label: "Negro", dot: "bg-[#2C2520]" },
+            { id: "azul", label: "Azul", dot: "bg-[#4B6584]" },
+            { id: "gris", label: "Gris", dot: "bg-[#A5B1C2]" },
           ].map((col) => (
             <button
               key={col.id}
               type="button"
               onClick={() => setActiveColorFilter(col.id)}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition shrink-0 border flex items-center gap-1.5 ${
+              className={`px-3 py-1 rounded-full text-[11px] font-medium transition shrink-0 border flex items-center gap-1 ${
                 activeColorFilter === col.id
-                  ? "bg-[#18181B] border-[#18181B] text-white shadow-sm"
-                  : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+                  ? "bg-tinta border-tinta text-white shadow-sm"
+                  : "bg-white border-linea text-tinta-apagada hover:text-tinta hover:border-laton/40"
               }`}
             >
-              <span className={`w-2.5 h-2.5 rounded-full ${col.dot} inline-block shrink-0`} />
+              <span className={`w-2 h-2 rounded-full ${col.dot} inline-block shrink-0`} />
               {col.label}
             </button>
           ))}
         </div>
 
         {/* Primary Action Buttons (Row 3) */}
-        <div className="flex gap-4 max-w-xl mx-auto pt-2">
+        <div className="flex gap-3 max-w-xl mx-auto pt-1">
           <button
             type="button"
             onClick={() => {
               setSelectionMode(!selectionMode);
               setSelectedPrendasForLook([]);
             }}
-            className={`flex-1 py-3.5 text-xs uppercase tracking-widest font-bold rounded-full border transition flex items-center justify-center gap-2 shadow-sm ${
+            className={`flex-1 py-2 text-[11px] uppercase tracking-wider font-bold rounded-full border transition flex items-center justify-center gap-1.5 shadow-sm ${
               selectionMode
-                ? "bg-[#18181B] border-[#18181B] text-white"
-                : "bg-white border-[#E4E4E7] text-[#52525B] hover:border-[#18181B] hover:text-[#18181B]"
+                ? "bg-tinta border-tinta text-white"
+                : "bg-white border-linea text-tinta-apagada hover:border-laton hover:text-laton"
             }`}
           >
-            {selectionMode ? "Cancelar Selección" : "Elegir"}
+            {selectionMode ? "Cancelar" : "Elegir prendas"}
           </button>
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="flex-1 py-3.5 bg-[#FA5C7C] hover:bg-[#E04B6A] text-white text-xs uppercase tracking-widest font-extrabold rounded-full transition flex items-center justify-center gap-2 shadow-md button-press"
+            className="flex-1 py-2 bg-laton hover:bg-laton-apagado text-white text-[11px] uppercase tracking-wider font-extrabold rounded-full transition flex items-center justify-center gap-1.5 shadow-md button-press"
           >
-            <Plus size={14} /> Añadir
+            <Plus size={12} /> Añadir Prenda
           </button>
         </div>
       </div>
 
       {/* Floating look creation indicator */}
       {selectionMode && selectedPrendasForLook.length > 0 && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-[#18181B] text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4 border border-white/10 animate-bounce">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-tinta text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4 border border-white/10 animate-bounce">
           <span className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
             {selectedPrendasForLook.length} {selectedPrendasForLook.length === 1 ? "prenda elegida" : "prendas elegidas"}
           </span>
@@ -2115,110 +2114,115 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
       <div className="w-full">
 
           {/* Section for Encapsulated Wardrobes */}
-          <div className="mb-6 p-4 bg-[#F4F4F5]/60 border border-laton/15 rounded-lg space-y-3 shadow-sm">
+          <div className="mb-4 p-3 bg-[#F4F4F5]/60 border border-laton/15 rounded-xl shadow-sm transition-all duration-355">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Briefcase size={12} className="text-laton animate-pulse" />
-                <span className="text-[10px] font-extrabold text-[#18181B] uppercase tracking-widest">
-                  Armarios Encapsulados (Cápsulas IA)
+              <button
+                type="button"
+                onClick={() => setIsArmariosExpanded(!isArmariosExpanded)}
+                className="flex items-center gap-2 text-left select-none cursor-pointer group"
+              >
+                <Briefcase size={13} className="text-laton animate-pulse" />
+                <span className="text-[11px] font-bold text-tinta uppercase tracking-wider group-hover:text-laton transition">
+                  Cápsulas de Armario ({armariosDisponibles.length})
                 </span>
-              </div>
+                {activeArmarioFilter !== "all" ? (
+                  <span className="bg-laton/15 text-laton text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Activo: {activeArmarioFilter}
+                  </span>
+                ) : (
+                  <span className="text-tinta-apagada text-[9px] font-mono lowercase">
+                    (todo visible)
+                  </span>
+                )}
+                {isArmariosExpanded ? <ChevronUp size={12} className="text-tinta-apagada ml-1" /> : <ChevronDown size={12} className="text-tinta-apagada ml-1" />}
+              </button>
+              
               <button
                 type="button"
                 onClick={handleCrearArmario}
-                className="text-[9px] font-extrabold text-[#18181B] hover:text-laton-apagado transition flex items-center gap-1 uppercase tracking-wider"
+                className="text-[9px] font-extrabold text-tinta hover:text-laton transition flex items-center gap-1 uppercase tracking-wider bg-white/80 hover:bg-white border border-linea px-2 py-1 rounded-full shadow-sm"
               >
-                <Plus size={10} /> Crear Armario
+                <Plus size={10} /> Crear
               </button>
             </div>
-            
-            <p className="text-[10.5px] text-tinta-apagada leading-relaxed">
-              Define colecciones independientes de tu ropero (ej: oficina, normal, fiesta). Las prendas agregadas con un filtro activo se clasificarán automáticamente en esa cápsula.
-            </p>
 
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setActiveArmarioFilter("all")}
-                className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded font-sans transition flex items-center gap-1.5 border ${
-                  activeArmarioFilter === "all"
-                    ? "bg-laton border-laton text-fondo font-bold"
-                    : "bg-tarjeta/40 border-linea/60 text-tinta-apagada hover:text-tinta hover:border-laton/40"
-                }`}
-              >
-                <Folder size={11} /> Todo ({prendas.length})
-              </button>
-              
-              {armariosDisponibles.map((arm) => {
-                const count = prendas.filter(p => getArmariosDePrenda(p).includes(arm)).length;
-                const isCustom = arm !== "normal" && arm !== "oficina" && arm !== "fiesta";
-                return (
-                  <div key={arm} className="relative group flex items-center">
+            <AnimatePresence initial={false}>
+              {isArmariosExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <p className="text-[10px] text-tinta-apagada leading-relaxed mt-2.5 mb-2 pb-2 border-b border-linea/40">
+                    Define colecciones independientes de tu ropero (ej: oficina, normal, fiesta). Las prendas agregadas con un filtro activo se clasificarán automáticamente en esa cápsula.
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
                     <button
                       type="button"
-                      onClick={() => setActiveArmarioFilter(arm)}
-                      className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded font-sans transition flex items-center gap-1.5 border pr-5 ${
-                        activeArmarioFilter === arm
+                      onClick={() => {
+                        setActiveArmarioFilter("all");
+                        setIsArmariosExpanded(false);
+                      }}
+                      className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded-lg font-sans transition flex items-center gap-1.5 border ${
+                        activeArmarioFilter === "all"
                           ? "bg-laton border-laton text-fondo font-bold"
-                          : "bg-tarjeta/40 border-linea/60 text-tinta-apagada hover:text-tinta hover:border-laton/40"
+                          : "bg-white border-linea/60 text-tinta-apagada hover:text-tinta hover:border-laton/40"
                       }`}
                     >
-                      <span>
-                        {arm === "normal" && "🏠"}
-                        {arm === "oficina" && "💼"}
-                        {arm === "fiesta" && "✨"}
-                        {isCustom && "🏷️"} {arm.charAt(0).toUpperCase() + arm.slice(1)}
-                      </span>
-                      <span className={`text-[9px] ${activeArmarioFilter === arm ? "text-fondo/80 font-black" : "text-tinta-apagada/70"}`}>
-                        ({count})
-                      </span>
+                      <Folder size={11} /> Todo ({prendas.length})
                     </button>
                     
-                    {isCustom && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEliminarArmario(arm);
-                        }}
-                        className="absolute -top-1 -right-1 bg-red-950/90 border border-red-800/40 text-red-300 hover:bg-red-800 hover:text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] leading-none transition shadow"
-                        title={`Eliminar armario ${arm}`}
-                      >
-                        ×
-                      </button>
-                    )}
+                    {armariosDisponibles.map((arm) => {
+                      const count = prendas.filter(p => getArmariosDePrenda(p).includes(arm)).length;
+                      const isCustom = arm !== "normal" && arm !== "oficina" && arm !== "fiesta";
+                      return (
+                        <div key={arm} className="relative group flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveArmarioFilter(arm);
+                              setIsArmariosExpanded(false);
+                            }}
+                            className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded-lg font-sans transition flex items-center gap-1.5 border pr-5 ${
+                              activeArmarioFilter === arm
+                                ? "bg-laton border-laton text-fondo font-bold"
+                                : "bg-white border-linea/60 text-tinta-apagada hover:text-tinta hover:border-laton/40"
+                            }`}
+                          >
+                            <span>
+                              {arm === "normal" && "🏠"}
+                              {arm === "oficina" && "💼"}
+                              {arm === "fiesta" && "✨"}
+                              {isCustom && "🏷️"} {arm.charAt(0).toUpperCase() + arm.slice(1)}
+                            </span>
+                            <span className={`text-[9px] ${activeArmarioFilter === arm ? "text-fondo/80 font-black" : "text-tinta-apagada/70"}`}>
+                              ({count})
+                            </span>
+                          </button>
+                          
+                          {isCustom && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEliminarArmario(arm);
+                              }}
+                              className="absolute -top-1 -right-1 bg-red-950/90 border border-red-800/40 text-red-300 hover:bg-red-800 hover:text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] leading-none transition shadow"
+                              title={`Eliminar armario ${arm}`}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Categories Selector tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none border-b border-linea/60">
-            <SlidersHorizontal size={12} className="text-laton shrink-0" />
-            <button
-              type="button"
-              id="filtro-todos"
-              onClick={() => setActiveCategoryFilter("all")}
-              className={`px-3 py-1.5 text-xs rounded font-sans uppercase tracking-wider transition ${
-                activeCategoryFilter === "all" ? "bg-laton text-fondo font-semibold" : "text-tinta-apagada hover:text-tinta"
-              }`}
-            >
-              Todos ({prendas.length})
-            </button>
-            {(["top", "pantalon", "calzado", "accesorio"] as CategoriaPrenda[]).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                id={`filtro-${cat}`}
-                onClick={() => setActiveCategoryFilter(cat)}
-                className={`px-3 py-1.5 text-xs rounded font-sans uppercase tracking-wider transition shrink-0 ${
-                  activeCategoryFilter === cat ? "bg-laton text-fondo font-semibold" : "text-tinta-apagada hover:text-tinta"
-                }`}
-              >
-                {getCategoryLabel(cat)} ({prendas.filter((p) => p.categoria === cat).length})
-              </button>
-            ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Catalog grid representation */}

@@ -5,14 +5,14 @@
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-sans: 'Outfit', sans-serif;
   
-  --color-fondo: #FAFAFA;
-  --color-fondo2: #F4F4F5;
+  --color-fondo: #FAF9F6;
+  --color-fondo2: #F4EFE6;
   --color-tarjeta: #FFFFFF;
-  --color-linea: #E4E4E7;
-  --color-laton: #18181B;
-  --color-laton-apagado: #71717A;
-  --color-tinta: #09090B;
-  --color-tinta-apagada: #52525B;
+  --color-linea: #E8E0D5;
+  --color-laton: #C5A059;
+  --color-laton-apagado: #A48343;
+  --color-tinta: #2C2520;
+  --color-tinta-apagada: #756B61;
 
   --animate-shimmer: shimmer 2s infinite linear;
 }
@@ -32,19 +32,19 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAFAFA;
+  background: #FAF9F6;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E4E4E7;
+  background: #E8E0D5;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #A1A1AA;
+  background: #C5A059;
 }
 
 body {
-  background-color: #FAFAFA;
-  color: #09090B;
+  background-color: #FAF9F6;
+  color: #2C2520;
   font-family: 'Outfit', sans-serif;
   overflow-x: hidden;
 }
@@ -87,6 +87,6 @@ body {
 /* Luxury Card hairline border gradient effect */
 .border-hairline {
   position: relative;
-  border: 1px solid #E4E4E7;
+  border: 1px solid #E8E0D5;
 }
 
