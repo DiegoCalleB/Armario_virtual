@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
 import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
 import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
-import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder } from "lucide-react";
+import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder, Search } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import GooglePhotosPicker from "./GooglePhotosPicker";
 
@@ -260,6 +260,13 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [error, setError] = useState<string | null>(null);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<"all" | CategoriaPrenda>("all");
   
+  // Search and Closet filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeColorFilter, setActiveColorFilter] = useState("all");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedPrendasForLook, setSelectedPrendasForLook] = useState<string[]>([]);
+  
   // Registration control tabs
   const [registrationTab, setRegistrationTab] = useState<"ia" | "manual" | "amiga" | "googlefotos">("ia");
 
@@ -380,6 +387,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
     });
     
     onPrendaAgregada(updated);
+    setIsAddModalOpen(false); // Close the beautiful uploader modal on success
   };
 
   const handleCrearArmario = () => {
@@ -941,6 +949,33 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
     }
   };
 
+  // Helper to match colors
+  const matchesColorFilter = (p: Prenda, filter: string): boolean => {
+    if (filter === "all") return true;
+    const name = p.nombre.toLowerCase();
+    const hex = p.color ? p.color.toLowerCase() : "";
+    
+    if (filter === "blanco") {
+      return name.includes("blanc") || name.includes("crudo") || hex === "#ffffff" || hex === "#fafafa" || hex === "#f3efe0" || hex === "#f4f4f5" || hex === "#e4e4e7";
+    }
+    if (filter === "negro") {
+      return name.includes("negr") || name.includes("carb") || name.includes("oscur") || hex === "#111111" || hex === "#000000" || hex === "#0f0f10" || hex === "#18181b" || hex === "#09090b";
+    }
+    if (filter === "beige") {
+      return name.includes("beige") || name.includes("camel") || name.includes("arena") || hex === "#c3b091" || hex === "#f3efe0";
+    }
+    if (filter === "marron") {
+      return name.includes("marr") || name.includes("choc") || hex === "#3a2a1a" || hex === "#c3b091";
+    }
+    if (filter === "azul") {
+      return name.includes("azul") || name.includes("marino") || name.includes("navy") || hex === "#1d2b42" || hex === "#121a30";
+    }
+    if (filter === "gris") {
+      return name.includes("gris") || name.includes("plata") || hex === "#7f8c8d" || hex === "#313639" || hex === "#71717a" || hex === "#52525b";
+    }
+    return false;
+  };
+
   // Filter garments list
   const prendasFiltradas = prendas.filter((p) => {
     // 1. Filter by Armario (wardrobe capsule)
@@ -952,8 +987,28 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
     }
     
     // 2. Filter by Category
-    if (activeCategoryFilter === "all") return true;
-    return p.categoria === activeCategoryFilter;
+    if (activeCategoryFilter !== "all" && p.categoria !== activeCategoryFilter) {
+      return false;
+    }
+
+    // 3. Filter by Color
+    if (!matchesColorFilter(p, activeColorFilter)) {
+      return false;
+    }
+
+    // 4. Filter by Search Term
+    if (searchTerm.trim() !== "") {
+      const s = searchTerm.toLowerCase();
+      const matchName = p.nombre.toLowerCase().includes(s);
+      const matchCat = getCategoryLabel(p.categoria).toLowerCase().includes(s);
+      const matchTejido = p.tejido?.toLowerCase().includes(s) || false;
+      const matchTags = p.tags?.some(t => t.toLowerCase().includes(s)) || false;
+      if (!matchName && !matchCat && !matchTejido && !matchTags) {
+        return false;
+      }
+    }
+    
+    return true;
   });
 
   return (
@@ -966,13 +1021,175 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             <p className="text-[10px] text-tinta-apagada font-sans tracking-wide uppercase">DIGITAL WARDROBE</p>
           </div>
         </div>
-        
-
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Garment Uploader - Column 1 */}
-        <div className="lg:col-span-1">
+      {/* SEARCH AND FILTERS (AI CLOSET STYLE) */}
+      <div className="space-y-4 mb-8">
+        {/* Search Input */}
+        <div className="relative w-full max-w-xl mx-auto">
+          <input
+            type="text"
+            placeholder="Buscar en tu armario (nombre, tejido, etiquetas...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-[#F4F4F5] text-[#18181B] pl-11 pr-11 py-3.5 rounded-full border border-[#E4E4E7] focus:border-[#18181B] focus:outline-none focus:ring-1 focus:ring-[#18181B] transition font-sans text-sm shadow-inner"
+          />
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#71717A]">
+            <Search size={18} />
+          </div>
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#18181B]"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {/* Category Pills (Row 1) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2.5 scrollbar-none no-scrollbar justify-start sm:justify-center">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryFilter("all")}
+            className={`px-5 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition shrink-0 border ${
+              activeCategoryFilter === "all"
+                ? "bg-[#18181B] border-[#18181B] text-white shadow"
+                : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+            }`}
+          >
+            Todo ({prendas.length})
+          </button>
+          {(["top", "pantalon", "calzado", "accesorio"] as CategoriaPrenda[]).map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setActiveCategoryFilter(cat)}
+              className={`px-5 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition shrink-0 border ${
+                activeCategoryFilter === cat
+                  ? "bg-[#18181B] border-[#18181B] text-white shadow"
+                  : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+              }`}
+            >
+              {getCategoryLabel(cat) === "Parte Superior" ? "Parte superior" : getCategoryLabel(cat) === "Parte Inferior" ? "Parte inferior" : getCategoryLabel(cat)} ({prendas.filter((p) => p.categoria === cat).length})
+            </button>
+          ))}
+        </div>
+
+        {/* Color Pills (Row 2) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 scrollbar-none no-scrollbar justify-start sm:justify-center border-b border-[#E4E4E7]/60">
+          <button
+            type="button"
+            onClick={() => setActiveColorFilter("all")}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition shrink-0 border ${
+              activeColorFilter === "all"
+                ? "bg-[#18181B] border-[#18181B] text-white shadow-sm"
+                : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+            }`}
+          >
+            Todos los Colores
+          </button>
+          {[
+            { id: "blanco", label: "Blanco", dot: "bg-white border border-[#E4E4E7]" },
+            { id: "beige", label: "Beige", dot: "bg-[#C3B091]" },
+            { id: "marron", label: "Marrón", dot: "bg-[#3A2A1A]" },
+            { id: "negro", label: "Negro", dot: "bg-[#111111]" },
+            { id: "azul", label: "Azul", dot: "bg-[#1D2B42]" },
+            { id: "gris", label: "Gris", dot: "bg-[#7F8C8D]" },
+          ].map((col) => (
+            <button
+              key={col.id}
+              type="button"
+              onClick={() => setActiveColorFilter(col.id)}
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition shrink-0 border flex items-center gap-1.5 ${
+                activeColorFilter === col.id
+                  ? "bg-[#18181B] border-[#18181B] text-white shadow-sm"
+                  : "bg-white border-[#E4E4E7] text-[#71717A] hover:text-[#18181B] hover:border-[#18181B]/40"
+              }`}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${col.dot} inline-block shrink-0`} />
+              {col.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Primary Action Buttons (Row 3) */}
+        <div className="flex gap-4 max-w-xl mx-auto pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectionMode(!selectionMode);
+              setSelectedPrendasForLook([]);
+            }}
+            className={`flex-1 py-3.5 text-xs uppercase tracking-widest font-bold rounded-full border transition flex items-center justify-center gap-2 shadow-sm ${
+              selectionMode
+                ? "bg-[#18181B] border-[#18181B] text-white"
+                : "bg-white border-[#E4E4E7] text-[#52525B] hover:border-[#18181B] hover:text-[#18181B]"
+            }`}
+          >
+            {selectionMode ? "Cancelar Selección" : "Elegir"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex-1 py-3.5 bg-[#FA5C7C] hover:bg-[#E04B6A] text-white text-xs uppercase tracking-widest font-extrabold rounded-full transition flex items-center justify-center gap-2 shadow-md button-press"
+          >
+            <Plus size={14} /> Añadir
+          </button>
+        </div>
+      </div>
+
+      {/* Floating look creation indicator */}
+      {selectionMode && selectedPrendasForLook.length > 0 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-[#18181B] text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4 border border-white/10 animate-bounce">
+          <span className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+            {selectedPrendasForLook.length} {selectedPrendasForLook.length === 1 ? "prenda elegida" : "prendas elegidas"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const itemsNames = prendas
+                .filter(p => selectedPrendasForLook.includes(p.id))
+                .map(p => p.nombre)
+                .join(", ");
+              alert(`Has elegido crear un look con: ${itemsNames}. ¡Pídele al asesor inteligente que confeccione este outfit para ti!`);
+              setSelectionMode(false);
+              setSelectedPrendasForLook([]);
+            }}
+            className="px-4 py-1.5 bg-[#FA5C7C] hover:bg-[#E04B6A] text-white text-[10px] uppercase tracking-widest font-extrabold rounded-full transition"
+          >
+            Crear Look
+          </button>
+        </div>
+      )}
+
+      {/* POPUP MODAL FOR ADDING GARMENTS (AI CLOSET STYLE) */}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <div className="fixed inset-0 bg-[#18181B]/80 backdrop-blur-sm z-50 flex flex-col justify-center items-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white border border-[#E4E4E7] rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl relative p-6 md:p-8"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="absolute right-5 top-5 text-[#71717A] hover:text-[#18181B] bg-[#F4F4F5] p-2 rounded-full transition z-10 animate-pulse"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="mb-6">
+                <h3 className="font-serif text-2xl font-bold tracking-tight text-[#18181B]">Añadir Nueva Prenda</h3>
+                <p className="text-xs text-[#71717A] font-sans">Elige la modalidad para registrar una prenda en tu armario digital</p>
+              </div>
+
+              {/* Garment Uploader - Column 1 */}
+              <div className="w-full">
           {/* Tab Selector */}
           <div className="flex border-b border-linea mb-5 select-none font-sans overflow-x-auto no-scrollbar gap-1">
             <button
@@ -1703,7 +1920,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                     ? "bg-transparent text-tinta-apagada border border-linea cursor-not-allowed"
                                     : isBorrowed
                                     ? "bg-green-950/40 border border-green-900/30 text-green-400 cursor-default"
-                                    : "bg-laton hover:bg-white text-fondo transition duration-150"
+                                    : "bg-laton hover:bg-laton-apagado hover:text-white text-fondo transition duration-150"
                                 }`}
                               >
                                 {p.id === "friend_empty" ? "Vacío" : isBorrowed ? "Prestado ✓" : "Pedir Prestado"}
@@ -1860,7 +2077,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                 className={`w-full py-1 text-[8.5px] uppercase font-bold tracking-wider rounded select-none text-center ${
                                   isExtracting
                                     ? "bg-laton/20 text-laton animate-pulse cursor-default"
-                                    : "bg-laton hover:bg-white text-fondo transition duration-150"
+                                    : "bg-laton hover:bg-laton-apagado hover:text-white text-fondo transition duration-150"
                                 }`}
                               >
                                 {isExtracting ? "Analizando..." : "Extraer IA"}
@@ -1888,12 +2105,14 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               <span>{error}</span>
             </div>
           )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-
-        </div>
-
-        {/* Garment Catalog & Filtering - Columns 2 & 3 */}
-        <div className="lg:col-span-2">
+      {/* Garment Catalog & Filtering - Full Width */}
+      <div className="w-full">
 
           {/* Section for Encapsulated Wardrobes */}
           <div className="mb-6 p-4 bg-[#F4F4F5]/60 border border-laton/15 rounded-lg space-y-3 shadow-sm">
@@ -2100,7 +2319,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
                       {prenda.tejido && (
                         <p className="text-[10px] text-laton font-medium mt-1">
-                          Tejido: <span className="text-white/80 font-normal">{prenda.tejido}</span>
+                          Tejido: <span className="text-tinta/80 font-normal">{prenda.tejido}</span>
                         </p>
                       )}
 
@@ -2145,7 +2364,6 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             )}
           </AnimatePresence>
         </div>
-      </div>
 
       {/* Garment Details & Description Modal */}
       <AnimatePresence>
@@ -2299,48 +2517,42 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           {armariosDisponibles.map((arm) => {
                             const isMember = getArmariosDePrenda(selectedPrenda).includes(arm);
                             return (
-                              <label
+                              <button
                                 key={arm}
+                                type="button"
+                                onClick={() => {
+                                  const currentArmarios = getArmariosDePrenda(selectedPrenda);
+                                  let nextArmarios = currentArmarios;
+                                  if (!currentArmarios.includes(arm)) {
+                                    nextArmarios = [...nextArmarios, arm];
+                                  } else {
+                                    nextArmarios = nextArmarios.filter(a => a !== arm);
+                                    if (nextArmarios.length === 0) {
+                                      nextArmarios = ["normal"];
+                                    }
+                                  }
+                                  setArmariosDePrenda(selectedPrenda, nextArmarios);
+                                  setSelectedPrenda({
+                                    ...selectedPrenda,
+                                    tags: [
+                                      ...(selectedPrenda.tags || []).filter(t => !t.startsWith("armario:")),
+                                      ...nextArmarios.map(a => `armario:${a}`)
+                                    ]
+                                  });
+                                }}
                                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] border cursor-pointer select-none transition ${
                                   isMember
                                     ? "bg-laton/15 border-laton text-laton font-bold"
                                     : "bg-fondo2/30 border-linea/65 text-tinta-apagada hover:text-tinta hover:border-laton/30"
                                 }`}
                               >
-                                <input
-                                  type="checkbox"
-                                  checked={isMember}
-                                  onChange={(e) => {
-                                    const currentArmarios = getArmariosDePrenda(selectedPrenda);
-                                    let nextArmarios = currentArmarios;
-                                    if (e.target.checked) {
-                                      if (!nextArmarios.includes(arm)) {
-                                        nextArmarios = [...nextArmarios, arm];
-                                      }
-                                    } else {
-                                      nextArmarios = nextArmarios.filter(a => a !== arm);
-                                      if (nextArmarios.length === 0) {
-                                        nextArmarios = ["normal"];
-                                      }
-                                    }
-                                    setArmariosDePrenda(selectedPrenda, nextArmarios);
-                                    setSelectedPrenda({
-                                      ...selectedPrenda,
-                                      tags: [
-                                        ...(selectedPrenda.tags || []).filter(t => !t.startsWith("armario:")),
-                                        ...nextArmarios.map(a => `armario:${a}`)
-                                      ]
-                                    });
-                                  }}
-                                  className="hidden"
-                                />
                                 <span>
                                   {arm === "normal" && "🏠"}
                                   {arm === "oficina" && "💼"}
                                   {arm === "fiesta" && "✨"}
                                   {arm !== "normal" && arm !== "oficina" && arm !== "fiesta" && "🏷️"} {arm.charAt(0).toUpperCase() + arm.slice(1)}
                                 </span>
-                              </label>
+                              </button>
                             );
                           })}
                         </div>
@@ -2406,7 +2618,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           }
                           setSelectedPrenda(null);
                         }}
-                        className="button-press px-4 py-1.5 bg-laton text-fondo hover:bg-white text-[10px] font-bold rounded flex items-center gap-1 uppercase tracking-wider"
+                        className="button-press px-4 py-1.5 bg-laton text-fondo hover:bg-laton-apagado hover:text-white text-[10px] font-bold rounded flex items-center gap-1 uppercase tracking-wider"
                       >
                         <Check size={12} /> Guardar
                       </button>

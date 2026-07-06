@@ -989,15 +989,15 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as ActiveTab)}
-                  className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded text-left transition-all duration-200 cursor-pointer ${
+                  className={`group w-full flex items-center gap-3.5 px-4 py-2.5 rounded text-left transition-all duration-200 cursor-pointer ${
                     isSelected
                       ? "bg-laton/15 border-l-2 border-laton text-laton font-medium shadow-md shadow-amber-950/5"
-                      : "text-tinta-apagada hover:text-white hover:bg-tarjeta border-l-2 border-transparent"
+                      : "text-tinta-apagada hover:text-tinta hover:bg-fondo2 border-l-2 border-transparent"
                   }`}
                 >
-                  <Icon size={15} className={isSelected ? "text-laton animate-pulse" : "text-tinta-apagada"} />
+                  <Icon size={15} className={isSelected ? "text-laton animate-pulse" : "text-tinta-apagada group-hover:text-tinta"} />
                   <div className="leading-tight">
-                    <p className={`text-[11px] uppercase tracking-wider font-bold ${isSelected ? "text-white" : ""}`}>
+                    <p className={`text-[11px] uppercase tracking-wider font-bold ${isSelected ? "text-tinta" : "group-hover:text-tinta"}`}>
                       {tab.label}
                     </p>
                     <p className="text-[9px] text-[#52525B]/70 font-mono">
@@ -1070,7 +1070,7 @@ export default function App() {
               <span className="text-[9px] tracking-widest text-laton uppercase font-medium">Estilista Virtual de Lujo</span>
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-3xl font-extrabold tracking-tight text-white select-none uppercase">
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-3xl font-extrabold tracking-tight text-tinta select-none uppercase">
               {activeTab === "espejo" && "TÚ ESPEJO VIRTUAL"}
               {activeTab === "armario" && "TÚ ARMARIO DIGITAL"}
               {activeTab === "planificador" && "AGENDA DE LOOKS"}
