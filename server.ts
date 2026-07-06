@@ -23,6 +23,43 @@ function parseDataUri(dataUri: string): { mimeType: string; data: string } {
   return { mimeType: "image/jpeg", data: dataUri.replace(/^data:image\/[a-z]+;base64,/, "") };
 }
 
+// Robust resolver that handles base64 Data URIs, raw base64 strings, or HTTP/HTTPS URLs (e.g. from Supabase Storage)
+async function resolveImageUri(imageSource: string): Promise<{ mimeType: string; data: string }> {
+  if (!imageSource) {
+    throw new Error("La fuente de la imagen está vacía.");
+  }
+
+  // If it is an HTTP or HTTPS URL, download it on the server and convert it to a base64 buffer
+  if (imageSource.startsWith("http://") || imageSource.startsWith("https://")) {
+    try {
+      console.log(`[resolveImageUri] Descargando imagen desde URL remota: ${imageSource}`);
+      const response = await fetch(imageSource);
+      if (!response.ok) {
+        throw new Error(`Fallo al descargar la imagen remota (${response.status} ${response.statusText})`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const base64Data = Buffer.from(arrayBuffer).toString("base64");
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      return { mimeType: contentType, data: base64Data };
+    } catch (fetchErr: any) {
+      console.error(`[resolveImageUri] Error crítico descargando la imagen de la URL: ${imageSource}`, fetchErr);
+      throw new Error(`No se pudo obtener la imagen remota desde el servidor: ${fetchErr.message}`);
+    }
+  }
+
+  // Otherwise, treat as standard Data URI
+  if (imageSource.startsWith("data:")) {
+    const matches = imageSource.match(/^data:([^;]+);base64,(.+)$/);
+    if (matches) {
+      return { mimeType: matches[1], data: matches[2] };
+    }
+    return { mimeType: "image/jpeg", data: imageSource.replace(/^data:image\/[a-z]+;base64,/, "") };
+  }
+
+  // Fallback as raw base64 string
+  return { mimeType: "image/jpeg", data: imageSource };
+}
+
 // Lazy initialization of the Gemini client so it fails fast during a call if key is missing,
 // instead of crashing the process on server startup.
 let aiClient: GoogleGenAI | null = null;
@@ -340,7 +377,7 @@ app.post("/api/analizar-rostro", async (req, res) => {
        return;
      }
 
-    const { mimeType, data } = parseDataUri(image);
+    const { mimeType, data } = await resolveImageUri(image);
     const ai = getGenAI();
 
     const response = await callGeminiWithRetry(() =>
@@ -413,7 +450,7 @@ app.post("/api/analizar-prenda", async (req, res) => {
        return;
     }
 
-    const { mimeType, data } = parseDataUri(image);
+    const { mimeType, data } = await resolveImageUri(image);
     const ai = getGenAI();
     const isMultiModeEnabled = isMulti === true || isMulti === "true";
     const promptText = isMultiModeEnabled
@@ -1010,7 +1047,7 @@ app.post("/api/generar-imagen", async (req, res) => {
 
     const isUsingCustomBody = !!(fullBody && customFullBodyImage);
     const activeImageSource = isUsingCustomBody ? customFullBodyImage : faceImage;
-    const { mimeType, data } = parseDataUri(activeImageSource);
+    const { mimeType, data } = await resolveImageUri(activeImageSource);
     const ai = getGenAI();
 
     console.log(`Generando imagen simulada con gemini-3.1-flash-lite-image (fullBody: ${!!fullBody}, customBody: ${isUsingCustomBody})...`);
@@ -1073,7 +1110,7 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
       for (const p of prendasDetalle) {
         if (p && p.imageSrc) {
           try {
-            const parsedG = parseDataUri(p.imageSrc);
+            const parsedG = await resolveImageUri(p.imageSrc);
             parts.push({
               inlineData: {
                 mimeType: parsedG.mimeType,
@@ -1081,7 +1118,7 @@ Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and fac
               },
             });
           } catch (e) {
-            console.warn("Error parsing garment image dataUri inside /api/generar-imagen:", e);
+            console.warn("Error parsing garment image inside /api/generar-imagen:", e);
           }
         }
       }
@@ -2135,7 +2172,7 @@ app.post("/api/probar-look", async (req, res) => {
     const ai = getGenAI();
 
     // Parse main person full-body image
-    const personParsed = parseDataUri(personImage);
+    const personParsed = await resolveImageUri(personImage);
     const parts: any[] = [
       {
         inlineData: {
@@ -2148,13 +2185,17 @@ app.post("/api/probar-look", async (req, res) => {
     // Parse and append garment images
     for (const gImg of garmentImages) {
       if (gImg) {
-        const parsedG = parseDataUri(gImg);
-        parts.push({
-          inlineData: {
-            mimeType: parsedG.mimeType,
-            data: parsedG.data,
-          },
-        });
+        try {
+          const parsedG = await resolveImageUri(gImg);
+          parts.push({
+            inlineData: {
+              mimeType: parsedG.mimeType,
+              data: parsedG.data,
+            },
+          });
+        } catch (e) {
+          console.warn("[PROBAR-LOOK] Error parsing garment image:", e);
+        }
       }
     }
 
@@ -2249,7 +2290,7 @@ app.post("/api/procesar-imagen-avanzada", async (req, res) => {
       return;
     }
 
-    const { mimeType, data } = parseDataUri(image);
+    const { mimeType, data } = await resolveImageUri(image);
     const ai = getGenAI();
 
     console.log("[IMAGEN-AVANZADA] Iniciando remoción de fondo y súper resolución para la prenda...");

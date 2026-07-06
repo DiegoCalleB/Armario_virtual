@@ -339,16 +339,16 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   };
 
   const getArmariosDePrenda = (prenda: Prenda): string[] => {
-    if (!prenda.tags) return ["normal"];
+    if (!prenda.tags || !Array.isArray(prenda.tags)) return ["normal"];
     const armariosTags = prenda.tags
-      .filter(t => t.startsWith("armario:"))
+      .filter(t => typeof t === "string" && t.startsWith("armario:"))
       .map(t => t.substring("armario:".length));
     if (armariosTags.length === 0) return ["normal"];
     return armariosTags;
   };
 
   const setArmariosDePrenda = (prenda: Prenda, nuevosArmarios: string[]) => {
-    const cleanTags = (prenda.tags || []).filter(t => !t.startsWith("armario:"));
+    const cleanTags = (Array.isArray(prenda.tags) ? prenda.tags : []).filter(t => typeof t === "string" && !t.startsWith("armario:"));
     const newTags = [...cleanTags, ...nuevosArmarios.map(a => `armario:${a}`)];
     if (onPrendaActualizada) {
       onPrendaActualizada({
