@@ -369,7 +369,7 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
                     <span className="col-span-2 text-tinta font-light">{rostro.pelo_actual}</span>
                   </div>
                   <div className="grid grid-cols-3">
-                    <span className="text-tinta-apagada text-xs font-medium uppercase font-sans">Barba Actual</span>
+                    <span className="text-tinta-apagada text-xs font-medium uppercase font-sans">Estilo Facial / Rasgos</span>
                     <span className="col-span-2 text-tinta font-light">{rostro.barba_actual}</span>
                   </div>
                 </div>

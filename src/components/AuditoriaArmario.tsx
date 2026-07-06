@@ -553,7 +553,7 @@ export default function AuditoriaArmario({
 
                       {/* Vinted Tags Details block */}
                       <div className="bg-white p-2 rounded-lg border border-gray-200 text-[7px] text-gray-400 space-y-1">
-                        <div><strong className="text-gray-600">Categoría:</strong> Ropa de hombre</div>
+                        <div><strong className="text-gray-600">Categoría:</strong> Moda / Prendas</div>
                         <div><strong className="text-gray-600">Estado:</strong> Muy bueno</div>
                         <div><strong className="text-gray-600">Sincronizador:</strong> Espejo AI Premium</div>
                       </div>

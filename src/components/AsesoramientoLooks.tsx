@@ -162,13 +162,14 @@ const CLIMAS_PREDEFINIDOS = [
   "Frío invernal intenso (5ºC)"
 ];
 
-const FRASES_BARBERO = [
-  "Buscando tijeras de acero templado...",
-  "Calentando toalla húmeda con vapor de lavanda...",
-  "Perfilando patillas a navaja clásica...",
-  "Moldeando pomada artesanal con aroma a tabaco y vainilla...",
-  "Ajustando el reflejo editorial del latón en el salón...",
-  "Pulido final con aceites esenciales clásicos..."
+const FRASES_ESTILISTA = [
+  "Analizando simetría y armonía facial...",
+  "Estudiando fisonomía de rostro para cortes y peinados...",
+  "Configurando drapeado de colores ideales para tu tono...",
+  "Definiendo paleta cromática sutil y elegante...",
+  "Esculpiendo volúmenes capilares personalizados...",
+  "Ajustando el reflejo editorial en el espejo...",
+  "Armonizando acabados de alta peluquería..."
 ];
 
 export default function AsesoramientoLooks({
@@ -221,9 +222,9 @@ export default function AsesoramientoLooks({
             ...(accesorios.length > 0 ? [accesorios[0].id] : [])
           ],
           porque: "Una elegante combinación sastrera inmediata. Hemos emparejado tus mejores prendas superiores con una faja formal estructurada para conseguir una caída limpia y armonizada sin esperas de procesamiento.",
-          pelo_sugerido: "Corte clásico texturizado con raya al lado",
-          barba_sugerida: "Barba de tres días perfilada y aceitada",
-          consejo_barberia: "Aplica cera mate de fijación media para fijar el pelo sin perder flexibilidad ni brillo."
+          pelo_sugerido: "Corte o peinado texturizado con movimiento natural",
+          barba_sugerida: "Estilo facial despejado, hidratado y luminoso",
+          consejo_barberia: "Aplica protector térmico y crema de peinado para un acabado sedoso y flexible."
         });
       }
 
@@ -238,9 +239,9 @@ export default function AsesoramientoLooks({
             ...(accesorios.length > 1 ? [accesorios[1].id] : accesorios.length > 0 ? [accesorios[0].id] : [])
           ],
           porque: "Una silueta casual-chic idónea para tarde noche o almuerzos de negocios discretos. El contraste de color enriquece la figura corporal con sutileza editorial.",
-          pelo_sugerido: "Tupé moderno levantado con secador de mano",
-          barba_sugerida: "Afeitado clásico apurado de caballeros",
-          consejo_barberia: "Un poco de bálsamo hidratante para después del afeitado mantendrá la tez impecable y libre de rojeces."
+          pelo_sugerido: "Estilo moderno con volumen suave",
+          barba_sugerida: "Rasgos limpios o maquillaje ligero satinado",
+          consejo_barberia: "Una bruma hidratante o bálsamo facial mantendrá tu piel impecable y radiante."
         });
       }
 
@@ -255,9 +256,9 @@ export default function AsesoramientoLooks({
             ...(accesorios.length > 0 ? [accesorios[0].id] : [])
           ],
           porque: "Estilo distinguido de máxima formalidad. Ideal para galas u ocasiones solemnes que reclamen un balance sobrio y distinguido.",
-          pelo_sugerido: "Degradado nítido con acabado limpio de barbería",
-          barba_sugerida: "Perfilado nítido de la línea del cuello y mejillas",
-          consejo_barberia: "Utiliza un peine de púas finas para esculpir perfectamente las guías de cada mechón."
+          pelo_sugerido: "Peinado pulido de alta peluquería",
+          barba_sugerida: "Facciones definidas o maquillaje de contorno sutil",
+          consejo_barberia: "Utiliza un cepillo suave para esculpir perfectamente cada volumen de forma fluida."
         });
       }
 
@@ -361,7 +362,7 @@ export default function AsesoramientoLooks({
     
     // Cycle beautiful progress phrases
     const interval = setInterval(() => {
-      setCurrentBarberPhraseIndex((prev) => (prev + 1) % FRASES_BARBERO.length);
+      setCurrentBarberPhraseIndex((prev) => (prev + 1) % FRASES_ESTILISTA.length);
     }, 1800);
 
     try {
@@ -632,7 +633,7 @@ export default function AsesoramientoLooks({
           <Camera size={26} className="text-laton-apagado mx-auto mb-3" />
           <h3 className="font-serif text-base font-semibold text-tinta">Espejo no calibrado</h3>
           <p className="text-xs text-tinta-apagada mt-1.5 max-w-sm mx-auto">
-            Por favor, sube tu retrato facial en la sección <strong>Tu Espejo</strong> primero. El estilista necesita comprender la fisionomía de tu rostro para aconsejarte cortes y barbas.
+            Por favor, sube tu retrato facial en la sección <strong>Tu Espejo</strong> primero. El estilista necesita comprender la fisionomía de tu rostro para aconsejarte cortes, peinados y rasgos de estilismo ideales.
           </p>
         </div>
       )}
@@ -928,16 +929,16 @@ export default function AsesoramientoLooks({
                     })()}
                   </div>
 
-                  {/* Right Column: Hairstyling, Grooming & Simulating Re-render */}
+                  {/* Right Column: Hairstyling, Estilismo & Simulating Re-render */}
                   <div className="lg:col-span-5 order-first lg:order-none bg-tarjeta border border-laton/50 rounded-lg p-6 space-y-6">
                     <span className="font-serif italic text-laton font-semibold block text-base border-b border-linea pb-2">
-                      Facciones & Barbería (04)
+                      Visajismo & Estilismo Facial (04)
                     </span>
 
                     <div className="space-y-4">
                       {/* Hair Recommendations */}
                       <div className="space-y-1">
-                        <span className="text-[10px] tracking-widest text-tinta-apagada uppercase font-medium">Corte de Cabello Recomendado</span>
+                        <span className="text-[10px] tracking-widest text-tinta-apagada uppercase font-medium">Corte o Peinado Recomendado</span>
                         <p className="font-serif text-base font-semibold text-tinta italic leading-tight">
                           {selectedLook.pelo_sugerido}
                         </p>
@@ -945,7 +946,7 @@ export default function AsesoramientoLooks({
 
                       {/* Beard Recommendations */}
                       <div className="space-y-1">
-                        <span className="text-[10px] tracking-widest text-tinta-apagada uppercase font-medium">Diseño de Barba Recomendado</span>
+                        <span className="text-[10px] tracking-widest text-tinta-apagada uppercase font-medium">Rasgos o Estilo Facial Sugerido</span>
                         <p className="font-serif text-base font-semibold text-tinta italic leading-tight">
                           {selectedLook.barba_sugerida}
                         </p>
@@ -954,7 +955,7 @@ export default function AsesoramientoLooks({
                       {/* Barber Tips */}
                       <div className="p-3.5 bg-fondo border border-linea rounded text-xs space-y-1 relative overflow-hidden">
                         <span className="text-[10px] tracking-widest text-laton uppercase font-medium block">
-                          Consejo de Maestro Barbero
+                          Consejo del Estilista Personal
                         </span>
                         <p className="text-tinta-apagada font-light leading-relaxed">
                           {selectedLook.consejo_barberia}
@@ -1007,10 +1008,10 @@ export default function AsesoramientoLooks({
                             <div className="absolute inset-0 rounded-full border border-laton border-t-transparent animate-spin"></div>
                           </div>
                           <p className="font-serif text-sm text-tinta italic">
-                            {simulationTab === "cuerpo" ? "Vistiendo tu silueta..." : "Grooming Virtual..."}
+                            {simulationTab === "cuerpo" ? "Vistiendo tu silueta..." : "Estilismo Virtual..."}
                           </p>
                           <p className="text-[11px] text-laton font-medium mt-1 animate-pulse min-h-[16px]">
-                            {FRASES_BARBERO[currentBarberPhraseIndex]}
+                            {FRASES_ESTILISTA[currentBarberPhraseIndex]}
                           </p>
                         </div>
                       )}
@@ -1039,7 +1040,7 @@ export default function AsesoramientoLooks({
                             !selectedLook.simulatedImageUrl ? (
                               <div className="space-y-3 text-left">
                                 <p className="text-[11.5px] text-tinta-apagada leading-relaxed font-light font-sans">
-                                  Ver tu fisonomía modificada. El retoque IA recreará tu rostro adaptando exactamente este peinado y barba sugeridos, ambientándote en una barbería clásica.
+                                  Ver tu fisonomía adaptada. El retoque IA recreará tu rostro adaptando exactamente este peinado y estilo facial sugeridos, ambientándote en un exclusivo atelier de imagen.
                                 </p>
                                 <button
                                   type="button"
@@ -1047,7 +1048,7 @@ export default function AsesoramientoLooks({
                                   onClick={() => triggerSimulation(activeLookIndex, selectedLook, false)}
                                   className="button-press w-full py-2.5 bg-tarjeta border border-laton text-laton hover:bg-laton hover:text-fondo text-xs font-bold uppercase tracking-widest rounded flex items-center justify-center gap-1.5 transition active:scale-97"
                                 >
-                                  <Eye size={12} /> Proyectar Rostro (Barbería)
+                                  <Eye size={12} /> Proyectar Rostro (Estilismo)
                                 </button>
                               </div>
                             ) : (

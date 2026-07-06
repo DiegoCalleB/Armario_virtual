@@ -24,13 +24,13 @@ export default function HistorialLooks({
   const handleCompartir = async (item: HistorialLook, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    const textToShare = `💈 *Tu Armario Inteligente - Estilista IA* 💈\n\n` +
+    const textToShare = `✨ *Atelier Espejo - Estilista Personal IA* ✨\n\n` +
       `Look Propuesto para: *${item.ocasion}* (${item.clima})\n` +
       `• Estilo: ${item.look.titulo}\n` +
-      `• Corte de cabello: ${item.look.pelo_sugerido}\n` +
-      `• Barba sugerida: ${item.look.barba_sugerida}\n` +
+      `• Corte o peinado: ${item.look.pelo_sugerido}\n` +
+      `• Rasgos / Estilo facial: ${item.look.barba_sugerida}\n` +
       `• Por qué funciona: "${item.look.porque}"\n\n` +
-      `Descubre tu sastre virtual en Tu Armario Inteligente.`;
+      `Descubre tu estilista personal virtual en Atelier Espejo.`;
 
     const shareUrl = `${window.location.origin}/?look=${encodeURIComponent(item.look.titulo)}&event=${encodeURIComponent(item.ocasion)}`;
 
@@ -255,7 +255,7 @@ export default function HistorialLooks({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t border-linea/60">
                               <div className="space-y-1">
                                 <span className="text-[8px] uppercase tracking-wider text-tinta-apagada/80 font-medium">
-                                  Corte de pelo sugerido
+                                  Corte o peinado sugerido
                                 </span>
                                 <p className="font-serif text-xs font-semibold text-tinta leading-snug">
                                   {item.look.pelo_sugerido}
@@ -263,7 +263,7 @@ export default function HistorialLooks({
                               </div>
                               <div className="space-y-1">
                                 <span className="text-[8px] uppercase tracking-wider text-tinta-apagada/80 font-medium">
-                                  Estructura de barba sugerida
+                                  Estilo facial / rasgos sugeridos
                                 </span>
                                 <p className="font-serif text-xs font-semibold text-tinta leading-snug">
                                   {item.look.barba_sugerida}

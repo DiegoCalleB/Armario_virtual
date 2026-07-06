@@ -391,7 +391,7 @@ app.post("/api/analizar-rostro", async (req, res) => {
             },
           },
           {
-            text: "Analiza esta foto de rostro masculino para un aseso de imagen exclusivo. Determina su forma de cara (ej: ovalada, cuadrada, redonda, alargada, triangular, diamante). Identifica su estilo de pelo actual y estilo de barba actual (o indica 'ninguno' si no tiene barba). Define un concepto de clave estilística única y sofisticada que capture su potencial de imagen. Todo el análisis debe ser en español castellano elegante. Responde estrictamente con el formato JSON definido en el esquema.",
+            text: "Analiza esta foto de rostro para un asesoramiento de imagen exclusivo, elegante y totalmente personalizado. El usuario puede ser de cualquier género (mujer, hombre, no binario, trans, etc.) y de cualquier edad (niños, jóvenes, adultos, mayores, etc.). Determina su forma de cara (ej: ovalada, cuadrada, redonda, alargada, triangular, diamante, etc.). Identifica su estilo de pelo actual y describe su estilo facial actual (pueden ser rasgos destacados, vello facial si tiene, maquillaje si lleva, gafas, accesorios o rasgos característicos; o indica 'despejado' si es piel limpia). Define un concepto de clave estilística única y sofisticada que capture su potencial de imagen. Todo el análisis debe ser en español castellano elegante. Responde estrictamente con el formato JSON definido en el esquema.",
           },
         ],
         config: {
@@ -409,7 +409,7 @@ app.post("/api/analizar-rostro", async (req, res) => {
               },
               barba_actual: {
                 type: Type.STRING,
-                description: "Descripción corta y elegante del estilo de barba actual.",
+                description: "Descripción corta y elegante del estilo facial actual (rasgos destacados, vello facial, maquillaje o piel despejada).",
               },
               clave: {
                 type: Type.STRING,
@@ -454,8 +454,8 @@ app.post("/api/analizar-prenda", async (req, res) => {
     const ai = getGenAI();
     const isMultiModeEnabled = isMulti === true || isMulti === "true";
     const promptText = isMultiModeEnabled
-      ? `Analiza detalladamente esta imagen de armario masculino o prenda de vestir. 
-Identifica CADA una de las prendas de vestir o calzado de hombre visibles de forma independiente.
+      ? `Analiza detalladamente esta imagen de armario o prenda de vestir (de cualquier estilo, público o género: mujer, hombre, unisex, trans, no binario, niños, mayores, etc.). 
+Identifica CADA una de las prendas de vestir o calzado visibles de forma independiente.
 
 - DETECCIÓN INDEPENDIENTE OBLIGATORIA: Si la imagen muestra a una persona vestida, un maniquí o un grupo de prendas juntas (ej: armario o ropa colgada), DEBES desglosar e identificar CADA una de las prendas por separado (ej: la chaqueta por un lado como 'top', la camisa por otro como 'top', los pantalones o vaqueros por otro como 'pantalon', los zapatos por otro como 'calzado'). Es de suma importancia que NO los agrupes en una sola prenda de armario.
 - REGLA CRÍTICA EXCLUSIÓN DE ACCESORIOS: Queda estrictamente PROHIBIDO detectar o extraer cualquier tipo de accesorio (tales como relojes, pulseras, joyas, gafas de sol o de vista, gorras, sombreros, cinturones, bolsos, mochilas, corbatas, bufandas, o pañuelos). No los incluyas bajo ningún concepto. Los accesorios se deben registrar de forma independiente por el usuario.
@@ -463,13 +463,13 @@ Identifica CADA una de las prendas de vestir o calzado de hombre visibles de for
 - Si la imagen contiene un único artículo de vestir o calzado aislado, lístalo como un único elemento en el array.
 
 Para cada prenda de ropa o calzado identificada de forma independiente, determina:
-1. Nombre de lujo sastrero y refinado en español (ej: "Americana estructurada marrón chocolate", "Pantalón chino beige de corte recto", "Zapatos Loafer de piel marrón oscura").
-2. Categoría: ÚNICAMENTE uno de estos tres valores: "top" (camisas, camisetas, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas) o "calzado" (zapatos, zapatillas, botas). ¡NO USAR la categoría 'accesorio' bajo ninguna circunstancia!
+1. Nombre de lujo sastrero y refinado en español (ej: "Americana estructurada marrón chocolate", "Vestido de cóctel plisado azul cobalto", "Pantalón de lino blanco", "Zapatos Loafer de piel marrón", "Zapatos de tacón kitten").
+2. Categoría: ÚNICAMENTE uno de estos tres valores: "top" (camisas, camisetas, blusas, vestidos, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas, faldas) o "calzado" (zapatos, zapatillas, botas, tacones). ¡NO USAR la categoría 'accesorio' bajo ninguna circunstancia!
 3. Color predominante en hexadecimal (ej: "#2C3E50").
 4. Formalidad del 1 al 5 (1: muy casual/deportivo, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
 5. Temporada: "verano", "invierno" o "todo".
 6. Tejido o material (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa", "Seda", "Punto/Knit").
-7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estilo Oxford", "Básico"]).
+7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estilo Oxford", "Básico", "Oversized"]).
 8. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0.0 a 1.0 (donde box_ymin es el borde superior como float (ej: 0.15), box_xmin el borde izquierdo (ej: 0.25), box_ymax el borde inferior (ej: 0.55) y box_xmax el borde derecho (ej: 0.75) de la prenda en la imagen).
 
 DIRECTRICES CRÍTICAS PARA LAS COORDENADAS (box_ymin, box_xmin, box_ymax, box_xmax):
@@ -483,17 +483,17 @@ DIRECTRICES CRÍTICAS PARA LAS COORDENADAS (box_ymin, box_xmin, box_ymax, box_xm
 - PROHIBIDO DEFINITIVO: No devuelvas las mismas coordenadas o las coordenadas de toda la imagen (0.0, 0.0, 1.0, 1.0) para más de una prenda. Si haces eso, el recorte de los pantalones saldrá con la foto de las camisetas, lo cual es incorrecto y confunde al usuario. Cada prenda debe tener su propia caja delimitadora exclusiva e impecable.
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
-      : `Analiza este artículo de ropa o calzado de hombre de la imagen de forma individual. 
+      : `Analiza este artículo de ropa o calzado de la imagen de forma individual (de cualquier estilo, público o género: mujer, hombre, unisex, trans, no binario, niños, mayores). 
 Identifica SOLO la prenda de vestir o el artículo de armario principal visible en la imagen como un elemento único del armario.
 
 Determina con precisión:
-1. Nombre elegante y refinado en español (ej: 'Americana estructurada marrón chocolate', 'Pantalón chino beige de corte recto', 'Zapatos Loafer de piel marrón oscura').
-2. Categoría de armario: "top" (camisas, camisetas, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas), "calzado" (zapatos, zapatillas, botas) o "accesorio" (reloj, pañuelo, gafas de sol, cinturón).
+1. Nombre elegante y refinado en español (ej: 'Americana estructurada marrón chocolate', 'Vestido fluido estampado floral', 'Pantalón chino de corte recto', 'Zapatos Loafer de piel', 'Tacones de salón clásicos').
+2. Categoría de armario: "top" (camisas, camisetas, blusas, vestidos, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas, faldas), "calzado" (zapatos, zapatillas, botas, tacones) o "accesorio" (reloj, pañuelo, gafas de sol, cinturón).
 3. Color predominante en formato hexadecimal (#HEX) (ej: '#1E3A8A').
 4. Formalidad del 1 al 5 (1: deportivo/muy casual, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
 5. Temporada idónea: "verano", "invierno" o "todo".
-6. Tejido o material de confección (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa").
-7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estructurado", "Básico"]).
+6. Tejido o material de confección (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa", "Seda", "Chifón").
+7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estructurado", "Básico", "Oversized"]).
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`;
 
@@ -880,11 +880,11 @@ No sugieras prendas de otras cápsulas a menos que sea estrictamente necesario p
       }
     }
 
-    const prompt = `Actúa como el estilista jefe de un salón de imagen masculina de lujo llamado ESPEJO.
-Analiza la fisionomía del usuario:
+    const prompt = `Actúa como el estilista jefe y director de visajismo del exclusivo Atelier de Imagen Unisex y Sastrería Digital ESPEJO, diseñado para todos los públicos sin distinción de género (mujeres, hombres, no binarios, trans, etc.) ni de edad (niños, jóvenes, adultos, mayores, etc.).
+Analiza la fisionomía y estilo del usuario:
 - Forma de cara: ${formaCara || "No especificada"}
 - Pelo actual: ${peloActual || "No especificado"}
-- Barba actual: ${barbaActual || "No especificada"}
+- Rasgos o estilo facial actual (barba, vello, maquillaje, accesorios o piel despejada): ${barbaActual || "No especificado"}
 
 ${perfilContext}
 
@@ -900,9 +900,9 @@ Tu tarea:
 1. Diseña de 2 a 3 looks sofisticados perfectos para la ocasión y el clima.
 2. Cada look DEBE componerse de prendas presentes en el inventario. Proporciona sus IDs exactos en el campo 'id_prendas'. ¡Está TOTALMENTE PROHIBIDO inventar IDs o incluir prendas que no estén en la lista de arriba!
 3. Explica detalladamente y en lenguaje editorial de alta costura el porqué de esta combinación ('porque'), relacionándolo con sus aspiraciones y diagnósticos estilísticos si se proporcionan en el perfil.
-4. Aconseja sobre el corte de cabello óptimo adaptado a su forma de cara ('pelo_sugerido') para estilizar su silueta. Si consideras que su peinado o corte actual ("${peloActual || "No especificado"}") ya es ideal y encaja de maravilla, indícalo expresamente afirmando que su estilo actual de pelo es perfecto y describe por qué.
-5. Aconseja sobre el estilo de barba óptimo adaptado a su rostro ('barba_sugerida') para balancear sus facciones. Si consideras que su barba actual o afeitado ("${barbaActual || "No especificado"}") ya es óptimo y armoniza a la perfección, indícalo expresamente diciendo que su estilo de barba actual es perfecto y describe por qué.
-6. Ofrece un truco o truco práctico del barbero ('consejo_barberia') para mantener o lucir este estilo.
+4. Aconseja sobre el corte de cabello o peinado óptimo adaptado a su forma de cara ('pelo_sugerido') para estilizar su silueta. Si consideras que su peinado o corte actual ("${peloActual || "No especificado"}") ya es ideal y encaja de maravilla, indícalo expresamente afirmando que su estilo actual de pelo es perfecto y describe por qué.
+5. Aconseja sobre el estilo facial o rasgos óptimos adaptados a su rostro ('barba_sugerida') para balancear sus facciones (vello facial, maquillaje sutil, diseño de cejas o accesorios según corresponda). Si consideras que su estilo facial o rasgos actuales ("${barbaActual || "No especificado"}") ya es óptimo y armoniza a la perfección, indícalo expresamente diciendo que su estilo facial actual es perfecto y describe por qué.
+6. Ofrece un truco práctico o consejo de estilismo y alta peluquería ('consejo_barberia') para mantener o lucir este estilo.
 
 Responde estrictamente utilizando el esquema de formato JSON siguiente.`;
 
@@ -939,11 +939,11 @@ Responde estrictamente utilizando el esquema de formato JSON siguiente.`;
                     },
                     barba_sugerida: {
                       type: Type.STRING,
-                      description: "Diseño de barba sugerido para su fisionomía.",
+                      description: "Diseño de estilo facial o rasgos sugeridos para su fisionomía.",
                     },
                     consejo_barberia: {
                       type: Type.STRING,
-                      description: "Truco práctico de barbería clásica (aplicación de ceras, aceites, perfilados, etc.) para este peinado/barba.",
+                      description: "Truco práctico de estilismo, peinado o cuidado facial (aplicación de ceras, peinados, perfilados, maquillaje, etc.).",
                     },
                   },
                   required: ["titulo", "id_prendas", "porque", "pelo_sugerido", "barba_sugerida", "consejo_barberia"],
@@ -1004,9 +1004,9 @@ Responde estrictamente utilizando el esquema de formato JSON siguiente.`;
             titulo: "Atuendo Espejo Classic (Local)",
             id_prendas: look1Ids,
             porque: `Combinación idónea extraída del armario para tu cita de ${ocasion} (${clima}). Balance de tonos con un acabado sobrio y simetrías elegantes.`,
-            pelo_sugerido: peloActual || "Corte clásico texturizado",
-            barba_sugerida: barbaActual || "Perfilado limpio de barbería",
-            consejo_barberia: "Aplica cera mate premium para estructurar el cabello sin brillo excesivo."
+            pelo_sugerido: peloActual || "Corte estructurado moderno",
+            barba_sugerida: barbaActual || "Estilo pulido y natural",
+            consejo_barberia: "Aplica cera o laca mate premium para estructurar el cabello con volumen natural."
           }
         ],
         _is_fallback: true
@@ -1017,9 +1017,9 @@ Responde estrictamente utilizando el esquema de formato JSON siguiente.`;
           titulo: "Casual Inteligente Espejo",
           id_prendas: look2Ids,
           porque: `Segunda propuesta sastrera coordinando prendas formales e informales de tu armario. Ideal para destacar en el evento de ${ocasion}.`,
-          pelo_sugerido: peloActual || "Corte clásico texturizado",
-          barba_sugerida: barbaActual || "Perfilado limpio de barbería",
-          consejo_barberia: "Utiliza un sérum hidratante de argán para nutrir y aportar suavidad al vello facial."
+          pelo_sugerido: peloActual || "Corte estructurado moderno",
+          barba_sugerida: barbaActual || "Estilo pulido y natural",
+          consejo_barberia: "Utiliza un sérum hidratante o aceite ligero de argán para aportar suavidad y brillo saludable."
         });
       }
 
@@ -1080,21 +1080,21 @@ ${descripcionPrendasDetallada}
 
 Drape these exact garments (shown in the subsequent input images) beautifully onto their body proportions, preserving the exact face, hair, gaze, hands, physique, and posture from the original picture. Copy their designs, patterns, textures, colors, and cuts directly from the garment images. Do NOT invent new clothing designs. Preserve the high-fashion background scene. Extremely photorealistic, high-fashion catalog magazine page quality.`;
       } else {
-        promptText = `Generate a photorealistic, full-body high-fashion editorial sartorial photograph of the same man shown in the first portrait face photo.
-His facial identity, eyes, lips, ethnicity, beard, hair style, age, and skeletal structure must be matched perfectly with the provided visage photograph.
-He must be standing elegantly in a stylish, full-body menswear posture, looking directly at the camera. He must be shown from head to toe.
-He is wearing this complete tailored outfit combination, whose exact photographs are provided as the subsequent input images:
+        promptText = `Generate a photorealistic, full-body high-fashion editorial photograph of the exact same person shown in the first portrait face photo.
+Their facial identity, eyes, lips, ethnicity, hair style, facial details, age, and skeletal structure must be matched perfectly with the provided visage photograph.
+They must be standing elegantly in a stylish, full-body high-fashion posture, looking directly at the camera. They must be shown from head to toe.
+They are wearing this complete tailored outfit combination, whose exact photographs are provided as the subsequent input images:
 ${descripcionPrendasDetallada}
 
-The generated outfit must match the specified garment photos with absolute precision, copying their exact patterns, prints, fabrics, colors, and styling cuts. Dress the person in the exact clothes shown in the subsequent images, rather than inventing generic clothes. The background is a tasteful, luxurious modern gentlemen's barber and sartorial atelier interior, with brass accents, warm wood paneling, and dramatic premium studio lighting. Focus on high-quality fabrics, professional tailoring drape, extremely sharp garment textures, and flawless visual style. High-fashion magazine editorial.`;
+The generated outfit must match the specified garment photos with absolute precision, copying their exact patterns, prints, fabrics, colors, and styling cuts. Dress the person in the exact clothes shown in the subsequent images, rather than inventing generic clothes. The background is a tasteful, luxurious modern high-end fashion atelier and design studio interior, with brass accents, warm organic wood paneling, and dramatic premium gallery lighting. Focus on high-quality fabrics, professional tailoring drape, extremely sharp garment textures, and flawless visual style. High-fashion magazine editorial.`;
       }
     } else {
-      promptText = `Generate a photorealistic, professional, high-fashion editorial portrait of this same man. Use the original photograph provided as the base.
-Modify only his hair and beard to match these styling guides perfectly:
-- Haircut suggested: "${estiloCabello}"
-- Facial hair / Beard suggested: "${estiloBarba}"
+      promptText = `Generate a photorealistic, professional, high-fashion editorial portrait of this exact same person. Use the original photograph provided as the base.
+Modify only their hair and facial styling to match these styling guides perfectly:
+- Hair/Haircut suggested: "${estiloCabello}"
+- Facial style / details suggested: "${estiloBarba}"
 
-Maintain his exact identity, eyes, lips, ethnicity, age, bone structure, and facial likeness from the original image. He should look neatly groomed, handsome, stylish, in a warm, dark, premium luxury barber shop interior backdrop with subtle brass and mahogany warm wood lighting. Output should be high quality, sharp, balanced contrast, as a clean editorial magazine portrait picture.`;
+Maintain their exact identity, eyes, lips, ethnicity, age, bone structure, and facial likeness from the original image. They should look neatly groomed, stylish, in a warm, sophisticated, premium luxury design atelier and styling salon interior backdrop with subtle brass and walnut warm lighting. Output should be high quality, sharp, balanced contrast, as a clean editorial magazine portrait picture.`;
     }
 
     const parts: any[] = [
@@ -1494,7 +1494,7 @@ Responde obligatoriamente en estricto formato JSON, siguiendo el esquema estruct
                     },
                     consejo_estilovital: {
                       type: Type.STRING,
-                      description: "Consejo de estilo rápido de barbero/sastre clásico.",
+                      description: "Consejo de estilo rápido de estilista / asesor de imagen personal.",
                     },
                   },
                   required: ["prenda_sugerida", "categoria", "por_que_falta", "consejo_estilovital"],
@@ -1736,8 +1736,8 @@ app.post("/api/analizar-compras", async (req, res) => {
 
     const perfilContext = compilePerfilContext(perfilEstilo);
 
-    const promptText = `Actúas como un cazador de tendencias (Trend Forecaster) y Personal Shopper de alta costura masculina de la sastrería ESPEJO.
-Estudia la colección actual de este armario y elabora un informe para guiarlo e influir en su próxima inversión de moda en función de su perfil personal, silueta y deseos:
+    const promptText = `Actúas como un cazador de tendencias (Trend Forecaster) y Personal Shopper de alta costura y estilismo unisex y personalizado del atelier de imagen ESPEJO (atendiendo a mujeres, hombres, personas no binarias, trans, jóvenes, niños y mayores por igual).
+Estudia la colección actual de este armario y elabora un informe para guiarle en su próxima inversión de moda en función de su perfil personal, silueta y deseos:
 
 ${perfilContext}
 
@@ -1746,10 +1746,10 @@ ${inventoryText}
 
 Identifica de forma meticulosa e inteligente:
 1. 'basicos_faltantes': De 2 a 3 prendas de vestir básicas o de fondo de armario que el usuario no tiene y que multiplicarían exponencialmente sus combinaciones ("multiplicadores de armario"), enfocados 100% en complementar lo que realmente necesita según su perfil.
-   Para cada básico faltante, genera también 2 o 3 opciones reales o simuladas de marcas reconocidas disponibles en plataformas multimarca (como Zalando, ASOS, Zara, Massimo Dutti, Mango Man) con marcas de calidad, precios aproximados, y el término de búsqueda exacto idóneo para encontrarlos.
-2. 'analisis_capsula': Un análisis editorial de 1-2 párrafos que asigne un "estilo de tendencia de alta gama" idóneo para su perfil actual (como Quiet Luxury, Neo-Sartorial core, Athletic Preppy, o Heritage Workwear) detallando qué siluetas debería buscar y por qué encaja con su personalidad.
+   Para cada básico faltante, genera también 2 o 3 opciones reales o simuladas de marcas reconocidas disponibles en plataformas multimarca (como Zalando, ASOS, Zara, Massimo Dutti, Mango, Uniqlo, COS, H&M, etc.) con marcas de calidad, precios aproximados, y el término de búsqueda exacto idóneo para encontrarlos.
+2. 'analisis_capsula': Un análisis editorial de 1-2 párrafos que asigne un "estilo de tendencia de alta gama" idóneo para su perfil actual (como Quiet Luxury, Neo-Sartorial core, Athletic Preppy, Heritage, Boho Chic, o Minimalist Tailoring) detallando qué siluetas debería buscar y por qué encaja con su personalidad.
 3. 'proxima_compra_estrella': Una sola sugerencia sumamente detallada e ideal para su próxima adquisición estrella que resolvería su vestimenta para alcanzar su Estilo Objetivo.
-   Para esta compra estrella, genera también 2 o 3 opciones recomendadas de marcas reconocidas disponibles en plataformas multimarca (Zalando, ASOS, etc.) con sus precios aproximados y términos de búsqueda exactos.
+   Para esta compra estrella, genera también 2 o 3 opciones recomendadas de marcas reconocidas disponibles en plataformas multimarca (Zalando, ASOS, Uniqlo, etc.) con sus precios aproximados y términos de búsqueda exactos.
 
 Responde estrictamente con el formato JSON definido en el esquema.`;
 
