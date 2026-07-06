@@ -276,7 +276,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
               value={formaSer}
               onChange={(e) => setFormaSer(e.target.value)}
               placeholder="Ej: Emprendedor tecnológico, minimalista práctico, creativo..."
-              className="w-full bg-fondo/80 border border-linea rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-laton font-sans"
+              className="w-full bg-fondo/80 border border-linea rounded px-3 py-2 text-xs text-tinta focus:outline-none focus:border-laton font-sans"
             />
           </div>
 
@@ -290,7 +290,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
               value={estiloObjetivo}
               onChange={(e) => setEstiloObjetivo(e.target.value)}
               placeholder="Ej: Conseguir un look smart-casual profesional pero moderno"
-              className="w-full bg-fondo/80 border border-linea rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-laton font-sans"
+              className="w-full bg-fondo/80 border border-linea rounded px-3 py-2 text-xs text-tinta focus:outline-none focus:border-laton font-sans"
             />
           </div>
 
@@ -306,10 +306,10 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
                 { label: "Tendencias", value: "Fast Fashion: Conocer tendencias rápidamente" }
               ].map((item) => (
                 <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setEstiloPresupuesto(item.value)}
-                  className={`p-2 rounded text-[10px] text-center transition text-white border transition-all duration-200 cursor-pointer ${
+                   key={item.value}
+                   type="button"
+                   onClick={() => setEstiloPresupuesto(item.value)}
+                   className={`p-2 rounded text-[10px] text-center transition text-tinta border transition-all duration-200 cursor-pointer ${
                     estiloPresupuesto === item.value
                       ? "bg-laton/20 border-laton text-laton font-medium"
                       : "bg-fondo/40 border-linea/60 hover:border-laton/50"
@@ -332,7 +332,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
               onChange={(e) => setDetallesLibres(e.target.value)}
               rows={4}
               placeholder="Escribe libremente... Ej: 'No me gustan los cuellos altos. Me encantan los abrigos estructurados de sastre. Busco colores que resalten mi tez clara. Prefiero prendas fáciles de planchar.'"
-              className="w-full bg-fondo/80 border border-linea rounded p-3 text-xs text-white focus:outline-none focus:border-laton leading-relaxed font-sans placeholder-tinta-apagada/40 resize-none"
+              className="w-full bg-fondo/80 border border-linea rounded p-3 text-xs text-tinta focus:outline-none focus:border-laton leading-relaxed font-sans placeholder-tinta-apagada/40 resize-none"
             />
           </div>
         </div>
@@ -366,17 +366,17 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-laton/5 border border-laton/20 p-4 rounded-lg flex items-start gap-2.5 text-xs font-mono text-amber-200/90"
+          className="bg-laton/5 border border-laton/20 p-4 rounded-lg flex items-start gap-2.5 text-xs font-mono text-tinta-apagada"
         >
           <Sparkles size={14} className="text-laton animate-pulse mt-0.5 shrink-0" />
           <div>
-            <span className="text-white uppercase font-bold text-[10px] tracking-widest block mb-1">
+            <span className="text-tinta uppercase font-bold text-[10px] tracking-widest block mb-1">
               Fórmula de Diagnóstico Activa
             </span>
             <span>
               La IA ahora coordinará tu corte, tus looks de fiesta, tu maleta cápsula y tus compras basándose en un perfil de tipo 
-              <strong className="text-laton"> {estiloVibe || "Personalizado"}</strong> persiguiendo un objetivo de 
-              <strong className="text-white"> {estiloObjetivo || "Elegancia natural"}</strong>.
+              <strong className="text-laton font-bold"> {estiloVibe || "Personalizado"}</strong> persiguiendo un objetivo de 
+              <strong className="text-tinta font-bold"> {estiloObjetivo || "Elegancia natural"}</strong>.
             </span>
           </div>
         </motion.div>

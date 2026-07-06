@@ -1616,7 +1616,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                               }
                             }
                           }}
-                          className="text-[10px] text-laton hover:text-white uppercase font-bold tracking-wider flex items-center gap-1"
+                          className="text-[10px] text-laton hover:text-laton-apagado uppercase font-bold tracking-wider flex items-center gap-1"
                         >
                           <RefreshCw size={10} /> Sincronizar
                         </button>
@@ -1758,7 +1758,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           setGphotosConnected(true);
                           setError(null);
                         }}
-                        className="px-4 py-2 bg-tarjeta text-tinta-apagada hover:text-white border border-linea hover:border-laton font-bold text-xs uppercase tracking-widest rounded transition duration-200 shadow-md"
+                        className="px-4 py-2 bg-tarjeta text-tinta-apagada hover:text-tinta border border-linea hover:border-laton font-bold text-xs uppercase tracking-widest rounded transition duration-200 shadow-md"
                       >
                         Modo Demostración
                       </button>
@@ -1907,7 +1907,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               <button
                 type="button"
                 onClick={handleCrearArmario}
-                className="text-[9px] font-extrabold text-[#18181B] hover:text-white transition flex items-center gap-1 uppercase tracking-wider"
+                className="text-[9px] font-extrabold text-[#18181B] hover:text-laton-apagado transition flex items-center gap-1 uppercase tracking-wider"
               >
                 <Plus size={10} /> Crear Armario
               </button>

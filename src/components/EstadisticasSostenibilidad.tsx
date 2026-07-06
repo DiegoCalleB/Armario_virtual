@@ -168,7 +168,7 @@ export default function EstadisticasSostenibilidad({
           <TrendingDown size={11} className="text-laton animate-pulse" />
           <span>Sartorial Finances & Cost-per-Wear Tracker</span>
         </div>
-        <h2 className="font-serif text-2xl font-bold tracking-tight text-white animate-fade-in">
+        <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta animate-fade-in">
           Coste Por Uso (CPW) y Sostenibilidad
         </h2>
         <p className="text-xs text-tinta-apagada max-w-xl mx-auto mt-1 leading-relaxed">
@@ -180,13 +180,13 @@ export default function EstadisticasSostenibilidad({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-tarjeta/40 border border-linea/60 rounded-xl p-4 space-y-1">
           <span className="text-[8px] uppercase tracking-wider text-laton font-bold block">Valor Total Invertido</span>
-          <p className="text-2xl font-serif font-black text-white">{totalInvertido.toFixed(2)} €</p>
+          <p className="text-2xl font-serif font-black text-tinta">{totalInvertido.toFixed(2)} €</p>
           <p className="text-[10px] text-tinta-apagada">Suma de todas las adquisiciones registradas.</p>
         </div>
 
         <div className="bg-tarjeta/40 border border-linea/60 rounded-xl p-4 space-y-1">
           <span className="text-[8px] uppercase tracking-wider text-laton font-bold block">Total Usos Registrados</span>
-          <p className="text-2xl font-serif font-black text-white">{totalUsos} usos</p>
+          <p className="text-2xl font-serif font-black text-tinta">{totalUsos} usos</p>
           <p className="text-[10px] text-tinta-apagada">Incrementado automáticamente al marcar looks.</p>
         </div>
 
@@ -197,18 +197,18 @@ export default function EstadisticasSostenibilidad({
         </div>
 
         {/* ECO-SCORE BENTO BLOCK */}
-        <div className="bg-[#1a2321] border border-emerald-900/30 rounded-xl p-4 flex flex-col justify-between">
+        <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
-              <span className="text-[8px] uppercase tracking-wider text-emerald-400 font-bold">Índice Circular y Eco-Score</span>
-              <ShieldCheck size={14} className="text-emerald-400" />
+              <span className="text-[8px] uppercase tracking-wider text-emerald-800 font-bold">Índice Circular y Eco-Score</span>
+              <ShieldCheck size={14} className="text-emerald-700" />
             </div>
-            <p className="text-2xl font-serif font-black text-emerald-300 mt-1">{ecoScore} / 100</p>
+            <p className="text-2xl font-serif font-black text-emerald-800 mt-1">{ecoScore} / 100</p>
           </div>
-          <div className="w-full bg-emerald-950 rounded-full h-1.5 mt-2 overflow-hidden border border-emerald-900/40">
-            <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${ecoScore}%` }} />
+          <div className="w-full bg-emerald-100 rounded-full h-1.5 mt-2 overflow-hidden border border-emerald-200">
+            <div className="bg-emerald-600 h-1.5 rounded-full" style={{ width: `${ecoScore}%` }} />
           </div>
-          <p className="text-[9px] text-emerald-200/60 mt-1 leading-tight">
+          <p className="text-[9px] text-emerald-800/80 mt-1 leading-tight">
             Premia fibras naturales nobles (lana, seda, lino) y alta frecuencia de uso de tus prendas.
           </p>
         </div>
@@ -222,7 +222,7 @@ export default function EstadisticasSostenibilidad({
             <div className="p-1 rounded bg-amber-500/10 text-laton">
               <Award size={14} />
             </div>
-            <h3 className="font-serif text-sm font-semibold text-white">Prendas Más Amortizadas (Héroes del Armario)</h3>
+            <h3 className="font-serif text-sm font-semibold text-tinta">Prendas Más Amortizadas (Héroes del Armario)</h3>
           </div>
 
           {heroesAmortizados.length === 0 ? (
@@ -230,7 +230,7 @@ export default function EstadisticasSostenibilidad({
           ) : (
             <div className="space-y-2">
               {heroesAmortizados.map((p) => (
-                <div key={p.id} className="bg-black/30 border border-linea/40 p-2.5 rounded-lg flex items-center justify-between gap-3">
+                <div key={p.id} className="bg-fondo hover:bg-fondo2/50 border border-linea p-2.5 rounded-lg flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-9 h-9 bg-fondo border border-linea rounded overflow-hidden flex-shrink-0">
                       {p.imageSrc ? (
@@ -242,13 +242,13 @@ export default function EstadisticasSostenibilidad({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-white truncate">{p.nombre}</p>
+                      <p className="text-[11px] font-bold text-tinta truncate">{p.nombre}</p>
                       <p className="text-[9px] text-tinta-apagada font-mono uppercase">{p.categoria} • {p.veces_puesto} usos</p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-[8px] uppercase tracking-wider text-emerald-400 font-bold block">Coste/Uso</span>
-                    <span className="text-xs font-mono font-bold text-emerald-300">{getCPW(p).toFixed(2)} €</span>
+                    <span className="text-[8px] uppercase tracking-wider text-emerald-700 font-bold block">Coste/Uso</span>
+                    <span className="text-xs font-mono font-bold text-emerald-700">{getCPW(p).toFixed(2)} €</span>
                   </div>
                 </div>
               ))}
@@ -259,10 +259,10 @@ export default function EstadisticasSostenibilidad({
         {/* FORGOTTEN / UNDERUTILIZED */}
         <div className="bg-tarjeta/40 border border-linea/60 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="p-1 rounded bg-red-500/10 text-red-400">
+            <div className="p-1 rounded bg-red-500/10 text-red-600">
               <AlertCircle size={14} />
             </div>
-            <h3 className="font-serif text-sm font-semibold text-white">Prendas Olvidadas u Costosas</h3>
+            <h3 className="font-serif text-sm font-semibold text-tinta">Prendas Olvidadas u Costosas</h3>
           </div>
 
           {prendasOlvidadas.length === 0 ? (
@@ -270,7 +270,7 @@ export default function EstadisticasSostenibilidad({
           ) : (
             <div className="space-y-2">
               {prendasOlvidadas.map((p) => (
-                <div key={p.id} className="bg-black/30 border border-linea/40 p-2.5 rounded-lg flex items-center justify-between gap-3">
+                <div key={p.id} className="bg-fondo hover:bg-fondo2/50 border border-linea p-2.5 rounded-lg flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-9 h-9 bg-fondo border border-linea rounded overflow-hidden flex-shrink-0">
                       {p.imageSrc ? (
@@ -282,13 +282,13 @@ export default function EstadisticasSostenibilidad({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-white truncate">{p.nombre}</p>
+                      <p className="text-[11px] font-bold text-tinta truncate">{p.nombre}</p>
                       <p className="text-[9px] text-tinta-apagada font-mono uppercase">{p.categoria} • {p.veces_puesto || 0} usos</p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-[8px] uppercase tracking-wider text-red-400 font-bold block">Coste/Uso</span>
-                    <span className="text-xs font-mono font-bold text-red-300">{getCPW(p).toFixed(2)} €</span>
+                    <span className="text-[8px] uppercase tracking-wider text-red-600 font-bold block">Coste/Uso</span>
+                    <span className="text-xs font-mono font-bold text-red-600">{getCPW(p).toFixed(2)} €</span>
                   </div>
                 </div>
               ))}
@@ -304,11 +304,11 @@ export default function EstadisticasSostenibilidad({
         </div>
         <div className="flex items-center gap-2 relative z-10">
           <Sparkles size={16} className="text-laton animate-pulse" />
-          <h3 className="font-serif text-sm font-bold text-white">Análisis Financiero de Sastre AI</h3>
+          <h3 className="font-serif text-sm font-bold text-tinta">Análisis Financiero de Sastre AI</h3>
         </div>
 
         {aiAdvice ? (
-          <p className="text-xs text-tinta leading-relaxed font-serif italic bg-black/25 p-3 rounded border border-linea/40 animate-fade-in relative z-10">
+          <p className="text-xs text-tinta leading-relaxed font-serif italic bg-[#F4F4F5] p-3 rounded border border-linea animate-fade-in relative z-10">
             {aiAdvice}
           </p>
         ) : (
@@ -319,7 +319,7 @@ export default function EstadisticasSostenibilidad({
             <button
               onClick={handleFetchAiFinance}
               disabled={loadingAdvice}
-              className="py-1.5 px-3.5 bg-laton hover:bg-white text-fondo font-bold uppercase tracking-wider rounded text-[9.5px] transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="py-1.5 px-3.5 bg-[#18181B] hover:bg-black text-white font-bold uppercase tracking-wider rounded text-[9.5px] transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {loadingAdvice ? (
                 <>
@@ -340,7 +340,7 @@ export default function EstadisticasSostenibilidad({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers size={14} className="text-laton" />
-            <h3 className="font-serif text-sm font-semibold text-white">Administrador de Precios y Fibras</h3>
+            <h3 className="font-serif text-sm font-semibold text-tinta">Administrador de Precios y Fibras</h3>
           </div>
           <span className="text-[9px] text-tinta-apagada font-mono uppercase">CLOSET DATABASE ({armario.length} ITEMS)</span>
         </div>
@@ -367,7 +367,7 @@ export default function EstadisticasSostenibilidad({
                   const currentCPW = getCPW(p);
 
                   return (
-                    <tr key={p.id} className="hover:bg-white/5 transition duration-150">
+                    <tr key={p.id} className="hover:bg-fondo2/30 transition duration-150">
                       <td className="py-3 flex items-center gap-2.5 max-w-[180px]">
                         <div className="w-7 h-7 bg-fondo border border-linea rounded overflow-hidden flex-shrink-0">
                           {p.imageSrc ? (
@@ -376,7 +376,7 @@ export default function EstadisticasSostenibilidad({
                             <div className="w-full h-full" style={{ backgroundColor: p.color }} />
                           )}
                         </div>
-                        <span className="font-medium text-white truncate text-[11px]">{p.nombre}</span>
+                        <span className="font-medium text-tinta truncate text-[11px]">{p.nombre}</span>
                       </td>
 
                       <td className="py-3 text-[10px] text-tinta-apagada font-mono uppercase">
@@ -389,7 +389,7 @@ export default function EstadisticasSostenibilidad({
                             type="text"
                             value={editMaterial}
                             onChange={(e) => setEditMaterial(e.target.value)}
-                            className="bg-fondo border border-linea rounded px-1.5 py-0.5 text-xs text-white w-24 focus:outline-none focus:border-laton"
+                            className="bg-fondo border border-linea rounded px-1.5 py-0.5 text-xs text-tinta w-24 focus:outline-none focus:border-laton"
                           />
                         ) : (
                           p.composicion_tejido || p.tejido || "Algodón"
@@ -402,7 +402,7 @@ export default function EstadisticasSostenibilidad({
                             type="number"
                             value={editPrice}
                             onChange={(e) => setEditPrice(e.target.value)}
-                            className="bg-fondo border border-linea rounded px-1.5 py-0.5 text-xs text-white w-16 focus:outline-none focus:border-laton font-mono"
+                            className="bg-fondo border border-linea rounded px-1.5 py-0.5 text-xs text-tinta w-16 focus:outline-none focus:border-laton font-mono"
                           />
                         ) : p.precio_compra !== undefined ? (
                           `${p.precio_compra.toFixed(2)} €`
@@ -411,13 +411,13 @@ export default function EstadisticasSostenibilidad({
                         )}
                       </td>
 
-                      <td className="py-3 font-mono text-white">
+                      <td className="py-3 font-mono text-tinta">
                         {isEditing ? (
                           <input
                             type="number"
                             value={editWorn}
                             onChange={(e) => setEditWorn(e.target.value)}
-                            className="bg-fondo border border-linea rounded px-1.5 py-0.5 text-xs text-white w-14 focus:outline-none focus:border-laton font-mono"
+                            className="bg-fondo border border-linea rounded px-1.5 py-0.5 text-xs text-tinta w-14 focus:outline-none focus:border-laton font-mono"
                           />
                         ) : (
                           p.veces_puesto || 0
@@ -426,7 +426,7 @@ export default function EstadisticasSostenibilidad({
 
                       <td className="py-3 font-mono font-bold">
                         {currentCPW > 0 ? (
-                          <span className={currentCPW < 10 ? "text-emerald-400" : currentCPW < 30 ? "text-amber-400" : "text-white"}>
+                          <span className={currentCPW < 10 ? "text-emerald-700" : currentCPW < 30 ? "text-amber-700" : "text-tinta"}>
                             {currentCPW.toFixed(2)} €
                           </span>
                         ) : (
@@ -438,7 +438,7 @@ export default function EstadisticasSostenibilidad({
                         {isEditing ? (
                           <button
                             onClick={() => saveEdits(p.id)}
-                            className="p-1 bg-laton text-fondo rounded hover:bg-white transition"
+                            className="p-1 bg-laton text-white rounded hover:bg-white/80 transition"
                             title="Guardar"
                           >
                             <Check size={11} />

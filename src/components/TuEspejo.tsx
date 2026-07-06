@@ -244,7 +244,7 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
             </div>
             
             {error && (
-              <div className="mt-4 flex items-center gap-2 p-3 bg-red-950/20 border border-red-900/30 text-red-300 text-xs rounded">
+              <div className="mt-4 flex items-center gap-2 p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded">
                 <AlertCircle size={14} className="shrink-0" />
                 <span>{error}</span>
               </div>

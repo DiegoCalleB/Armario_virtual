@@ -94,7 +94,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
           <Briefcase size={11} className="text-laton" />
           <span>Equipaje de Cápsula Minimalista</span>
         </div>
-        <h2 className="font-serif text-2xl font-bold tracking-tight text-white">
+        <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">
           Asistente de Maletas Inteligente
         </h2>
         <p className="text-xs text-tinta-apagada max-w-xl mx-auto mt-1">
@@ -105,7 +105,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Side Column - Config Form */}
         <div className="lg:col-span-5 bg-tarjeta border border-linea rounded p-5 space-y-4">
-          <h3 className="font-serif text-sm font-bold text-white border-b border-linea/60 pb-2 flex items-center gap-2">
+          <h3 className="font-serif text-sm font-bold text-tinta border-b border-linea/60 pb-2 flex items-center gap-2">
             Planificar Ruta de Viaje
           </h3>
 
@@ -139,7 +139,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                   onChange={(e) => setDias(Number(e.target.value))}
                   className="w-full accent-laton bg-linea cursor-pointer"
                 />
-                <span className="font-serif text-sm font-bold text-white bg-linea/60 px-3 py-1 rounded min-w-[50px] text-center border border-linea/20">
+                <span className="font-serif text-sm font-bold text-tinta bg-fondo px-3 py-1 rounded min-w-[50px] text-center border border-linea/20">
                   {dias} {dias === 1 ? "día" : "días"}
                 </span>
               </div>
@@ -177,7 +177,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
             </div>
 
             {error && (
-              <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-200 rounded text-[11px] leading-normal font-sans">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded text-[11px] leading-normal font-sans">
                 {error}
               </div>
             )}
@@ -188,7 +188,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
               className={`w-full py-3 px-4 font-serif text-xs font-bold uppercase tracking-widest rounded flex items-center justify-center gap-2 border shadow-lg cursor-pointer transition-all ${
                 loading
                   ? "bg-tarjeta border-linea text-tinta-apagada"
-                  : "bg-laton/15 border-laton/40 text-laton hover:bg-laton/25 hover:border-laton/60 active:scale-[0.98]"
+                  : "bg-laton/15 border-laton/40 text-[#18181B] hover:bg-laton/25 hover:border-laton/60 active:scale-[0.98]"
               }`}
             >
               {loading ? (
@@ -217,7 +217,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                 className="h-full flex flex-col items-center justify-center border border-linea/60 bg-tarjeta rounded p-8 text-center"
               >
                 <Briefcase size={40} className="text-laton-apagado animate-bounce mb-3" />
-                <h4 className="font-serif text-sm font-semibold text-white">Sastrería de Equipajes Activa</h4>
+                <h4 className="font-serif text-sm font-semibold text-tinta">Sastrería de Equipajes Activa</h4>
                 <p className="text-[11px] text-tinta-apagada max-w-[280px] mt-1 leading-relaxed">
                   Evaluando la cohesión térmica de tus prendas e ideando outfits atemporales para vestir en {destino || "tu viaje"}. Por favor espera un momento bajo el hilo del Gemini-3.5 master...
                 </p>
@@ -235,7 +235,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                       <MapPin size={18} />
                     </div>
                     <div>
-                      <h4 className="font-serif text-base font-bold text-white tracking-tight">
+                      <h4 className="font-serif text-base font-bold text-tinta tracking-tight">
                         Cuaderno de Viaje: {destino}
                       </h4>
                       <p className="text-[11px] text-tinta-apagada/80 leading-relaxed font-sans mt-1">
@@ -247,7 +247,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
 
                 {/* Seleccion de Prendas Reales */}
                 <div className="bg-tarjeta border border-linea rounded p-5 space-y-3">
-                  <h4 className="font-serif text-xs font-bold text-white uppercase tracking-wider pb-1 border-b border-linea/60 flex items-center gap-1.5">
+                  <h4 className="font-serif text-xs font-bold text-tinta uppercase tracking-wider pb-1 border-b border-linea/60 flex items-center gap-1.5">
                     <CheckCircle size={13} className="text-[#18181B]" />
                     <span>Prendas de tu Armario para Empacar ({result.prendas_seleccionadas.length})</span>
                   </h4>
@@ -267,7 +267,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                             className="w-14 h-14 object-cover rounded bg-fondo2 border border-linea/30"
                             referrerPolicy="no-referrer"
                           />
-                          <p className="text-[10px] text-white font-medium line-clamp-1 w-full" title={p.nombre}>
+                          <p className="text-[10px] text-tinta font-medium line-clamp-1 w-full" title={p.nombre}>
                             {p.nombre}
                           </p>
                           <span className="text-[8px] uppercase tracking-wider text-laton/80 font-mono">
@@ -287,7 +287,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                         <div key={idx} className="text-[10.5px] leading-relaxed flex gap-1.5">
                           <span className="text-laton font-serif shrink-0 font-bold">•</span>
                           <span className="text-tinta">
-                            <strong className="text-white">{p.nombre}:</strong> {just.motivo_seleccion}
+                            <strong className="text-tinta font-bold">{p.nombre}:</strong> {just.motivo_seleccion}
                           </span>
                         </div>
                       );
@@ -297,7 +297,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
 
                 {/* Daily Combinations */}
                 <div className="bg-tarjeta border border-linea rounded p-5 space-y-3">
-                  <h4 className="font-serif text-xs font-bold text-white uppercase tracking-wider pb-1 border-b border-linea/60 flex items-center gap-1.5">
+                  <h4 className="font-serif text-xs font-bold text-tinta uppercase tracking-wider pb-1 border-b border-linea/60 flex items-center gap-1.5">
                     <Flame size={13} className="text-[#18181B]" />
                     <span>Propuestas de Outfit por Jornada ({result.combinaciones.length})</span>
                   </h4>
@@ -312,7 +312,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                           <span className="font-serif text-sm font-semibold text-laton">
                             Día {comb.dia_numero}
                           </span>
-                          <span className="text-[10px] text-white/90 bg-linea/60 px-2 py-0.5 rounded font-sans font-medium">
+                          <span className="text-[10px] text-tinta-apagada bg-fondo border border-linea px-2 py-0.5 rounded font-sans font-medium">
                             {comb.titulo_actividad}
                           </span>
                         </div>
@@ -348,7 +348,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
 
                 {/* Extras Checklist Recommendations */}
                 <div className="bg-tarjeta border border-linea rounded p-5 space-y-3">
-                  <h4 className="font-serif text-xs font-bold text-white uppercase tracking-wider pb-1 border-b border-linea/60">
+                  <h4 className="font-serif text-xs font-bold text-tinta uppercase tracking-wider pb-1 border-b border-linea/60">
                     Sugerencias Sencillas y Equipaje Extra
                   </h4>
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10.5px] text-tinta-apagada leading-normal">
@@ -364,7 +364,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
             ) : (
               <div className="h-full min-h-[400px] flex flex-col items-center justify-center border border-dashed border-linea rounded text-center p-8 bg-tarjeta/40">
                 <Briefcase size={44} className="text-tinta-apagada/40 mb-3" />
-                <h4 className="font-serif text-sm font-semibold text-white/80">Maleta en Blanco</h4>
+                <h4 className="font-serif text-sm font-semibold text-tinta">Maleta en Blanco</h4>
                 <p className="text-[11.5px] text-tinta-apagada max-w-xs mt-1 leading-relaxed">
                   Completa el panel de control de viaje a la izquierda y presiona el botón dorado para planificar tu maleta utilizando las prendas reales de tu armario.
                 </p>

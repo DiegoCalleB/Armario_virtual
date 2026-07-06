@@ -95,7 +95,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
           <TrendingUp size={11} className="text-laton" />
           <span>Personal Shopper & Multi-Brand Connector</span>
         </div>
-        <h2 className="font-serif text-2xl font-bold tracking-tight text-white animate-fade-in">
+        <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta animate-fade-in">
           Asesor de Compras y Tendencias
         </h2>
         <p className="text-xs text-tinta-apagada max-w-xl mx-auto mt-1 leading-relaxed">
@@ -115,20 +115,20 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
             <div className="w-14 h-14 rounded-full bg-[#F4F4F5] border border-laton/20 flex items-center justify-center text-laton">
               <ShoppingBag size={24} />
             </div>
-            <h3 className="font-serif text-base font-bold text-white">¿Qué básicos faltan en tu armario?</h3>
+            <h3 className="font-serif text-base font-bold text-tinta">¿Qué básicos faltan en tu armario?</h3>
             <p className="text-xs text-tinta-apagada leading-relaxed max-w-sm">
               Conectar tu armario actual con Gemini permite simular un escáner de combinaciones. Descubrirás prendas conectoras clave y obtendrás enlaces de búsqueda directos a las mejores tiendas de moda.
             </p>
 
             {error && (
-              <p className="text-[11px] text-red-300 bg-red-950/30 px-3 py-2 rounded leading-tight border border-red-900/40">
+              <p className="text-[11px] text-red-600 bg-red-50 px-3 py-2 rounded leading-tight border border-red-200">
                 {error}
               </p>
             )}
 
             <button
               onClick={handleAnalizarCompras}
-              className="button-press py-3 px-5 font-serif text-xs font-bold uppercase tracking-widest rounded bg-laton/15 border border-laton/40 text-laton hover:bg-laton/25 hover:border-laton/60 shadow-md cursor-pointer transition-all flex items-center gap-2"
+              className="button-press py-3 px-5 font-serif text-xs font-bold uppercase tracking-widest rounded bg-laton/15 border border-laton/40 text-[#18181B] hover:bg-laton/25 hover:border-laton/60 shadow-md cursor-pointer transition-all flex items-center gap-2"
             >
               <Sparkles size={12} className="animate-pulse" />
               <span>Generar Informe de Inversión</span>
@@ -147,7 +147,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
               <div className="absolute inset-0 rounded-full border-2 border-laton border-t-transparent animate-spin" />
               <Scissors size={24} className="text-laton animate-pulse" />
             </div>
-            <h4 className="font-serif text-sm font-semibold text-white">Hilvanando Análisis de Tendencias</h4>
+            <h4 className="font-serif text-sm font-semibold text-tinta">Hilvanando Análisis de Tendencias</h4>
             <p className="text-xs text-tinta-apagada max-w-xs leading-relaxed mt-1">
               Escaneando la composición cromática... Buscando alternativas en catálogos multimarca de Zalando y ASOS... Redactando veredicto de Slow Fashion...
             </p>
@@ -166,7 +166,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
               <div className="bg-tarjeta border border-linea rounded p-5 space-y-3.5">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-laton" />
-                  <h3 className="font-serif text-sm font-bold text-white uppercase tracking-wider">
+                  <h3 className="font-serif text-sm font-bold text-tinta uppercase tracking-wider">
                     Veredicto Editorial de Macrotendencias
                   </h3>
                 </div>
@@ -177,12 +177,12 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
 
               {/* Absolute Star Next Purchase Spotlight */}
               {result?.proxima_compra_estrella && (
-                <div className="bg-[#1c1811] border border-laton/30 rounded-lg p-5 relative overflow-hidden space-y-4">
-                  {/* Decorative gold background shine overlay */}
+                <div className="bg-laton/5 border border-linea rounded-lg p-5 relative overflow-hidden space-y-4">
+                  {/* Decorative soft background shine overlay */}
                   <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-laton/5 filter blur-xl pointer-events-none" />
                   
                   <div className="flex items-center justify-between relative z-10">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-laton/20 text-laton text-[9px] font-bold uppercase tracking-widest border border-laton/30">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-laton/15 text-[#18181B] text-[9px] font-bold uppercase tracking-widest border border-linea">
                       <Lightbulb size={10} className="text-laton" />
                       <span>PRÓXIMA ADQUISICIÓN CLAVE</span>
                     </div>
@@ -195,27 +195,27 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                     <span className="text-[9.5px] font-bold uppercase tracking-wider text-laton/80 block">
                       {result.proxima_compra_estrella.tipo}
                     </span>
-                    <h4 className="font-serif text-lg font-bold text-white leading-tight">
+                    <h4 className="font-serif text-lg font-bold text-tinta leading-tight">
                       {result.proxima_compra_estrella.item}
                     </h4>
                   </div>
 
-                  <p className="text-xs text-tinta leading-relaxed relative z-10">
+                  <p className="text-xs text-tinta-apagada leading-relaxed relative z-10">
                     {result.proxima_compra_estrella.descripcion_detallada}
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-laton/10 text-[11px] relative z-10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-linea text-[11px] relative z-10">
                     <div>
-                      <span className="text-[8px] uppercase tracking-wider text-laton/80 block font-bold">Rango de Coste Sugerido</span>
-                      <p className="text-white font-mono font-medium flex items-center mt-0.5 gap-0.5">
+                      <span className="text-[8px] uppercase tracking-wider text-[#52525B] block font-bold">Rango de Coste Sugerido</span>
+                      <p className="text-tinta font-mono font-medium flex items-center mt-0.5 gap-0.5">
                         <DollarSign size={11} className="text-laton" />
                         {result.proxima_compra_estrella.rango_precio_estimado_en_euros}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-[8px] uppercase tracking-wider text-laton/80 block font-bold">Potencial de Armonización</span>
-                      <p className="text-tinta leading-relaxed mt-0.5">
+                      <span className="text-[8px] uppercase tracking-wider text-[#52525B] block font-bold">Potencial de Armonización</span>
+                      <p className="text-tinta-apagada leading-relaxed mt-0.5">
                         {result.proxima_compra_estrella.potencial_combinaciones_explicado}
                       </p>
                     </div>
@@ -223,30 +223,30 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
 
                   {/* Multi-Brand Store Integration for Star Purchase */}
                   {result.proxima_compra_estrella.propuestas_tiendas && result.proxima_compra_estrella.propuestas_tiendas.length > 0 && (
-                    <div className="pt-3 border-t border-laton/10 relative z-10">
-                      <span className="text-[8.5px] uppercase tracking-wider text-laton font-bold block mb-2">
+                    <div className="pt-3 border-t border-linea relative z-10">
+                      <span className="text-[8.5px] uppercase tracking-wider text-tinta font-bold block mb-2">
                         🛍️ Opciones disponibles en tiendas de marca:
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {result.proxima_compra_estrella.propuestas_tiendas.map((prop, idx) => (
-                          <div key={idx} className="bg-black/40 border border-linea rounded p-2.5 flex flex-col justify-between space-y-2">
+                          <div key={idx} className="bg-tarjeta border border-linea rounded p-2.5 flex flex-col justify-between space-y-2">
                             <div>
                               <div className="flex justify-between items-start gap-1">
-                                <span className="text-[9.5px] font-mono text-laton font-bold bg-[#F4F4F5] px-1.5 py-0.5 rounded border border-laton/10">
+                                <span className="text-[9.5px] font-mono text-[#18181B] font-bold bg-[#F4F4F5] px-1.5 py-0.5 rounded border border-linea">
                                   {prop.marca}
                                 </span>
-                                <span className="text-[10px] font-mono text-white">{prop.precio_aproximado}</span>
+                                <span className="text-[10px] font-mono text-tinta-apagada">{prop.precio_aproximado}</span>
                               </div>
-                              <p className="text-[10.5px] text-white font-medium mt-1 line-clamp-1">{prop.modelo}</p>
+                              <p className="text-[10.5px] text-tinta font-medium mt-1 line-clamp-1">{prop.modelo}</p>
                             </div>
                             
-                            <div className="flex gap-1 pt-1.5 border-t border-white/5">
+                            <div className="flex gap-1 pt-1.5 border-t border-linea">
                               <a
                                 href={getZalandoSearchUrl(prop.termino_busqueda)}
                                 target="_blank"
                                 referrerPolicy="no-referrer"
                                 rel="noopener noreferrer"
-                                className="flex-1 py-1 px-1 bg-white hover:bg-[#FF6900]/10 hover:border-[#FF6900]/30 border border-transparent rounded text-[9px] text-fondo font-bold text-center flex items-center justify-center gap-0.5 hover:text-[#FF6900] transition-colors"
+                                className="flex-1 py-1 px-1 bg-[#F4F4F5] hover:bg-[#FF6900]/10 hover:border-[#FF6900]/30 border border-linea rounded text-[9px] text-tinta font-bold text-center flex items-center justify-center gap-0.5 hover:text-[#FF6900] transition-colors"
                                 title="Ver en Zalando"
                               >
                                 <ShoppingCart size={8} />
@@ -257,7 +257,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                                 target="_blank"
                                 referrerPolicy="no-referrer"
                                 rel="noopener noreferrer"
-                                className="py-1 px-1.5 hover:bg-white hover:text-fondo rounded text-[9px] text-tinta-apagada font-bold text-center flex items-center justify-center gap-0.5 border border-linea/60 transition-colors"
+                                className="py-1 px-1.5 hover:bg-fondo hover:text-tinta rounded text-[9px] text-tinta-apagada font-bold text-center flex items-center justify-center gap-0.5 border border-linea transition-colors"
                                 title="Ver en ASOS"
                               >
                                 <span>ASOS</span>
@@ -267,7 +267,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                                 target="_blank"
                                 referrerPolicy="no-referrer"
                                 rel="noopener noreferrer"
-                                className="py-1 px-1.5 hover:bg-white hover:text-fondo rounded text-[9px] text-tinta-apagada font-bold text-center flex items-center justify-center gap-0.5 border border-linea/60 transition-colors"
+                                className="py-1 px-1.5 hover:bg-fondo hover:text-tinta rounded text-[9px] text-tinta-apagada font-bold text-center flex items-center justify-center gap-0.5 border border-linea transition-colors"
                                 title="Google Shopping"
                               >
                                 <Globe size={8} />
@@ -286,7 +286,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
             <div className="md:col-span-5 space-y-4">
               <div className="bg-tarjeta border border-linea rounded p-5 space-y-4">
                 <div className="border-b border-linea pb-2 flex items-center justify-between">
-                  <h3 className="font-serif text-sm font-bold text-white flex items-center gap-2">
+                  <h3 className="font-serif text-sm font-bold text-tinta flex items-center gap-2">
                     <Tag size={13} className="text-laton" />
                     <span>Multiplicadores de Armario</span>
                   </h3>
@@ -302,7 +302,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                       className="p-3.5 bg-fondo2/40 border border-linea/60 rounded space-y-3 relative"
                     >
                       <div className="flex items-start justify-between">
-                        <h4 className="font-serif text-xs font-bold text-white leading-tight max-w-[180px]">
+                        <h4 className="font-serif text-xs font-bold text-tinta leading-tight max-w-[180px]">
                           {missing.nombre_prenda}
                         </h4>
                         <span className="text-[8.5px] text-laton uppercase font-mono font-bold bg-[#F4F4F5] px-1.5 py-0.5 rounded">
@@ -327,14 +327,14 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                           </span>
                           <div className="space-y-1.5">
                             {missing.propuestas_tiendas.map((prop, sIdx) => (
-                              <div key={sIdx} className="bg-black/20 hover:bg-black/40 border border-linea/40 hover:border-laton/30 p-2 rounded transition-all flex items-center justify-between gap-2">
+                              <div key={sIdx} className="bg-fondo hover:bg-fondo2/60 border border-linea p-2 rounded transition-all flex items-center justify-between gap-2">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-[8px] font-mono text-laton font-semibold uppercase">{prop.marca}</span>
-                                    <span className="text-[9px] text-white/40">•</span>
+                                    <span className="text-[9px] text-tinta-apagada/40">•</span>
                                     <span className="text-[9px] text-tinta-apagada font-mono font-bold">{prop.precio_aproximado}</span>
                                   </div>
-                                  <p className="text-[9.5px] text-white truncate max-w-[170px]" title={prop.modelo}>
+                                  <p className="text-[9.5px] text-tinta truncate max-w-[170px]" title={prop.modelo}>
                                     {prop.modelo}
                                   </p>
                                 </div>
@@ -345,7 +345,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                                     target="_blank"
                                     referrerPolicy="no-referrer"
                                     rel="noopener noreferrer"
-                                    className="p-1 px-1.5 bg-white text-fondo hover:text-[#FF6900] hover:bg-[#FF6900]/10 border border-transparent hover:border-[#FF6900]/30 rounded text-[8px] font-bold flex items-center gap-0.5 transition-all"
+                                    className="p-1 px-1.5 bg-[#F4F4F5] hover:bg-[#FF6900]/10 hover:border-[#FF6900]/30 border border-linea text-tinta rounded text-[8px] font-bold flex items-center gap-0.5 transition-all"
                                     title="Buscar en Zalando España"
                                   >
                                     <span>Zalando</span>
@@ -356,7 +356,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                                     target="_blank"
                                     referrerPolicy="no-referrer"
                                     rel="noopener noreferrer"
-                                    className="p-1 hover:bg-white hover:text-fondo text-tinta-apagada border border-linea/60 rounded text-[8px] font-semibold transition-all"
+                                    className="p-1 hover:bg-[#18181B] hover:text-white text-tinta-apagada border border-linea rounded text-[8px] font-semibold transition-all"
                                     title="Buscar en ASOS"
                                   >
                                     <span>ASOS</span>
@@ -377,7 +377,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
                       setResult(null);
                       setError(null);
                     }}
-                    className="w-full py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-tinta-apagada hover:text-white transition-colors bg-fondo2/40 border border-linea rounded cursor-pointer"
+                    className="w-full py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-tinta-apagada hover:text-tinta transition-colors bg-fondo2/40 border border-linea rounded cursor-pointer"
                   >
                     Volver a Analizar / Repetir Escaneo
                   </button>
