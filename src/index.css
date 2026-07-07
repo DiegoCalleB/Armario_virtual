@@ -9,8 +9,8 @@
   --color-fondo2: #F4EFE6;
   --color-tarjeta: #FFFFFF;
   --color-linea: #E8E0D5;
-  --color-laton: #C5A059;
-  --color-laton-apagado: #A48343;
+  --color-laton: var(--laton-color, #C5A059);
+  --color-laton-apagado: var(--laton-apagado-color, #A48343);
   --color-tinta: #2C2520;
   --color-tinta-apagada: #756B61;
 

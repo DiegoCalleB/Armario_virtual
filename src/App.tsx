@@ -143,10 +143,54 @@ function safeSetLocalStorage(key: string, value: string): boolean {
   }
 }
 
+function adjustColorBrightness(hex: string, factor: number): string {
+  let cleanHex = hex.replace("#", "");
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex[0] + cleanHex[0] + cleanHex[1] + cleanHex[1] + cleanHex[2] + cleanHex[2];
+  }
+  const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+  const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+  const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+
+  const nr = Math.max(0, Math.min(255, Math.floor(r * factor)));
+  const ng = Math.max(0, Math.min(255, Math.floor(g * factor)));
+  const nb = Math.max(0, Math.min(255, Math.floor(b * factor)));
+
+  const rHex = nr.toString(16).padStart(2, '0');
+  const gHex = ng.toString(16).padStart(2, '0');
+  const bHex = nb.toString(16).padStart(2, '0');
+
+  return `#${rHex}${gHex}${bHex}`;
+}
+
 export default function App() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isAuthMock, setIsAuthMock] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
+
+  // Global accent color selection
+  const [accentColor, setAccentColor] = useState<string>(() => {
+    try {
+      return localStorage.getItem("espejo_accent_color") || "#C5A059";
+    } catch (e) {
+      return "#C5A059";
+    }
+  });
+
+  const handleAccentColorChange = (color: string) => {
+    setAccentColor(color);
+    try {
+      localStorage.setItem("espejo_accent_color", color);
+    } catch (e) {
+      console.warn("Could not save accent color to localStorage:", e);
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--laton-color", accentColor);
+    const darkAccent = adjustColorBrightness(accentColor, 0.83);
+    document.documentElement.style.setProperty("--laton-apagado-color", darkAccent);
+  }, [accentColor]);
 
   // Bottom Navigation state
   const [activeTab, setActiveTab] = useState<ActiveTab>("armario");
@@ -926,7 +970,7 @@ export default function App() {
             </span>
           </div>
           <h2 className="font-serif text-xl font-bold uppercase tracking-widest text-[#09090B]">
-            SINCRONIZANDO TU ARMARIO
+            ABRIENDO TU ARMARIO
           </h2>
           <div className="w-12 h-px bg-laton mx-auto opacity-50" />
           <p className="font-sans text-[11px] uppercase tracking-widest text-tinta-apagada max-w-xs animate-pulse">
@@ -1024,6 +1068,46 @@ export default function App() {
 
         {/* Footer info/Reset at the bottom of the sidebar */}
         <div className="space-y-4 pt-4 border-t border-linea/40">
+          {/* Accent Color Customizer */}
+          <div className="bg-fondo/40 p-2.5 rounded border border-linea/40">
+            <p className="text-[9px] uppercase font-bold tracking-widest text-tinta/80 mb-2">Tono de Acento</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { name: "Classic Gold", hex: "#C5A059" },
+                { name: "Terracotta", hex: "#C26D4D" },
+                { name: "Forest Moss", hex: "#5F7353" },
+                { name: "Prussian Blue", hex: "#466373" },
+                { name: "Burgundy", hex: "#8C4F5A" },
+                { name: "Slate Charcoal", hex: "#6B7280" }
+              ].map((col) => (
+                <button
+                  key={col.hex}
+                  onClick={() => handleAccentColorChange(col.hex)}
+                  className={`w-5 h-5 rounded-full transition-transform hover:scale-110 relative cursor-pointer flex items-center justify-center`}
+                  style={{ backgroundColor: col.hex }}
+                  title={col.name}
+                >
+                  {accentColor.toLowerCase() === col.hex.toLowerCase() && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+                  )}
+                </button>
+              ))}
+              {/* Custom color option with hidden input */}
+              <label className="w-5 h-5 rounded-full bg-linear-to-tr from-pink-500 via-red-500 to-yellow-500 hover:scale-110 transition-transform relative cursor-pointer flex items-center justify-center overflow-hidden border border-linea/50">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => handleAccentColorChange(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  title="Color Personalizado"
+                />
+                {![ "#C5A059", "#C26D4D", "#5F7353", "#466373", "#8C4F5A", "#6B7280" ].some(hex => hex.toLowerCase() === accentColor.toLowerCase()) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+                )}
+              </label>
+            </div>
+          </div>
+
           <button
             onClick={handleLogout}
             className="w-full py-2 bg-fondo border border-linea hover:border-red-900/50 text-tinta-apagada hover:text-red-400 text-[10px] font-bold uppercase tracking-widest rounded flex items-center justify-center gap-2 transition duration-200 cursor-pointer"
@@ -1391,6 +1475,46 @@ export default function App() {
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Accent Color Customizer on Mobile */}
+              <div className="mt-4 pt-3 border-t border-linea/30">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-center text-tinta/80 mb-2">Tono de Acento</p>
+                <div className="flex items-center justify-center gap-2">
+                  {[
+                    { name: "Classic Gold", hex: "#C5A059" },
+                    { name: "Terracotta", hex: "#C26D4D" },
+                    { name: "Forest Moss", hex: "#5F7353" },
+                    { name: "Prussian Blue", hex: "#466373" },
+                    { name: "Burgundy", hex: "#8C4F5A" },
+                    { name: "Slate Charcoal", hex: "#6B7280" }
+                  ].map((col) => (
+                    <button
+                      key={col.hex}
+                      onClick={() => handleAccentColorChange(col.hex)}
+                      className={`w-5.5 h-5.5 rounded-full transition-transform hover:scale-110 relative cursor-pointer flex items-center justify-center`}
+                      style={{ backgroundColor: col.hex }}
+                      title={col.name}
+                    >
+                      {accentColor.toLowerCase() === col.hex.toLowerCase() && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+                      )}
+                    </button>
+                  ))}
+                  {/* Custom color option with hidden input */}
+                  <label className="w-5.5 h-5.5 rounded-full bg-linear-to-tr from-pink-500 via-red-500 to-yellow-500 hover:scale-110 transition-transform relative cursor-pointer flex items-center justify-center overflow-hidden border border-linea/50">
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => handleAccentColorChange(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      title="Color Personalizado"
+                    />
+                    {![ "#C5A059", "#C26D4D", "#5F7353", "#466373", "#8C4F5A", "#6B7280" ].some(hex => hex.toLowerCase() === accentColor.toLowerCase()) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+                    )}
+                  </label>
+                </div>
               </div>
             </motion.div>
           </>

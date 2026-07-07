@@ -221,7 +221,7 @@ export default function AuditoriaArmario({
           >
             <div className="flex items-baseline justify-between mb-6">
               <div className="flex items-center gap-3">
-                <span className="font-serif italic text-laton font-medium text-lg">05</span>
+                <span className="font-serif italic text-laton font-medium text-lg">10</span>
                 <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Auditoría de tu Armario & Vinted</h2>
               </div>
               <p className="text-xs font-sans text-tinta-apagada select-none font-medium">OPTIMIZER & REDUNDANCIES</p>

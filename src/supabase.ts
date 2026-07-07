@@ -698,3 +698,94 @@ export async function deleteUserPlanificacion(userId: string, planId: string): P
     console.error("Critical error in deleteUserPlanificacion:", err);
   }
 }
+
+// 7. ARMARIOS PERSONALIZADOS (CUSTOM CAPSULE LIST) HELPERS
+export async function fetchUserArmariosLista(userId: string): Promise<string[] | null> {
+  if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
+    return null;
+  }
+  try {
+    // 1. Try dedicated table
+    const { data, error } = await supabase
+      .from("armarios_personalizados")
+      .select("nombre")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      return data.map((item: any) => item.nombre);
+    }
+
+    // 2. Fallback to style profile respostasQuiz
+    const { data: perfilData, error: perfilError } = await supabase
+      .from("perfil_estilo")
+      .select("respuestas_quiz")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!perfilError && perfilData?.respuestas_quiz) {
+      const quiz = typeof perfilData.respuestas_quiz === "string" 
+        ? JSON.parse(perfilData.respuestas_quiz) 
+        : perfilData.respuestas_quiz;
+      if (quiz && quiz.armariosDisponibles && Array.isArray(quiz.armariosDisponibles)) {
+        return quiz.armariosDisponibles;
+      }
+    }
+    
+    return null;
+  } catch (err) {
+    console.warn("Error in fetchUserArmariosLista:", err);
+    return null;
+  }
+}
+
+export async function saveUserArmariosLista(userId: string, lista: string[]): Promise<void> {
+  if (!isSupabaseConfigured || !supabase || userId === "usr_guest" || userId.startsWith("usr_mock")) {
+    return;
+  }
+  try {
+    // 1. Save to dedicated table if possible
+    const { error: deleteError } = await supabase
+      .from("armarios_personalizados")
+      .delete()
+      .eq("user_id", userId);
+
+    if (!deleteError && lista.length > 0) {
+      const payload = lista.map(nombre => ({ user_id: userId, nombre }));
+      const { error: insertError } = await supabase
+        .from("armarios_personalizados")
+        .insert(payload);
+      if (insertError) {
+        console.warn("Could not insert into armarios_personalizados table:", insertError.message);
+      }
+    }
+  } catch (err) {
+    console.warn("Could not save to armarios_personalizados table:", err);
+  }
+
+  // 2. Save/Backup in style profile respuestas_quiz for backward compatibility & easy migration
+  try {
+    const { data: perfilData, error: perfilError } = await supabase
+      .from("perfil_estilo")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let respuestasQuiz: any = {};
+    if (!perfilError && perfilData) {
+      respuestasQuiz = typeof perfilData.respuestas_quiz === "string"
+        ? JSON.parse(perfilData.respuestas_quiz)
+        : perfilData.respuestas_quiz || {};
+    }
+    respuestasQuiz.armariosDisponibles = lista;
+
+    await supabase.from("perfil_estilo").upsert({
+      user_id: userId,
+      respuestas_quiz: respuestasQuiz,
+      updated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.warn("Could not save backup in style profile respuestas_quiz:", err);
+  }
+}
+

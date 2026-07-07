@@ -77,7 +77,7 @@ export default function HistorialLooks({
     <section id="historial-looks-seccion" className="border-t border-linea pt-8 pb-4">
       <div className="flex items-baseline justify-between mb-6">
         <div className="flex items-center gap-3">
-          <span className="font-serif italic text-laton font-medium text-lg">04</span>
+          <span className="font-serif italic text-laton font-medium text-lg">03</span>
           <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Historial de Looks</h2>
         </div>
         <p className="text-xs font-sans text-tinta-apagada select-none font-medium">SAVED IMPRESSIONS</p>

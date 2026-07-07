@@ -185,7 +185,7 @@ export default function TuEspejo({ rostro, onAnalizado, onBorrar }: TuEspejoProp
     <section id="tu-espejo-sección" className="border-t border-linea pt-8 pb-10">
       <div className="flex items-baseline justify-between mb-6">
         <div className="flex items-center gap-3">
-          <span className="font-serif italic text-laton font-medium text-lg">01</span>
+          <span className="font-serif italic text-laton font-medium text-lg">04</span>
           <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Tu Espejo</h2>
         </div>
         <p className="text-xs font-sans text-tinta-apagada select-none">DIGITAL REFLECTION</p>

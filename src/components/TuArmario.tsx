@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
 import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
 import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
+import { supabase, fetchUserArmariosLista, saveUserArmariosLista } from "../supabase";
 import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import GooglePhotosPicker from "./GooglePhotosPicker";
@@ -348,9 +349,41 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [activeArmarioFilter, setActiveArmarioFilter] = useState<string>("all");
   const [isArmariosExpanded, setIsArmariosExpanded] = useState<boolean>(false);
 
-  const saveArmariosLista = (lista: string[]) => {
+  // Sync custom wardrobes list from Supabase
+  useEffect(() => {
+    async function loadCustomArmarios() {
+      if (!userEmail || userEmail === "guest") return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const dbLista = await fetchUserArmariosLista(user.id);
+          if (dbLista && dbLista.length > 0) {
+            setArmariosDisponibles(dbLista);
+            localStorage.setItem(`espejo_armarios_lista_${userEmail}`, JSON.stringify(dbLista));
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load custom capsule wardrobes list from Supabase:", err);
+      }
+    }
+    loadCustomArmarios();
+  }, [userEmail]);
+
+  const saveArmariosLista = async (lista: string[]) => {
     setArmariosDisponibles(lista);
     localStorage.setItem(`espejo_armarios_lista_${userEmail || "guest"}`, JSON.stringify(lista));
+
+    // Save to Supabase
+    if (userEmail && userEmail !== "guest") {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await saveUserArmariosLista(user.id, lista);
+        }
+      } catch (err) {
+        console.warn("Could not save custom capsule wardrobes list to Supabase:", err);
+      }
+    }
   };
 
   const getArmariosDePrenda = (prenda: Prenda): string[] => {
@@ -1099,7 +1132,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
     <section id="tu-armario-sección" className="border-t border-linea pt-2 pb-6">
       <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-linea/20">
         <div className="flex items-center gap-2">
-          <span className="font-serif italic text-laton font-semibold text-base">02</span>
+          <span className="font-serif italic text-laton font-semibold text-base">01</span>
           <h2 className="font-serif text-lg font-bold tracking-tight text-tinta">Tu Armario</h2>
           <span className="text-[9px] text-tinta-apagada font-mono uppercase tracking-widest ml-1 hidden sm:inline">DIGITAL WARDROBE</span>
         </div>

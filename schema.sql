@@ -195,3 +195,31 @@ CREATE POLICY "Permitir borrado individual de planificaciones"
     ON public.planificaciones FOR DELETE 
     USING (auth.uid() = user_id);
 
+
+-- -------------------------------------------------------------------------
+-- 6. CONFIGURACIÓN DE LA TABLA 'armarios_personalizados' (Lista de Cápsulas)
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.armarios_personalizados (
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    nombre TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, nombre)
+);
+
+-- Habilitar Row Level Security (RLS)
+ALTER TABLE public.armarios_personalizados ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para 'armarios_personalizados'
+CREATE POLICY "Permitir lectura de armarios_personalizados de usuario" 
+    ON public.armarios_personalizados FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Permitir inserción de armarios_personalizados de usuario" 
+    ON public.armarios_personalizados FOR INSERT 
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Permitir borrado de armarios_personalizados de usuario" 
+    ON public.armarios_personalizados FOR DELETE 
+    USING (auth.uid() = user_id);
+
+
