@@ -325,6 +325,13 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [copiedDescripcion, setCopiedDescripcion] = useState(false);
   const [isMultiMode, setIsMultiMode] = useState(false);
 
+  // Interactive image cropping states
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [cropBox, setCropBox] = useState({ x: 15, y: 15, w: 70, h: 70 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, boxX: 15, boxY: 15, boxW: 70, boxH: 70 });
+  const [activeHandle, setActiveHandle] = useState<string | null>(null);
+
   // Encapsulated wardrobes states
   const [armariosDisponibles, setArmariosDisponibles] = useState<string[]>(() => {
     const cached = localStorage.getItem(`espejo_armarios_lista_${userEmail || "guest"}`);
@@ -363,6 +370,145 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
         ...prenda,
         tags: newTags
       });
+    }
+  };
+
+  // Dragging event listeners for cropping
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+      const deltaX = ((clientX - dragStart.x) / rect.width) * 100;
+      const deltaY = ((clientY - dragStart.y) / rect.height) * 100;
+
+      setCropBox(() => {
+        let x = dragStart.boxX;
+        let y = dragStart.boxY;
+        let w = dragStart.boxW;
+        let h = dragStart.boxH;
+
+        if (activeHandle === "move") {
+          x = Math.max(0, Math.min(100 - w, dragStart.boxX + deltaX));
+          y = Math.max(0, Math.min(100 - h, dragStart.boxY + deltaY));
+        } else if (activeHandle === "br") {
+          w = Math.max(10, Math.min(100 - dragStart.boxX, dragStart.boxW + deltaX));
+          h = Math.max(10, Math.min(100 - dragStart.boxY, dragStart.boxH + deltaY));
+        } else if (activeHandle === "tl") {
+          const newX = Math.max(0, Math.min(dragStart.boxX + dragStart.boxW - 10, dragStart.boxX + deltaX));
+          w = dragStart.boxX + dragStart.boxW - newX;
+          x = newX;
+          const newY = Math.max(0, Math.min(dragStart.boxY + dragStart.boxH - 10, dragStart.boxY + deltaY));
+          h = dragStart.boxY + dragStart.boxH - newY;
+          y = newY;
+        } else if (activeHandle === "tr") {
+          w = Math.max(10, Math.min(100 - dragStart.boxX, dragStart.boxW + deltaX));
+          const newY = Math.max(0, Math.min(dragStart.boxY + dragStart.boxH - 10, dragStart.boxY + deltaY));
+          h = dragStart.boxY + dragStart.boxH - newY;
+          y = newY;
+        } else if (activeHandle === "bl") {
+          const newX = Math.max(0, Math.min(dragStart.boxX + dragStart.boxW - 10, dragStart.boxX + deltaX));
+          w = dragStart.boxX + dragStart.boxW - newX;
+          x = newX;
+          h = Math.max(10, Math.min(100 - dragStart.boxY, dragStart.boxH + deltaY));
+        }
+
+        return { x, y, w, h };
+      });
+    };
+
+    const handleEnd = () => {
+      setIsDragging(false);
+      setActiveHandle(null);
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
+    };
+  }, [isDragging, dragStart, activeHandle]);
+
+  const handleCropStart = (e: React.MouseEvent | React.TouchEvent, handle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setIsDragging(true);
+    setActiveHandle(handle);
+    setDragStart({
+      x: clientX,
+      y: clientY,
+      boxX: cropBox.x,
+      boxY: cropBox.y,
+      boxW: cropBox.w,
+      boxH: cropBox.h
+    });
+  };
+
+  const performCrop = async () => {
+    if (!imageToCrop) return;
+    setLoading(true);
+    setLoadingText("Recortando prenda...");
+    
+    try {
+      const croppedBase64 = await new Promise<string>((resolve, reject) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("No se pudo crear el lienzo de recorte"));
+            return;
+          }
+          
+          const startX = (cropBox.x / 100) * img.width;
+          const startY = (cropBox.y / 100) * img.height;
+          const cropW = (cropBox.w / 100) * img.width;
+          const cropH = (cropBox.h / 100) * img.height;
+          
+          canvas.width = cropW;
+          canvas.height = cropH;
+          
+          ctx.drawImage(
+            img,
+            startX,
+            startY,
+            cropW,
+            cropH,
+            0,
+            0,
+            cropW,
+            cropH
+          );
+          
+          resolve(canvas.toDataURL("image/jpeg", 0.95));
+        };
+        img.onerror = () => reject(new Error("No se pudo cargar la imagen para recortar"));
+        img.src = imageToCrop;
+      });
+
+      setImageToCrop(null);
+      await procesarBase64Prenda(croppedBase64);
+    } catch (err: any) {
+      console.error(err);
+      setError("No se pudo recortar la imagen seleccionada: " + err.message);
+      setLoading(false);
     }
   };
 
@@ -655,6 +801,25 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
       return;
     }
 
+    if (validImageFiles.length === 1) {
+      setError(null);
+      setLoading(true);
+      setLoadingText("Cargando imagen...");
+      try {
+        const rawBase64 = await fileToBase64(validImageFiles[0]);
+        const resizedBase64 = await resizeImage(rawBase64, 1024); // Keep better quality for editing/cropping
+        setImageToCrop(resizedBase64);
+        setCropBox({ x: 15, y: 15, w: 70, h: 70 });
+      } catch (err) {
+        console.error("Error reading file:", err);
+        setError("Fallo al cargar la imagen seleccionada.");
+      } finally {
+        setLoading(false);
+        setLoadingText("");
+      }
+      return;
+    }
+
     setError(null);
     setLoading(true);
 
@@ -851,101 +1016,9 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
         const rawBase64 = canvas.toDataURL("image/jpeg");
         stopCamera();
         
-        setLoading(true);
-        setLoadingText("Analizando captura...");
-        try {
-          const resizedBase64 = await resizeImage(rawBase64, 768);
-          const res = await fetch("/api/analizar-prenda", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ image: resizedBase64, isMulti: isMultiMode }),
-          });
-
-          if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.error || "Fallo al identificar la prenda o prendas.");
-          }
-
-          const infoParsed = await res.json();
-          
-          let prendasArray: any[] = [];
-          if (infoParsed.prendas && Array.isArray(infoParsed.prendas)) {
-            prendasArray = infoParsed.prendas;
-          } else if (infoParsed.nombre) {
-            prendasArray = [infoParsed];
-          }
-
-          if (prendasArray.length > 0) {
-            const listToAdd: Prenda[] = [];
-            for (let idx = 0; idx < prendasArray.length; idx++) {
-              const item = prendasArray[idx];
-              let croppedImg = resizedBase64;
-
-              const yminVal = item.box_ymin !== undefined && item.box_ymin !== null ? Number(item.box_ymin) : NaN;
-              const xminVal = item.box_xmin !== undefined && item.box_xmin !== null ? Number(item.box_xmin) : NaN;
-              const ymaxVal = item.box_ymax !== undefined && item.box_ymax !== null ? Number(item.box_ymax) : NaN;
-              const xmaxVal = item.box_xmax !== undefined && item.box_xmax !== null ? Number(item.box_xmax) : NaN;
-
-              if (
-                !isNaN(yminVal) &&
-                !isNaN(xminVal) &&
-                !isNaN(ymaxVal) &&
-                !isNaN(xmaxVal) &&
-                !(yminVal === 0 && xminVal === 0 && ymaxVal === 1000 && xmaxVal === 1000 && prendasArray.length === 1)
-              ) {
-                try {
-                  croppedImg = await cropGarmentImage(
-                    resizedBase64,
-                    yminVal,
-                    xminVal,
-                    ymaxVal,
-                    xmaxVal,
-                    item.categoria
-                  );
-                } catch (cropErr) {
-                  console.error("Error al recortar captura:", cropErr);
-                }
-              }
-
-              // Apply background removal and upscale
-              try {
-                croppedImg = await processImageToTransparentAndHD(croppedImg, (text) => {
-                  setLoadingText(`[Prenda ${idx + 1}/${prendasArray.length}] ${text}`);
-                });
-              } catch (bgErr) {
-                console.error("Error al quitar fondo:", bgErr);
-              }
-
-              const nuevaPrenda: Prenda = {
-                id: "prenda_" + Date.now() + "_" + idx + "_" + Math.floor(Math.random() * 1000),
-                nombre: item.nombre || "Prenda identificada con IA",
-                categoria: (item.categoria as CategoriaPrenda) || "top",
-                color: item.color || "#18181B",
-                formalidad: item.formalidad !== undefined ? item.formalidad : 3,
-                temporada: (item.temporada as TemporadaPrenda) || "todo",
-                imageSrc: croppedImg,
-                tejido: item.tejido || "Algodón mixto",
-                tags: Array.isArray(item.tags) ? item.tags : ["Modern", "Básico"],
-              };
-              listToAdd.push(nuevaPrenda);
-            }
-            if (listToAdd.length > 0) {
-              handlePrendaAgregadaConArmario(listToAdd);
-            }
-          } else {
-            throw new Error("Fallo al identificar la prenda o prendas de la captura.");
-          }
-        } catch (err: any) {
-          console.error(err);
-          let errorFriendly = err.message || "Fallo del estilista al analizar la prenda capturada.";
-          if (err.message && (err.message.toLowerCase().includes("fetch") || err.message.toLowerCase().includes("failed"))) {
-            errorFriendly = "No se ha podido conectar con el atelier virtual de Espejo para registrar esta prenda. Por favor, reinténtalo en un momento.";
-          }
-          setError(errorFriendly);
-        } finally {
-          setLoading(false);
-          setLoadingText("");
-        }
+        // Load the captured camera shot into the interactive crop editor!
+        setImageToCrop(rawBase64);
+        setCropBox({ x: 15, y: 15, w: 70, h: 70 });
       }
     }
   };
@@ -1189,8 +1262,119 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
               {/* Garment Uploader - Column 1 */}
               <div className="w-full">
-          {/* Tab Selector */}
-          <div className="flex border-b border-linea mb-5 select-none font-sans overflow-x-auto no-scrollbar gap-1">
+                {imageToCrop ? (
+                  <div className="space-y-5 animate-fade-in text-left">
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold text-laton uppercase tracking-widest block font-sans">
+                        Edición de Encuadre Sastrero
+                      </span>
+                      <p className="text-[10.5px] text-tinta-apagada font-light leading-relaxed">
+                        Arrastra las esquinas o desplaza el recuadro para seleccionar la prenda exacta que deseas registrar en tu armario digital.
+                      </p>
+                    </div>
+
+                    {/* Cropping Canvas Container */}
+                    <div 
+                      ref={containerRef}
+                      className="relative w-full aspect-square bg-[#18181B] rounded-2xl overflow-hidden border border-linea select-none touch-none max-h-[360px] mx-auto"
+                    >
+                      <img 
+                        src={imageToCrop} 
+                        alt="Prenda a encuadrar" 
+                        className="w-full h-full object-contain pointer-events-none"
+                      />
+                      
+                      {/* Dark overlay around the crop area using clip-path */}
+                      <div className="absolute inset-0 pointer-events-none bg-black/60" style={{
+                        clipPath: `polygon(
+                          0% 0%, 
+                          0% 100%, 
+                          ${cropBox.x}% 100%, 
+                          ${cropBox.x}% ${cropBox.y}%, 
+                          ${cropBox.x + cropBox.w}% ${cropBox.y}%, 
+                          ${cropBox.x + cropBox.w}% ${cropBox.y + cropBox.h}%, 
+                          ${cropBox.x}% ${cropBox.y + cropBox.h}%, 
+                          ${cropBox.x}% 100%, 
+                          100% 100%, 
+                          100% 0%
+                        )`
+                      }} />
+
+                      {/* Draggable crop window */}
+                      <div 
+                        className="absolute border-2 border-laton bg-transparent cursor-move group"
+                        style={{
+                          left: `${cropBox.x}%`,
+                          top: `${cropBox.y}%`,
+                          width: `${cropBox.w}%`,
+                          height: `${cropBox.h}%`
+                        }}
+                        onMouseDown={(e) => handleCropStart(e, "move")}
+                        onTouchStart={(e) => handleCropStart(e, "move")}
+                      >
+                        {/* Subtle Grid Lines */}
+                        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-30 pointer-events-none">
+                          <div className="border-r border-b border-white border-dashed"></div>
+                          <div className="border-r border-b border-white border-dashed"></div>
+                          <div className="border-b border-white border-dashed"></div>
+                          <div className="border-r border-b border-white border-dashed"></div>
+                          <div className="border-r border-b border-white border-dashed"></div>
+                          <div className="border-b border-white border-dashed"></div>
+                          <div className="border-r border-white border-dashed"></div>
+                          <div className="border-r border-white border-dashed"></div>
+                          <div></div>
+                        </div>
+
+                        {/* Handles */}
+                        {/* Top-Left */}
+                        <div 
+                          className="absolute w-5 h-5 -left-2.5 -top-2.5 border-t-4 border-l-4 border-laton cursor-nwse-resize z-20"
+                          onMouseDown={(e) => handleCropStart(e, "tl")}
+                          onTouchStart={(e) => handleCropStart(e, "tl")}
+                        />
+                        {/* Top-Right */}
+                        <div 
+                          className="absolute w-5 h-5 -right-2.5 -top-2.5 border-t-4 border-r-4 border-laton cursor-nesw-resize z-20"
+                          onMouseDown={(e) => handleCropStart(e, "tr")}
+                          onTouchStart={(e) => handleCropStart(e, "tr")}
+                        />
+                        {/* Bottom-Left */}
+                        <div 
+                          className="absolute w-5 h-5 -left-2.5 -bottom-2.5 border-b-4 border-l-4 border-laton cursor-nesw-resize z-20"
+                          onMouseDown={(e) => handleCropStart(e, "bl")}
+                          onTouchStart={(e) => handleCropStart(e, "bl")}
+                        />
+                        {/* Bottom-Right */}
+                        <div 
+                          className="absolute w-5 h-5 -right-2.5 -bottom-2.5 border-b-4 border-r-4 border-laton cursor-nwse-resize z-20"
+                          onMouseDown={(e) => handleCropStart(e, "br")}
+                          onTouchStart={(e) => handleCropStart(e, "br")}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Actions buttons */}
+                    <div className="flex gap-3 justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setImageToCrop(null)}
+                        className="px-4 py-2 text-[10px] uppercase tracking-wider font-bold border border-linea hover:bg-fondo text-tinta-apagada hover:text-tinta rounded-xl transition duration-150"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={performCrop}
+                        className="px-5 py-2 text-[10px] uppercase tracking-wider font-extrabold bg-laton hover:bg-laton-apagado text-white rounded-xl shadow transition duration-150 flex items-center gap-1.5"
+                      >
+                        <Sparkles size={11} /> Confirmar Selección
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Tab Selector */}
+                    <div className="flex border-b border-linea mb-5 select-none font-sans overflow-x-auto no-scrollbar gap-1">
             <button
               type="button"
               onClick={() => {
@@ -1964,7 +2148,10 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     </div>
                     <div className="flex flex-wrap gap-3 justify-center">
                       <GooglePhotosPicker
-                        onPhotoSelected={procesarBase64Prenda}
+                        onPhotoSelected={(base64) => {
+                          setImageToCrop(base64);
+                          setCropBox({ x: 15, y: 15, w: 70, h: 70 });
+                        }}
                         triggerButtonText="Conectar Google Fotos (Real)"
                         triggerClassName="px-4 py-2 bg-white text-slate-800 hover:bg-slate-100 font-bold text-xs uppercase tracking-widest rounded transition duration-200 flex items-center gap-2 shadow-md border border-slate-200 cursor-pointer"
                       />
@@ -2097,6 +2284,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               </motion.div>
             )}
           </AnimatePresence>
+                  </>
+                )}
 
           {error && (
             <div className="mt-4 flex items-center gap-2 p-3 bg-red-950/20 border border-red-900/30 text-red-300 text-xs rounded">
@@ -2525,6 +2714,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                 key={arm}
                                 type="button"
                                 onClick={() => {
+                                  if (!selectedPrenda) return;
                                   const currentArmarios = getArmariosDePrenda(selectedPrenda);
                                   let nextArmarios = currentArmarios;
                                   if (!currentArmarios.includes(arm)) {
@@ -2535,11 +2725,10 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                       nextArmarios = ["normal"];
                                     }
                                   }
-                                  setArmariosDePrenda(selectedPrenda, nextArmarios);
                                   setSelectedPrenda({
                                     ...selectedPrenda,
                                     tags: [
-                                      ...(selectedPrenda.tags || []).filter(t => !t.startsWith("armario:")),
+                                      ...(selectedPrenda.tags || []).filter(t => typeof t === "string" && !t.startsWith("armario:")),
                                       ...nextArmarios.map(a => `armario:${a}`)
                                     ]
                                   });
@@ -2614,7 +2803,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       <button
                         type="button"
                         onClick={() => {
-                          if (onPrendaActualizada) {
+                          if (onPrendaActualizada && selectedPrenda) {
                             onPrendaActualizada({
                               ...selectedPrenda,
                               descripcion: customDescripcion,
