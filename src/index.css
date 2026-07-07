@@ -5,14 +5,14 @@
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-sans: 'Outfit', sans-serif;
   
-  --color-fondo: #FAF9F6;
-  --color-fondo2: #F4EFE6;
+  --color-fondo: var(--fondo-color, #FAF9F6);
+  --color-fondo2: var(--fondo2-color, #F4EFE6);
   --color-tarjeta: #FFFFFF;
-  --color-linea: #E8E0D5;
+  --color-linea: var(--linea-color, #E8E0D5);
   --color-laton: var(--laton-color, #C5A059);
   --color-laton-apagado: var(--laton-apagado-color, #A48343);
-  --color-tinta: #2C2520;
-  --color-tinta-apagada: #756B61;
+  --color-tinta: var(--tinta-color, #2C2520);
+  --color-tinta-apagada: var(--tinta-apagada-color, #756B61);
 
   --animate-shimmer: shimmer 2s infinite linear;
 }
@@ -43,8 +43,8 @@
 }
 
 body {
-  background-color: #FAF9F6;
-  color: #2C2520;
+  background-color: var(--fondo-color, #FAF9F6);
+  color: var(--tinta-color, #2C2520);
   font-family: 'Outfit', sans-serif;
   overflow-x: hidden;
 }

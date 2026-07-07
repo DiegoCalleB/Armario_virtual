@@ -163,6 +163,35 @@ function adjustColorBrightness(hex: string, factor: number): string {
   return `#${rHex}${gHex}${bHex}`;
 }
 
+function mixColors(hex1: string, hex2: string, weight: number): string {
+  let cleanHex1 = hex1.replace("#", "");
+  if (cleanHex1.length === 3) {
+    cleanHex1 = cleanHex1[0] + cleanHex1[0] + cleanHex1[1] + cleanHex1[1] + cleanHex1[2] + cleanHex1[2];
+  }
+  let cleanHex2 = hex2.replace("#", "");
+  if (cleanHex2.length === 3) {
+    cleanHex2 = cleanHex2[0] + cleanHex2[0] + cleanHex2[1] + cleanHex2[1] + cleanHex2[2] + cleanHex2[2];
+  }
+
+  const r1 = parseInt(cleanHex1.substring(0, 2), 16) || 0;
+  const g1 = parseInt(cleanHex1.substring(2, 4), 16) || 0;
+  const b1 = parseInt(cleanHex1.substring(4, 6), 16) || 0;
+
+  const r2 = parseInt(cleanHex2.substring(0, 2), 16) || 0;
+  const g2 = parseInt(cleanHex2.substring(2, 4), 16) || 0;
+  const b2 = parseInt(cleanHex2.substring(4, 6), 16) || 0;
+
+  const nr = Math.max(0, Math.min(255, Math.floor(r1 * (1 - weight) + r2 * weight)));
+  const ng = Math.max(0, Math.min(255, Math.floor(g1 * (1 - weight) + g2 * weight)));
+  const nb = Math.max(0, Math.min(255, Math.floor(b1 * (1 - weight) + b2 * weight)));
+
+  const rHex = nr.toString(16).padStart(2, '0');
+  const gHex = ng.toString(16).padStart(2, '0');
+  const bHex = nb.toString(16).padStart(2, '0');
+
+  return `#${rHex}${gHex}${bHex}`;
+}
+
 export default function App() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isAuthMock, setIsAuthMock] = useState(false);
@@ -190,6 +219,36 @@ export default function App() {
     document.documentElement.style.setProperty("--laton-color", accentColor);
     const darkAccent = adjustColorBrightness(accentColor, 0.83);
     document.documentElement.style.setProperty("--laton-apagado-color", darkAccent);
+
+    const isClassicGold = accentColor.toLowerCase() === "#c5a059";
+    if (isClassicGold) {
+      document.documentElement.style.setProperty("--fondo-color", "#FAF9F6");
+      document.documentElement.style.setProperty("--fondo2-color", "#F4EFE6");
+      document.documentElement.style.setProperty("--linea-color", "#E8E0D5");
+      document.documentElement.style.setProperty("--tinta-color", "#2C2520");
+      document.documentElement.style.setProperty("--tinta-apagada-color", "#756B61");
+    } else {
+      // Procedurally generate a fully compatible, premium-quality theme matching the selected accent color!
+      // Extremely subtle tint of the accent mixed with white for the master canvas background
+      const fondo = mixColors(accentColor, "#FFFFFF", 0.975);
+      document.documentElement.style.setProperty("--fondo-color", fondo);
+
+      // Soft complementary background for sections and side panels
+      const fondo2 = mixColors(accentColor, "#FFFFFF", 0.92);
+      document.documentElement.style.setProperty("--fondo2-color", fondo2);
+
+      // Coordinated soft pastel borders and separator lines
+      const linea = mixColors(accentColor, "#FFFFFF", 0.84);
+      document.documentElement.style.setProperty("--linea-color", linea);
+
+      // Rich, deep ink text color taking some warmth/coolness of the active color instead of pure harsh black
+      const tinta = mixColors(accentColor, "#121212", 0.12);
+      document.documentElement.style.setProperty("--tinta-color", tinta);
+
+      // Coordinated secondary/muted body text color
+      const tintaApagada = mixColors(accentColor, "#4F4F4F", 0.40);
+      document.documentElement.style.setProperty("--tinta-apagada-color", tintaApagada);
+    }
   }, [accentColor]);
 
   // Bottom Navigation state
@@ -1442,7 +1501,7 @@ export default function App() {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="lg:hidden fixed bottom-24 left-1/2 z-50 w-[92%] max-w-sm bg-tarjeta/98 border border-linea/80 rounded-2xl p-5 shadow-[0_15px_50px_rgba(0,0,0,0.95)] backdrop-blur-xl"
             >
-              <h3 className="text-[10px] tracking-wider text-laton uppercase font-bold border-b border-linea/30 pb-2 mb-3 text-center">
+              <h3 className="text-[12px] sm:text-[13px] tracking-widest text-laton uppercase font-extrabold border-b border-linea/30 pb-2 mb-3.5 text-center">
                 MÁS HERRAMIENTAS DE ESTILO
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -1463,15 +1522,19 @@ export default function App() {
                         setActiveTab(item.id as ActiveTab);
                         setShowMoreMenu(false);
                       }}
-                      className={`flex flex-col items-center justify-center p-3 rounded-lg border text-center transition-all cursor-pointer ${
+                      className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all cursor-pointer ${
                         isSelected
-                          ? "bg-laton/20 border-laton text-laton"
-                          : "bg-fondo/40 border-linea/50 text-tinta hover:bg-tarjeta"
+                          ? "bg-laton/15 border-laton text-laton shadow-sm"
+                          : "bg-fondo border-linea/60 text-tinta hover:bg-linea/20"
                       }`}
                     >
-                      <Icon size={18} className="mb-1 text-laton" />
-                      <span className="text-[10px] uppercase tracking-wider font-extrabold block text-white">{item.label}</span>
-                      <span className="text-[8px] text-tinta-apagada font-mono mt-0.5">{item.desc}</span>
+                      <Icon size={22} className={`mb-1.5 ${isSelected ? "text-laton" : "text-laton/90"}`} />
+                      <span className={`text-[12px] sm:text-[13px] uppercase tracking-wider font-extrabold block ${
+                        isSelected ? "text-laton" : "text-tinta"
+                      }`}>{item.label}</span>
+                      <span className={`text-[10px] sm:text-[11px] font-sans font-medium mt-1 block ${
+                        isSelected ? "text-laton/90" : "text-tinta-apagada"
+                      }`}>{item.desc}</span>
                     </button>
                   );
                 })}
