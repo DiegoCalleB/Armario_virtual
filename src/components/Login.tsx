@@ -383,11 +383,11 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               <span className="w-4 h-4 border-2 border-fondo border-t-transparent rounded-full animate-spin" />
             ) : isSignUp ? (
               <>
-                <UserPlus size={14} /> Crear Mi Atelier Personal
+                <UserPlus size={14} /> Crear Mi Vestidor Personal
               </>
             ) : (
               <>
-                <LogIn size={14} /> Acceder Al Boutique
+                <LogIn size={14} /> Entrar A Mi Armario
               </>
             )}
           </button>

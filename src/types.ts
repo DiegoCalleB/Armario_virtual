@@ -17,7 +17,7 @@ export interface Prenda {
   formalidad: number; // 1 to 5
   temporada: TemporadaPrenda;
   imageSrc: string; // Base64 representation of item
-  descripcion?: string; // Observaciones opcionales o notas del sastre
+  descripcion?: string; // Observaciones opcionales o notas sobre la prenda
   tejido?: string; // Tipo de tejido identificado por la IA (ej: Algodón, Lana, Denim, etc.)
   tags?: string[]; // Etiquetas automatizadas de estilo y corte
   precio_compra?: number; // Coste en euros para calcular Cost-per-Wear

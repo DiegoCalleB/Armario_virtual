@@ -10,7 +10,7 @@ interface TuArmarioProps {
   prendas: Prenda[];
   onPrendaAgregada: (prenda: Prenda | Prenda[]) => void;
   onPrendaEliminada: (id: string) => void;
-  onPrendaActualizada?: (prenda: Prenda) => void;
+  onPrendaActualizada?: (prenda: Prenda | Prenda[]) => void;
   userEmail?: string;
 }
 
@@ -555,17 +555,27 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
       const updated = armariosDisponibles.filter(a => a !== arm);
       saveArmariosLista(updated);
       
-      // Update each garment belonging to this wardrobe
+      // Update each garment belonging to this wardrobe using batching
+      const updatedPrendasToSave: Prenda[] = [];
       prendas.forEach(p => {
         const currentArmarios = getArmariosDePrenda(p);
         if (currentArmarios.includes(arm)) {
           const nextArmarios = currentArmarios.filter(a => a !== arm);
-          if (nextArmarios.length === 0) {
-            nextArmarios.push("normal");
-          }
-          setArmariosDePrenda(p, nextArmarios);
+          const finalArmarios = nextArmarios.length === 0 ? ["normal"] : nextArmarios;
+          
+          const cleanTags = (Array.isArray(p.tags) ? p.tags : []).filter(t => typeof t === "string" && !t.startsWith("armario:"));
+          const newTags = [...cleanTags, ...finalArmarios.map(a => `armario:${a}`)];
+          
+          updatedPrendasToSave.push({
+            ...p,
+            tags: newTags
+          });
         }
       });
+      
+      if (updatedPrendasToSave.length > 0 && onPrendaActualizada) {
+        onPrendaActualizada(updatedPrendasToSave);
+      }
       
       if (activeArmarioFilter === arm) {
         setActiveArmarioFilter("all");
@@ -939,7 +949,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             formalidad: 3,
             temporada: "todo",
             imageSrc: processedFallbackImg,
-            descripcion: "Fallo o lentitud al contactar la IA sastre. Presiona esta carta para configurar sus detalles y notas."
+            descripcion: "Fallo o lentitud al contactar la Inteligencia Artificial. Presiona esta tarjeta para configurar sus detalles y notas."
           };
           handlePrendaAgregadaConArmario(mockPrenda);
           completedCount++;
@@ -1266,7 +1276,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                   <div className="space-y-5 animate-fade-in text-left">
                     <div className="space-y-1.5">
                       <span className="text-[10px] font-bold text-laton uppercase tracking-widest block font-sans">
-                        Edición de Encuadre Sastrero
+                        Ajustar foto de la prenda
                       </span>
                       <p className="text-[10.5px] text-tinta-apagada font-light leading-relaxed">
                         Arrastra las esquinas o desplaza el recuadro para seleccionar la prenda exacta que deseas registrar en tu armario digital.
@@ -1655,7 +1665,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     {[
                       { hex: "#1D2B42", name: "Azul Marino" },
                       { hex: "#313639", name: "Gris Carbón" },
-                      { hex: "#111111", name: "Negro Sastre" },
+                      { hex: "#111111", name: "Negro" },
                       { hex: "#F3EFE0", name: "Blanco Crudo" },
                       { hex: "#C3B091", name: "Camel/Beige" },
                       { hex: "#5C061D", name: "Burdeos" },
@@ -1720,11 +1730,11 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       );
                     })}
                     <span className="text-[10px] text-tinta-apagada font-sans font-medium ml-2">
-                      {manualFormalidad === 3 && "Smart Casual"}
+                      {manualFormalidad === 3 && "Semi-formal"}
                       {manualFormalidad === 1 && "Informal"}
-                      {manualFormalidad === 2 && "Casual Link"}
-                      {manualFormalidad === 4 && "Sastrería"}
-                      {manualFormalidad === 5 && "Gala / Chaqué"}
+                      {manualFormalidad === 2 && "Casual"}
+                      {manualFormalidad === 4 && "Formal / Elegante"}
+                      {manualFormalidad === 5 && "Muy formal / Gala"}
                     </span>
                   </div>
                 </div>
@@ -2199,7 +2209,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                             id: "gphoto_1",
                             title: "Outfit de Boda",
                             categoria: "top" as CategoriaPrenda,
-                            desc: "Americana entallada de sastre azul cobalto",
+                            desc: "Americana entallada elegante azul cobalto",
                             color: "#1d2b42",
                             formalidad: 5,
                             tejido: "Lana virgen súper 120",
@@ -2223,7 +2233,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                             color: "#111111",
                             formalidad: 4,
                             tejido: "Cuero Napa cepillado",
-                            tags: ["Sartorial", "Atelier"]
+                            tags: ["Clásico", "Elegante"]
                           }
                         ].map((item) => {
                           const isExtracting = gphotosExtractingId === item.id;
@@ -2264,7 +2274,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                   isExtracting
                                     ? "bg-laton/20 text-laton animate-pulse cursor-default"
                                     : "bg-laton hover:bg-laton-apagado hover:text-white text-fondo transition duration-150"
-                                }`}
+                                  }`}
                               >
                                 {isExtracting ? "Analizando..." : "Extraer IA"}
                               </button>
@@ -2275,7 +2285,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       
                       {gphotosExtractedCount > 0 && (
                         <div className="text-[9px] text-green-400 bg-green-950/20 border border-green-900/30 p-2 rounded text-center font-medium animate-fade-in">
-                          ¡Prenda extraída con éxito! Se ha incorporado a tu vestidor virtual con todas sus propiedades clasificadas de forma sastrera.
+                          ¡Prenda extraída con éxito! Se ha añadido a tu armario con todos sus detalles clasificados automáticamente.
                         </div>
                       )}
                     </div>
@@ -2427,7 +2437,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 <Tag size={28} className="text-laton-apagado mx-auto mb-3" />
                 <p className="font-serif text-lg text-tinta italic font-medium">Armario despejado</p>
                 <p className="text-xs text-tinta-apagada mt-1 max-w-sm mx-auto">
-                  No hay prendas cargadas en esta categoría. Sube fotografías para entrenar a tu sastre digital.
+                  No hay prendas en esta categoría. Sube fotos para que la Inteligencia Artificial las organice en tu armario.
                 </p>
               </motion.div>
             ) : (
@@ -2580,7 +2590,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 <div className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${showVintedSync ? "bg-[#09b1ba]" : "bg-laton"}`} />
                   <span className={`font-sans text-[10px] tracking-widest uppercase font-bold ${showVintedSync ? "text-[#09b1ba]" : "text-laton"}`}>
-                    {showVintedSync ? "Vinted Express Integrator" : "Ficha del Sastre"}
+                    {showVintedSync ? "Venta en Vinted" : "Detalles de la Prenda"}
                   </span>
                 </div>
                 <button
@@ -2789,7 +2799,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           setVintedDraft({
                             titulo: `Elegante ${selectedPrenda.nombre} - Espejo Selected`,
                             precio: recommendedPrice,
-                            descripcion: `Exquisito ${selectedPrenda.nombre.toLowerCase()} en impecable estado de conservación.\n\nTemporada óptima: ${selectedPrenda.temporada === "verano" ? "Primavera/Verano" : selectedPrenda.temporada === "invierno" ? "Otoño/Invierno" : "Multiestacional"}.\nObservaciones sastreras: ${customDescripcion || "Prenda de excelente diseño y tacto premium para balancear cualquier atuendo clásico."}\n\n#slowfashion #vintagedepot #elegantmen #sartorial #espejoboutique`,
+                            descripcion: `Bonito/a ${selectedPrenda.nombre.toLowerCase()} en muy buen estado.\n\nTemporada ideal: ${selectedPrenda.temporada === "verano" ? "Primavera/Verano" : selectedPrenda.temporada === "invierno" ? "Otoño/Invierno" : "Cualquier temporada"}.\nDetalles adicionales: ${customDescripcion || "Prenda muy bien cuidada y fácil de combinar."}\n\n#moda #vintagedepot #estilo #armariocircular #segundamano`,
                           });
                           setShowVintedSync(true);
                           setVintedSyncStatus("idle");
@@ -2915,7 +2925,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                               {vintedSyncStatus === "success" && (
                                 <div className="space-y-3 mt-2">
                                   <div className="p-2.5 bg-emerald-950/20 border border-emerald-900/40 text-emerald-200 font-sans text-[10px] leading-relaxed rounded">
-                                    <strong>¡Anuncio sastrero automatizado!</strong> Debido a las políticas de seguridad de Vinted, no es posible enviar información directamente desde nuestros servidores a sus formularios de forma invisible. 
+                                    <strong>¡Anuncio automático listo!</strong> Debido a las políticas de seguridad de Vinted, no es posible enviar información directamente desde nuestros servidores a sus formularios de forma invisible. 
                                     Por ello, ESPEJO ha creado la <strong>Sincronización Express en 1-Clic</strong>:
                                   </div>
 
@@ -2989,7 +2999,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                       {/* Descripción copy row */}
                                       <div className="flex flex-col gap-1 bg-tarjeta p-2 border border-linea/60 rounded">
                                         <div className="flex items-center justify-between">
-                                          <span className="text-[7px] text-[#52525B] uppercase font-bold tracking-wider">Descripción del sastre</span>
+                                          <span className="text-[7px] text-[#52525B] uppercase font-bold tracking-wider">Descripción de la prenda</span>
                                           <button
                                             type="button"
                                             onClick={async () => {

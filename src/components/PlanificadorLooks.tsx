@@ -272,7 +272,7 @@ export default function PlanificadorLooks({
     const abrigo = selectedPrendas.find(p => p.categoria === "top" && (p.nombre.toLowerCase().includes("abrigo") || p.nombre.toLowerCase().includes("chaqueta") || p.nombre.toLowerCase().includes("blazer") || p.tejido?.toLowerCase().includes("lana") || p.tejido?.toLowerCase().includes("cuero")));
     const pantalón = selectedPrendas.find(p => p.categoria === "pantalon");
 
-    let advice = `Atelier climatológico (${plan.clima_simulado.ciudad}, ${plan.clima_simulado.temp}°C): `;
+    let advice = `Asesor del clima (${plan.clima_simulado.ciudad}, ${plan.clima_simulado.temp}°C): `;
 
     if (plan.clima_simulado.condicion === "lluvioso" || plan.clima_simulado.condicion === "tormenta") {
       if (calzado && (calzado.nombre.toLowerCase().includes("lona") || calzado.nombre.toLowerCase().includes("ante") || calzado.tejido?.toLowerCase().includes("ante"))) {
@@ -291,7 +291,7 @@ export default function PlanificadorLooks({
         if (!tieneLana) {
           advice += "⚠️ Protección térmica baja: Las prendas seleccionadas carecen de fibras naturales de abrigo como lana o cachemira. Pasarás frío.";
         } else {
-          advice += "✓ Capas térmicas correctas: Sintonía de lana para el frío siberiano.";
+          advice += "✓ Capas térmicas correctas: Prendas de lana idóneas para el frío.";
         }
       }
     } else if (plan.clima_simulado.condicion === "soleado") {
@@ -303,7 +303,7 @@ export default function PlanificadorLooks({
           advice += "✓ Confort estival: Selección ligera, fresca y transpirable.";
         }
       } else {
-        advice += "✓ Confort térmico excelente para pasear bajo el sol de sastre.";
+        advice += "✓ Confort térmico excelente para pasear bajo el sol.";
       }
     } else {
       advice += "✓ Composición equilibrada de capas medias para clima variable.";
@@ -367,13 +367,13 @@ export default function PlanificadorLooks({
       <div className="mb-6 text-center">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#F4F4F5] text-[#18181B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
           <Calendar size={11} className="text-laton animate-pulse" />
-          <span>Sartorial Agenda & Weather Tracker</span>
+          <span>Agenda Semanal y Clima</span>
         </div>
         <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta animate-fade-in">
           Planificador Semanal de Looks
         </h2>
         <p className="text-xs text-tinta-apagada max-w-xl mx-auto mt-1 leading-relaxed">
-          Diseña tu elegancia de lunes a domingo. Consulta el clima simulado de las principales capitales de moda y recibe un informe de idoneidad térmica elaborado por el Sastre AI.
+          Organiza tus atuendos de lunes a domingo. Consulta el clima simulado de las principales ciudades y recibe un informe de protección térmica elaborado por nuestra IA.
         </p>
 
         {/* Global city selector */}
@@ -606,7 +606,7 @@ export default function PlanificadorLooks({
             >
               <div className="flex justify-between items-center border-b border-linea pb-3">
                 <div>
-                  <h3 className="font-serif text-lg font-bold text-tinta">Agendar Combinación Sastrera</h3>
+                  <h3 className="font-serif text-lg font-bold text-tinta">Agendar Combinación de Ropa</h3>
                   <p className="text-[10px] text-tinta-apagada font-mono uppercase">FECHA SELECCIONADA: {modalDate}</p>
                 </div>
                 <button

@@ -151,11 +151,11 @@ export default function EstadisticasSostenibilidad({
           setAiAdvice(data.consejo);
         }
       } else {
-        setAiAdvice("Atelier Financiero: Te sugerimos amortizar aquellas americanas y zapatos que superen los 50€ por uso. Trata de incorporarlos en looks relajados para tus salidas informales.");
+        setAiAdvice("Asesor Financiero: Te sugerimos amortizar aquellas prendas y calzados que superen los 50€ por uso. Trata de incorporarlos en combinaciones sencillas para tus salidas de diario.");
       }
     } catch (err) {
       console.error(err);
-      setAiAdvice("Atelier Financiero: Te sugerimos amortizar aquellas americanas y zapatos que superen los 50€ por uso. Trata de incorporarlos en looks relajados para tus salidas informales.");
+      setAiAdvice("Asesor Financiero: Te sugerimos amortizar aquellas prendas y calzados que superen los 50€ por uso. Trata de incorporarlos en combinaciones sencillas para tus salidas de diario.");
     } finally {
       setLoadingAdvice(false);
     }
@@ -166,7 +166,7 @@ export default function EstadisticasSostenibilidad({
       <div className="mb-6 text-center">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-laton/20 bg-[#F4F4F5] text-[#18181B] text-[10px] font-bold uppercase tracking-widest mb-2.5">
           <TrendingDown size={11} className="text-laton animate-pulse" />
-          <span>Sartorial Finances & Cost-per-Wear Tracker</span>
+          <span>Finanzas del Armario & Calculadora de Coste por Uso</span>
         </div>
         <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta animate-fade-in">
           Coste Por Uso (CPW) y Sostenibilidad
@@ -193,7 +193,7 @@ export default function EstadisticasSostenibilidad({
         <div className="bg-tarjeta/40 border border-linea/60 rounded-xl p-4 space-y-1">
           <span className="text-[8px] uppercase tracking-wider text-laton font-bold block">Coste Promedio por Uso (CPW)</span>
           <p className="text-2xl font-serif font-black text-laton">{promedioCpW.toFixed(2)} €</p>
-          <p className="text-[10px] text-tinta-apagada">Inversión amortizada global de tu atelier.</p>
+          <p className="text-[10px] text-tinta-apagada">Inversión amortizada global de tu armario.</p>
         </div>
 
         {/* ECO-SCORE BENTO BLOCK */}
@@ -304,7 +304,7 @@ export default function EstadisticasSostenibilidad({
         </div>
         <div className="flex items-center gap-2 relative z-10">
           <Sparkles size={16} className="text-laton animate-pulse" />
-          <h3 className="font-serif text-sm font-bold text-tinta">Análisis Financiero de Sastre AI</h3>
+          <h3 className="font-serif text-sm font-bold text-tinta">Análisis Financiero Inteligente</h3>
         </div>
 
         {aiAdvice ? (
@@ -314,7 +314,7 @@ export default function EstadisticasSostenibilidad({
         ) : (
           <div className="space-y-2 relative z-10">
             <p className="text-xs text-tinta-apagada">
-              Genera una recomendación de sastre totalmente personalizada para balancear tu inversión de moda y planificar de forma inteligente tus próximas adquisiciones estelares.
+              Genera una recomendación totalmente personalizada para equilibrar tu inversión en ropa y planificar de forma inteligente tus próximas compras.
             </p>
             <button
               onClick={handleFetchAiFinance}

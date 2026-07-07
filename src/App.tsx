@@ -459,7 +459,7 @@ export default function App() {
             ...p,
             precio_compra: p.precio_compra ?? [145, 89, 185, 45, 220, 75][idx % 6],
             veces_puesto: p.veces_puesto ?? [8, 14, 1, 0, 19, 3][idx % 6],
-            composicion_tejido: p.composicion_tejido || p.tejido || ["100% Lana de Sastre", "100% Algodón Egipcio", "Cuero Premium", "Mezcla de Lino", "Ante Italiano", "Sarga Fina"][idx % 6]
+            composicion_tejido: p.composicion_tejido || p.tejido || ["100% Lana Fina", "100% Algodón Egipcio", "Cuero Premium", "Mezcla de Lino", "Ante Italiano", "Sarga Fina"][idx % 6]
           }));
 
           // Load weekly plan
@@ -478,7 +478,7 @@ export default function App() {
                   condicion: "nublado",
                   ciudad: "Madrid"
                 },
-                comentarios_sastre: "Atelier climatológico (Madrid, 17°C): El blazer desestructurado en sintonía de lana es idóneo para el viento fresco de la capital. Resguardo óptimo."
+                comentarios_sastre: "Asistente del clima (Madrid, 17°C): El blazer de lana es ideal para el viento fresco de la capital. Estilo cómodo y abrigado."
               }
             ];
             safeSetLocalStorage(planKey, JSON.stringify(dbPlanificaciones));
@@ -557,7 +557,7 @@ export default function App() {
             ...p,
             precio_compra: p.precio_compra ?? [145, 89, 185, 45, 220, 75][idx % 6],
             veces_puesto: p.veces_puesto ?? [8, 14, 1, 0, 19, 3][idx % 6],
-            composicion_tejido: p.composicion_tejido || p.tejido || ["100% Lana de Sastre", "100% Algodón Egipcio", "Cuero Premium", "Mezcla de Lino", "Ante Italiano", "Sarga Fina"][idx % 6]
+            composicion_tejido: p.composicion_tejido || p.tejido || ["100% Lana Fina", "100% Algodón Egipcio", "Cuero Premium", "Mezcla de Lino", "Ante Italiano", "Sarga Fina"][idx % 6]
           }));
 
           if (parsedPlanes.length === 0 && enrichedLocalPrendas.length > 0) {
@@ -573,7 +573,7 @@ export default function App() {
                   condicion: "nublado",
                   ciudad: "Madrid"
                 },
-                comentarios_sastre: "Atelier climatológico (Madrid, 17°C): El blazer desestructurado en sintonía de lana es idóneo para el viento fresco de la capital. Resguardo óptimo."
+                comentarios_sastre: "Asistente del clima (Madrid, 17°C): El blazer de lana es ideal para el viento fresco de la capital. Estilo cómodo y abrigado."
               }
             ];
             safeSetLocalStorage(planKey, JSON.stringify(parsedPlanes));
@@ -703,10 +703,16 @@ export default function App() {
     }
   };
 
-  const handlePrendaActualizada = async (prendaActualizada: Prenda) => {
+  const handlePrendaActualizada = async (prendaOrArray: Prenda | Prenda[]) => {
+    const arr = Array.isArray(prendaOrArray) ? prendaOrArray : [prendaOrArray];
+    if (arr.length === 0) return;
+
     // Primero actualizamos localmente
     setPrendas((prev) => {
-      const updated = prev.map((p) => (p.id === prendaActualizada.id ? prendaActualizada : p));
+      const updated = prev.map((p) => {
+        const matching = arr.find((item) => item.id === p.id);
+        return matching ? matching : p;
+      });
       if (user) {
         safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
       }
@@ -715,15 +721,21 @@ export default function App() {
 
     if (user && isSupabaseConfigured && !isAuthMock && user.id !== "usr_guest" && !user.id.startsWith("usr_mock")) {
       try {
-        const saved = await updateUserPrenda(user.id, prendaActualizada);
-        // Actualizamos de nuevo con la URL final del storage
+        const savedList: Prenda[] = [];
+        for (const item of arr) {
+          const saved = await updateUserPrenda(user.id, item);
+          savedList.push(saved);
+        }
         setPrendas((prev) => {
-          const updated = prev.map((p) => (p.id === saved.id ? saved : p));
+          const updated = prev.map((p) => {
+            const matching = savedList.find((s) => s.id === p.id);
+            return matching ? matching : p;
+          });
           safeSetLocalStorage(`espejo_prendas_${user.id}`, JSON.stringify(updated));
           return updated;
         });
       } catch (err) {
-        console.error("Error updating prenda:", err);
+        console.error("Error updating garments:", err);
       }
     }
   };
@@ -914,11 +926,11 @@ export default function App() {
             </span>
           </div>
           <h2 className="font-serif text-xl font-bold uppercase tracking-widest text-[#09090B]">
-            SARTORÍAL SYNC
+            SINCRONIZANDO TU ARMARIO
           </h2>
           <div className="w-12 h-px bg-laton mx-auto opacity-50" />
           <p className="font-sans text-[11px] uppercase tracking-widest text-tinta-apagada max-w-xs animate-pulse">
-            Sincronizando el armario clasificado con tu atelier privado...
+            Sincronizando tus prendas de vestir con tu cuenta privada...
           </p>
         </div>
       </div>
@@ -936,7 +948,7 @@ export default function App() {
         <div className="space-y-8 overflow-y-auto no-scrollbar py-2">
           {/* Brand/Logo */}
           <div className="text-left py-2 border-b border-linea pb-4">
-            <span className="text-[10px] tracking-widest text-laton uppercase font-bold block mb-1">ATELIER ESPEJO</span>
+            <span className="text-[10px] tracking-widest text-laton uppercase font-bold block mb-1">ESPEJO DIGITAL</span>
             <h1 className="font-serif text-xl sm:text-2xl font-black tracking-tight text-tinta uppercase select-none leading-tight">
               Armario Digital
             </h1>
@@ -951,7 +963,7 @@ export default function App() {
               </span>
               <div className="text-left w-full overflow-hidden">
                 <p className="text-[9px] text-tinta-apagada font-bold uppercase tracking-wider leading-none">
-                  {isSupabaseConfigured && !isAuthMock ? "ATELIER CLOUD" : "MEMORIA INTEGRADA"}
+                  {isSupabaseConfigured && !isAuthMock ? "NUBE CONECTADA" : "MEMORIA INTEGRADA"}
                 </p>
                 <p className="text-[10px] font-mono text-tinta/80 truncate mt-0.5">
                   {user.email}
@@ -960,7 +972,7 @@ export default function App() {
             </div>
             {isSupabaseConfigured && !isAuthMock ? (
               <div className="text-[8.5px] uppercase tracking-wider text-emerald-400 font-bold bg-emerald-950/20 px-2 py-0.5 border border-emerald-950/30 rounded text-center">
-                Atelier Sincronizado
+                Armario Sincronizado
               </div>
             ) : (
               <div className="text-[8.5px] uppercase tracking-wider text-amber-500 font-bold bg-amber-950/10 px-2 py-0.5 border border-amber-950/20 rounded text-center">
@@ -1016,14 +1028,14 @@ export default function App() {
             onClick={handleLogout}
             className="w-full py-2 bg-fondo border border-linea hover:border-red-900/50 text-tinta-apagada hover:text-red-400 text-[10px] font-bold uppercase tracking-widest rounded flex items-center justify-center gap-2 transition duration-200 cursor-pointer"
           >
-            <LogOut size={12} /> Cerrar Atelier
+            <LogOut size={12} /> Cerrar Sesión
           </button>
           
           <button
             onClick={handleResetApp}
             className="w-full text-center hover:underline text-[9px] uppercase tracking-wider font-mono text-tinta-apagada/40 hover:text-red-400 transition"
           >
-            Resetear atelier
+            Restaurar aplicación
           </button>
         </div>
       </aside>
@@ -1091,7 +1103,7 @@ export default function App() {
               {activeTab === "asesor" && "Pruébate cualquier combinación con inteligencia artificial."}
               {activeTab === "historial" && "Guarda tus looks favoritos."}
               {activeTab === "auditoria" && "Analiza lo que realmente usas y lo que te sobra."}
-              {activeTab === "maleta" && "Tu cápsula sastrera inteligente para viajar ligero."}
+              {activeTab === "maleta" && "Tu cápsula inteligente de ropa para viajar ligero."}
               {activeTab === "compras" && "Prendas recomendadas que encajan con tu perfil."}
               {activeTab === "diagnostico" && "Tu silueta, preferencias y metas estéticas."}
             </p>
@@ -1122,7 +1134,7 @@ export default function App() {
                     Error de Almacenamiento
                   </h3>
                   <p className="text-[11px] text-tinta-apagada">
-                    No se pudo guardar la imagen de tu prenda en el servidor de almacenamiento. Por favor, comprueba tu conexión o contacta al administrador de tu atelier.
+                    No se pudo guardar la imagen de tu prenda en el servidor de almacenamiento. Por favor, comprueba tu conexión o contacta al soporte de la aplicación.
                   </p>
                 </div>
               </div>
@@ -1318,8 +1330,8 @@ export default function App() {
 
           {/* Footnote inside Main Panel */}
           <footer className="text-center pt-10 pb-8 text-[11px] font-sans text-tinta-apagada/40 leading-relaxed max-w-sm mx-auto select-none">
-            <p className="font-serif italic font-medium text-laton">Atelier Espejo</p>
-            <p>Atelier de Asesoría de Imagen & Estilismo Digital Inclusivo.</p>
+            <p className="font-serif italic font-medium text-laton">Espejo Digital</p>
+            <p>Asesoría de Imagen & Estilismo Personal para todo el mundo.</p>
             <p className="mt-0.5 text-laton/80 font-medium">Diseñado y Desarrollado por <span className="font-bold">AIron Labs</span>.</p>
             <p className="mt-1">© 2026. Todos los derechos reservados.</p>
           </footer>

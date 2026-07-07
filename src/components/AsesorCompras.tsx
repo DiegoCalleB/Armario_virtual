@@ -74,14 +74,14 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
       });
 
       if (!res.ok) {
-        throw new Error("No se pudo conectar con el recomendador de compras sastreras.");
+        throw new Error("No se pudo conectar con el recomendador de compras inteligente.");
       }
 
       const data = await res.json();
       setResult(data);
     } catch (err) {
       console.error(err);
-      setError("No se ha podido procesar el reporte de compras en el atelier. Por favor reinténtalo.");
+      setError("No se ha podido procesar el reporte de compras. Por favor reinténtalo.");
     } finally {
       setLoading(false);
     }
@@ -147,7 +147,7 @@ export default function AsesorCompras({ armario, perfilEstilo }: AsesorComprasPr
               <div className="absolute inset-0 rounded-full border-2 border-laton border-t-transparent animate-spin" />
               <Scissors size={24} className="text-laton animate-pulse" />
             </div>
-            <h4 className="font-serif text-sm font-semibold text-tinta">Hilvanando Análisis de Tendencias</h4>
+            <h4 className="font-serif text-sm font-semibold text-tinta">Preparando Análisis de Tendencias</h4>
             <p className="text-xs text-tinta-apagada max-w-xs leading-relaxed mt-1">
               Escaneando la composición cromática... Buscando alternativas en catálogos multimarca de Zalando y ASOS... Redactando veredicto de Slow Fashion...
             </p>

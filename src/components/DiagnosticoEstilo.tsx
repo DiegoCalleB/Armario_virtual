@@ -93,7 +93,7 @@ export default function DiagnosticoEstilo({ userId, onPerfilGuardado, perfilActu
               DIAGNÓSTICO & DOSSIER DE ESTILO
             </h3>
             <p className="font-mono text-[9px] text-laton uppercase tracking-widest mt-0.5">
-              Personalización Sastrera por Inteligencia Artificial
+              Personalización por Inteligencia Artificial
             </p>
             <p className="font-sans text-xs text-tinta-apagada mt-2 leading-relaxed">
               Completa este breve cuestionario o describe tus objetivos en la caja de texto. 

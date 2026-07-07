@@ -60,7 +60,7 @@ export default function AuditoriaArmario({
 
   const handleAuditar = async () => {
     if (armario.length === 0) {
-      setError("Necesitas tener prendas registradas en tu armario para que el sastre pueda evaluarlas.");
+      setError("Necesitas tener prendas registradas en tu armario para que la IA pueda evaluarlas.");
       return;
     }
 
@@ -82,9 +82,9 @@ export default function AuditoriaArmario({
       setAuditResult(data);
     } catch (err: any) {
       console.error(err);
-      let errorFriendly = err.message || "Fallo en la comunicación con el sastre auditor.";
+      let errorFriendly = err.message || "Fallo en la comunicación con la IA de auditoría.";
       if (err.message && (err.message.toLowerCase().includes("fetch") || err.message.toLowerCase().includes("failed"))) {
-        errorFriendly = "No se pudo conectar con el comité sastrero de Espejo. Por favor, comprueba tu conexión o reinténtalo transcurridos unos segundos.";
+        errorFriendly = "No se pudo conectar con el servidor de Espejo. Por favor, comprueba tu conexión o reinténtalo transcurridos unos segundos.";
       }
       setError(errorFriendly);
     } finally {
@@ -108,7 +108,7 @@ export default function AuditoriaArmario({
       setVintedDraft({
         titulo: `Prenda Elegante - ${prenda.nombre}`,
         precio: prenda.formalidad * 15 + 10,
-        descripcion: `Magnífico ${prenda.nombre.toLowerCase()} en buen estado. Ideal para estilo smart casual y combinaciones sutiles.\n\n#slowfashion #sartorial #menswear #vintagedepot`,
+        descripcion: `Magnífico ${prenda.nombre.toLowerCase()} en buen estado. Ideal para estilo casual y combinaciones cómodas.\n\n#slowfashion #estiloymoda #ropadesegundamano #armario`,
       });
     }
     setSyncStatus("idle");
@@ -222,7 +222,7 @@ export default function AuditoriaArmario({
             <div className="flex items-baseline justify-between mb-6">
               <div className="flex items-center gap-3">
                 <span className="font-serif italic text-laton font-medium text-lg">05</span>
-                <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Auditoría del Sastre & Vinted</h2>
+                <h2 className="font-serif text-2xl font-bold tracking-tight text-tinta">Auditoría de tu Armario & Vinted</h2>
               </div>
               <p className="text-xs font-sans text-tinta-apagada select-none font-medium">OPTIMIZER & REDUNDANCIES</p>
             </div>
@@ -235,7 +235,7 @@ export default function AuditoriaArmario({
               <TrendingUp size={16} className="text-laton" /> Armario Inteligente Circular
             </h3>
             <p className="text-xs text-tinta-apagada leading-relaxed font-sans font-light">
-              ¿Quieres saber qué te falta para tener el vestidor perfecto? ¿Sabes qué prendas rompen la armonía de tu estilo? El sastre boutique de <span className="text-laton font-medium">ESPEJO</span> analiza la sinergia global del total de tus piezas para proponerte compras estratégicas y listar tus excesos directamente para vender en <span className="text-[#09b1ba] font-semibold">Vinted</span> con descripciones optimizadas con IA.
+              ¿Quieres saber qué te falta para tener el armario perfecto? ¿Sabes qué prendas ya no encajan con tu estilo? Nuestro recomendador inteligente de <span className="text-laton font-medium">ESPEJO</span> analiza todas tus piezas juntas para proponerte prendas clave que te faltan y listar lo que te sobra directamente para vender en <span className="text-[#09b1ba] font-semibold">Vinted</span> con descripciones automáticas creadas con IA.
             </p>
           </div>
           <button
@@ -301,12 +301,12 @@ export default function AuditoriaArmario({
                   <span className="text-[8px] uppercase font-mono text-laton tracking-widest font-semibold">Sinergia</span>
                 </div>
               </div>
-              <p className="text-[10px] text-tinta-apagada">Grado de versatilidad de tu sastrería</p>
+              <p className="text-[10px] text-tinta-apagada">Grado de versatilidad de tus prendas</p>
             </div>
 
             {/* Editorial tailors review */}
             <div className="bg-tarjeta border border-linea p-5 rounded md:col-span-2 relative min-h-[160px] flex flex-col justify-between">
-              <div className="absolute top-2 right-2 text-[8px] font-mono text-tinta-apagada">CRÍTICA DEL SASTRE</div>
+              <div className="absolute top-2 right-2 text-[8px] font-mono text-tinta-apagada">CRÍTICA DE NUESTRA IA</div>
               <div className="space-y-2 pr-4 pt-1">
                 <p className="font-serif text-[13px] text-tinta font-medium leading-relaxed italic">
                   "{auditResult.analisis_editorial}"
@@ -326,7 +326,7 @@ export default function AuditoriaArmario({
                 <span className="w-1.5 h-1.5 rounded-full bg-laton" /> Prendas de las que Careces (Huecos de Armario)
               </h3>
               <p className="text-[11px] text-tinta-apagada leading-relaxed mb-2 font-sans font-light">
-                Estas prendas son las mejores cartas tácticas para multiplicar tus combinaciones. Un sastre las diseña según tu estilo existente:
+                Estas prendas son las mejores opciones para multiplicar tus combinaciones y aprovechar más la ropa que ya tienes:
               </p>
 
               <div className="space-y-3">
@@ -605,7 +605,7 @@ export default function AuditoriaArmario({
                           onChange={(e) => setVintedDraft({ ...vintedDraft, precio: parseInt(e.target.value) || 0 })}
                           className="w-24 text-xs font-sans bg-fondo border border-linea text-tinta p-2 rounded focus:border-laton focus:outline-none"
                         />
-                        <span className="text-xs text-tinta-apagada">Tasación de sastre idónea para venta rápida</span>
+                        <span className="text-xs text-tinta-apagada">Tasación recomendada para venta rápida</span>
                       </div>
                     </div>
 
@@ -666,7 +666,7 @@ export default function AuditoriaArmario({
                             className="space-y-3 mt-2 font-sans"
                           >
                             <div className="p-2 bg-emerald-950/20 border border-emerald-900/40 text-emerald-200 text-[10px] leading-relaxed rounded">
-                              <strong>¡Anuncio sastrero automatizado!</strong> Debido a las limitaciones de seguridad de Vinted, la carga de datos se ha unificado en la <strong>Sincronización Express de 1-Clic</strong>:
+                              <strong>¡Anuncio automatizado!</strong> Debido a las limitaciones de seguridad de Vinted, la carga de datos se ha unificado en la <strong>Sincronización Express de 1-Clic</strong>:
                             </div>
 
                             <div className="bg-tarjeta p-2.5 border border-linea rounded space-y-2">
@@ -739,7 +739,7 @@ export default function AuditoriaArmario({
                                 {/* Descripción */}
                                 <div className="flex flex-col gap-1 bg-tarjeta p-1.5 border border-linea/50 rounded">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[6.5px] text-tinta-apagada uppercase font-bold tracking-wider">Descripción sastrera</span>
+                                    <span className="text-[6.5px] text-tinta-apagada uppercase font-bold tracking-wider">Descripción del anuncio</span>
                                     <button
                                       type="button"
                                       onClick={async () => {

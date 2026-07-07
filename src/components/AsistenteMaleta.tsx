@@ -32,7 +32,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
   const [destino, setDestino] = useState("");
   const [dias, setDias] = useState(4);
   const [clima, setClima] = useState("Modera y primaveral (18ºC)");
-  const [actividades, setActividades] = useState("Cenas sastreras, turismo clásico, caminatas");
+  const [actividades, setActividades] = useState("Cenas elegantes, turismo, caminatas");
   
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MaletaResult | null>(null);
@@ -68,7 +68,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
       });
 
       if (!res.ok) {
-        throw new Error("Fallo en la conexión con el sastre de maletas.");
+        throw new Error("Fallo en la conexión con el asistente de maletas.");
       }
 
       const data = await res.json();
@@ -194,7 +194,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
               {loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-laton border-t-transparent rounded-full animate-spin shrink-0" />
-                  <span>Cargando Estilista Sastrero...</span>
+                  <span>Cargando Estilo de Viaje...</span>
                 </>
               ) : (
                 <>
@@ -217,7 +217,7 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                 className="h-full flex flex-col items-center justify-center border border-linea/60 bg-tarjeta rounded p-8 text-center"
               >
                 <Briefcase size={40} className="text-laton-apagado animate-bounce mb-3" />
-                <h4 className="font-serif text-sm font-semibold text-tinta">Sastrería de Equipajes Activa</h4>
+                <h4 className="font-serif text-sm font-semibold text-tinta">Organización de Equipaje Activa</h4>
                 <p className="text-[11px] text-tinta-apagada max-w-[280px] mt-1 leading-relaxed">
                   Evaluando la cohesión térmica de tus prendas e ideando outfits atemporales para vestir en {destino || "tu viaje"}. Por favor espera un momento bajo el hilo del Gemini-3.5 master...
                 </p>

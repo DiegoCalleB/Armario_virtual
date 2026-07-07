@@ -101,7 +101,7 @@ PERFIL Y DIAGNÓSTICO DE ESTILO DEL USUARIO:
 - Paleta de Colores Favoritos: "${coloresText}"
 - Detalles Libres / Observaciones estilísticas del usuario: "${perfilEstilo.detallesLibres || "Ninguna"}"
 
-INSTRUCCIÓN CRUCIAL DE INTEGRACIÓN: Debes alinear al 100% tu análisis sastrero, las combinaciones de looks sugeridas, los consejos de peluquería/barba, las prendas a descartar y las recomendaciones de compras sugeridas con este perfil y diagnóstico personal. Explica al usuario explícitamente cómo tus propuestas encajan con su forma de ser y le ayudan a conseguir su Estilo Objetivo ("${perfilEstilo.estiloObjetivo || "su estilo ideal"}") resolviendo lo que realmente necesita y depurando lo que le sobra.
+INSTRUCCIÓN CRUCIAL DE INTEGRACIÓN: Debes alinear al 100% tu análisis de estilo, las combinaciones de looks sugeridas, los consejos de peinado/imagen, las prendas a descartar y las recomendaciones de compras sugeridas con este perfil y diagnóstico personal. Explica al usuario explícitamente cómo tus propuestas encajan con su forma de ser y le ayudan a conseguir su Estilo Objetivo ("${perfilEstilo.estiloObjetivo || "su estilo ideal"}") resolviendo lo que realmente necesita. Evita terminologías pretenciosas o de sastrería compleja; usa siempre un español claro, sencillo y accesible para cualquier persona.
 ---
 `;
 }
@@ -463,20 +463,20 @@ Identifica CADA una de las prendas de vestir o calzado visibles de forma indepen
 - Si la imagen contiene un único artículo de vestir o calzado aislado, lístalo como un único elemento en el array.
 
 Para cada prenda de ropa o calzado identificada de forma independiente, determina:
-1. Nombre de lujo sastrero y refinado en español (ej: "Americana estructurada marrón chocolate", "Vestido de cóctel plisado azul cobalto", "Pantalón de lino blanco", "Zapatos Loafer de piel marrón", "Zapatos de tacón kitten").
+1. Nombre descriptivo y sencillo en español (ej: "Chaqueta marrón chocolate", "Vestido estampado azul", "Pantalón de lino blanco", "Zapatos de cuero marrón", "Zapatos de tacón").
 2. Categoría: ÚNICAMENTE uno de estos tres valores: "top" (camisas, camisetas, blusas, vestidos, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas, faldas) o "calzado" (zapatos, zapatillas, botas, tacones). ¡NO USAR la categoría 'accesorio' bajo ninguna circunstancia!
 3. Color predominante en hexadecimal (ej: "#2C3E50").
-4. Formalidad del 1 al 5 (1: muy casual/deportivo, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
+4. Formalidad del 1 al 5 (1: muy casual/deportivo, 2: casual diario, 3: smart casual/semi-formal, 4: formal/elegante, 5: de etiqueta/gala).
 5. Temporada: "verano", "invierno" o "todo".
-6. Tejido o material (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa", "Seda", "Punto/Knit").
-7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estilo Oxford", "Básico", "Oversized"]).
+6. Tejido o material (ej: "Lana", "Algodón", "Lino", "Vaquero", "Cuero", "Seda", "Punto").
+7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Ajustado", "Atemporal", "Clásico", "Básico", "Ancho"]).
 8. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0.0 a 1.0 (donde box_ymin es el borde superior como float (ej: 0.15), box_xmin el borde izquierdo (ej: 0.25), box_ymax el borde inferior (ej: 0.55) y box_xmax el borde derecho (ej: 0.75) de la prenda en la imagen).
 
 DIRECTRICES CRÍTICAS PARA LAS COORDENADAS (box_ymin, box_xmin, box_ymax, box_xmax):
 - Cada prenda que identifiques DEBE tener una caja delimitadora (bounding box) extremadamente precisa y realista, que corresponda ÚNICAMENTE al área real de esa prenda en la foto.
 - NUNCA utilices coordenadas idénticas o casi idénticas para diferentes prendas.
 - Por ejemplo, si en la foto hay una persona vestida de cuerpo entero, un maniquí con outfit completo, o prendas dispuestas en vertical (ej. una percha con camiseta arriba y pantalones abajo):
-  * Los pantalones o bermudas ("pantalon") están en la mitad INFERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser significativamente mayor (por ejemplo, entre 0.45 y 0.65) y su "box_ymax" debe terminar cerca del borde inferior (por ejemplo, entre 0.85 y 1.0). Jamás asignes una caja delimitadora en la mitad superior de la imagen a un pantalón.
+  * Los pantalones o bermudas ("pantalon") están en la mitad INFERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser significativamente mayor (por ejemplo, entre 0.45 y 0.65) and su "box_ymax" debe terminar cerca del borde inferior (por ejemplo, entre 0.85 y 1.0). Jamás asignes una caja delimitadora en la mitad superior de la imagen a un pantalón.
   * La camiseta, camisa, abrigo o chaqueta ("top") está en la mitad SUPERIOR, por lo que su coordenada vertical inicial "box_ymin" debe ser baja (por ejemplo, entre 0.0 y 0.25) y su "box_ymax" de final vertical debe estar en la mitad o torso medio (por ejemplo, entre 0.45 y 0.65).
   * El calzado o zapatos ("calzado") están en la zona más BAJA de todas, por lo que su coordenada vertical "box_ymin" debe estar por encima de 0.85 o 0.90.
 - Si las prendas están dispuestas una al lado de la otra horizontalmente (ej: ropa doblada en una mesa o perchas paralelas), asegúrate de darles rangos horizontales de coordenadas ("box_xmin" y "box_xmax") claramente diferenciados y separados para que el recorte sea perfecto para cada prenda.
@@ -487,13 +487,13 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
 Identifica SOLO la prenda de vestir o el artículo de armario principal visible en la imagen como un elemento único del armario.
 
 Determina con precisión:
-1. Nombre elegante y refinado en español (ej: 'Americana estructurada marrón chocolate', 'Vestido fluido estampado floral', 'Pantalón chino de corte recto', 'Zapatos Loafer de piel', 'Tacones de salón clásicos').
+1. Nombre elegante y sencillo en español (ej: 'Chaqueta marrón chocolate', 'Vestido fluido estampado', 'Pantalón chino beige', 'Zapatos de cuero', 'Tacones clásicos').
 2. Categoría de armario: "top" (camisas, camisetas, blusas, vestidos, abrigos, chaquetas), "pantalon" (pantalones, vaqueros, bermudas, faldas), "calzado" (zapatos, zapatillas, botas, tacones) o "accesorio" (reloj, pañuelo, gafas de sol, cinturón).
 3. Color predominante en formato hexadecimal (#HEX) (ej: '#1E3A8A').
-4. Formalidad del 1 al 5 (1: deportivo/muy casual, 2: casual diario, 3: smart casual/semi-formal, 4: traje/cóctel, 5: de etiqueta/gala).
+4. Formalidad del 1 al 5 (1: deportivo/muy casual, 2: casual diario, 3: smart casual/semi-formal, 4: formal/elegante, 5: de etiqueta/gala).
 5. Temporada idónea: "verano", "invierno" o "todo".
-6. Tejido o material de confección (ej: "Lana de sastre", "Algodón peinado", "Lino", "Denim grueso", "Piel napa", "Seda", "Chifón").
-7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Slim Fit", "Atemporal", "Estructurado", "Básico", "Oversized"]).
+6. Tejido o material de confección (ej: "Lana", "Algodón", "Lino", "Vaquero", "Cuero", "Seda").
+7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Ajustado", "Atemporal", "Clásico", "Básico", "Ancho"]).
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`;
 
@@ -733,13 +733,13 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
 
     res.json(parsedResponse);
   } catch (error: any) {
-    console.error("Error en analizar-prenda, aplicando fallback de atelier:", error);
+    console.error("Error en analizar-prenda, aplicando fallback de armario:", error);
     const { isMulti } = req.body;
     if (isMulti) {
       res.json({
         prendas: [
           {
-            nombre: "Americana vintage de botonadura simple",
+            nombre: "Chaqueta clásica de botonadura simple",
             categoria: "top",
             color: "#1d2b42",
             formalidad: 4,
@@ -754,7 +754,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
       });
     } else {
       res.json({
-        nombre: "Chaqueta estructurada de sastre clásica",
+        nombre: "Chaqueta estructurada clásica",
         categoria: "top",
         color: "#1d2b42",
         formalidad: 4,
@@ -880,7 +880,7 @@ No sugieras prendas de otras cápsulas a menos que sea estrictamente necesario p
       }
     }
 
-    const prompt = `Actúa como el estilista jefe y director de visajismo del exclusivo Atelier de Imagen Unisex y Sastrería Digital ESPEJO, diseñado para todos los públicos sin distinción de género (mujeres, hombres, no binarios, trans, etc.) ni de edad (niños, jóvenes, adultos, mayores, etc.).
+    const prompt = `Actúa como el estilista jefe del exclusivo Asesor de Imagen ESPEJO, diseñado para todos los públicos sin distinción de género (mujeres, hombres, no binarios, trans, etc.) ni de edad (niños, jóvenes, adultos, mayores, etc.).
 Analiza la fisionomía y estilo del usuario:
 - Forma de cara: ${formaCara || "No especificada"}
 - Pelo actual: ${peloActual || "No especificado"}
@@ -897,12 +897,12 @@ Inventario disponible de su propio Armario (USAR EXCLUSIVAMENTE ESTOS Ids para c
 ${inventoryText}
 
 Tu tarea:
-1. Diseña de 2 a 3 looks sofisticados perfectos para la ocasión y el clima.
+1. Diseña de 2 a 3 looks cómodos y elegantes perfectos para la ocasión y el clima.
 2. Cada look DEBE componerse de prendas presentes en el inventario. Proporciona sus IDs exactos en el campo 'id_prendas'. ¡Está TOTALMENTE PROHIBIDO inventar IDs o incluir prendas que no estén en la lista de arriba!
-3. Explica detalladamente y en lenguaje editorial de alta costura el porqué de esta combinación ('porque'), relacionándolo con sus aspiraciones y diagnósticos estilísticos si se proporcionan en el perfil.
+3. Explica detalladamente y en lenguaje sencillo, directo y claro el porqué de esta combinación ('porque'), relacionándolo con su estilo preferido de forma amigable y útil para cualquier persona.
 4. Aconseja sobre el corte de cabello o peinado óptimo adaptado a su forma de cara ('pelo_sugerido') para estilizar su silueta. Si consideras que su peinado o corte actual ("${peloActual || "No especificado"}") ya es ideal y encaja de maravilla, indícalo expresamente afirmando que su estilo actual de pelo es perfecto y describe por qué.
 5. Aconseja sobre el estilo facial o rasgos óptimos adaptados a su rostro ('barba_sugerida') para balancear sus facciones (vello facial, maquillaje sutil, diseño de cejas o accesorios según corresponda). Si consideras que su estilo facial o rasgos actuales ("${barbaActual || "No especificado"}") ya es óptimo y armoniza a la perfección, indícalo expresamente diciendo que su estilo facial actual es perfecto y describe por qué.
-6. Ofrece un truco práctico o consejo de estilismo y alta peluquería ('consejo_barberia') para mantener o lucir este estilo.
+6. Ofrece un truco práctico o consejo de estilismo y cuidado personal ('consejo_barberia') para mantener o lucir este estilo.
 
 Responde estrictamente utilizando el esquema de formato JSON siguiente.`;
 
@@ -1607,8 +1607,8 @@ app.post("/api/asistente-maleta", async (req, res) => {
 
     const perfilContext = compilePerfilContext(perfilEstilo);
 
-    const promptText = `Actúas como un Asesor Sastrero Experto especializado en Equipaje de Cápsula Minimalista.
-Estás planificando la maleta perfecta para un viaje de caballeros.
+    const promptText = `Actúas como un Asesor de Imagen Experto especializado en Equipaje de Cápsula Minimalista.
+Estás planificando la maleta perfecta para un viaje.
 
 ${perfilContext}
 
@@ -1678,7 +1678,7 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
               recomendaciones_extras: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
-                description: "Recomendaciones secundarias (ej: crema solar, paraguas de viaje, neceser de sastre).",
+                description: "Recomendaciones secundarias (ej: crema solar, paraguas de viaje, neceser de aseo).",
               },
             },
             required: ["analisis_destino", "prendas_seleccionadas", "por_que_seleccion_garment", "combinaciones", "recomendaciones_extras"],
@@ -1688,7 +1688,7 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
     );
 
     if (!response.text) {
-      throw new Error("No se obtuvo respuesta del sastre de maleta.");
+      throw new Error("No se obtuvo respuesta del asistente de maleta.");
     }
 
     res.json(JSON.parse(response.text.trim()));
@@ -1697,21 +1697,21 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
     const { armario = [] } = req.body;
     const itemsSelected = armario.slice(0, Math.min(armario.length, 5)).map((p: any) => p.id);
     res.json({
-      analisis_destino: "Tu viaje exige una combinación inteligente de prendas superpuestas para adaptarte a los cambios de temperatura sin sacrificar un ápice de elegancia.",
+      analisis_destino: "Tu viaje exige una combinación inteligente de prendas superpuestas para adaptarte a los cambios de temperatura sin sacrificar comodidad.",
       prendas_seleccionadas: itemsSelected,
       por_que_seleccion_garment: itemsSelected.map((id: string) => ({
         prenda_id: id,
-        motivo_seleccion: "Prenda de alta versatilidad que constituye la espina dorsal del armario cápsula de este viaje.",
+        motivo_seleccion: "Prenda de alta versatilidad que constituye la base de este viaje.",
       })),
       combinaciones: [
         {
           dia_numero: 1,
           titulo_actividad: "Llegada y exploración inicial",
           prendas_combinadas: itemsSelected.slice(0, 3),
-          explicacion_outfit: "Propuesta de bienvenida cómoda y estructurada, ideal para transiciones y primer contacto con el entorno satoral.",
+          explicacion_outfit: "Propuesta de bienvenida cómoda y estructurada, ideal para transiciones y primer contacto con el entorno.",
         }
       ],
-      recomendaciones_extras: ["Añade un calzador de viaje y un cepillo textil portátil para mantener tus prendas impecables."],
+      recomendaciones_extras: ["Añade un neceser de aseo y cargadores para tus dispositivos."],
     });
   }
 });
@@ -1736,7 +1736,7 @@ app.post("/api/analizar-compras", async (req, res) => {
 
     const perfilContext = compilePerfilContext(perfilEstilo);
 
-    const promptText = `Actúas como un cazador de tendencias (Trend Forecaster) y Personal Shopper de alta costura y estilismo unisex y personalizado del atelier de imagen ESPEJO (atendiendo a mujeres, hombres, personas no binarias, trans, jóvenes, niños y mayores por igual).
+    const promptText = `Actúas como un asesor de imagen y Personal Shopper unisex y personalizado de ESPEJO (atendiendo a mujeres, hombres, personas no binarias, trans, jóvenes, niños y mayores por igual).
 Estudia la colección actual de este armario y elabora un informe para guiarle en su próxima inversión de moda en función de su perfil personal, silueta y deseos:
 
 ${perfilContext}
@@ -1747,7 +1747,7 @@ ${inventoryText}
 Identifica de forma meticulosa e inteligente:
 1. 'basicos_faltantes': De 2 a 3 prendas de vestir básicas o de fondo de armario que el usuario no tiene y que multiplicarían exponencialmente sus combinaciones ("multiplicadores de armario"), enfocados 100% en complementar lo que realmente necesita según su perfil.
    Para cada básico faltante, genera también 2 o 3 opciones reales o simuladas de marcas reconocidas disponibles en plataformas multimarca (como Zalando, ASOS, Zara, Massimo Dutti, Mango, Uniqlo, COS, H&M, etc.) con marcas de calidad, precios aproximados, y el término de búsqueda exacto idóneo para encontrarlos.
-2. 'analisis_capsula': Un análisis editorial de 1-2 párrafos que asigne un "estilo de tendencia de alta gama" idóneo para su perfil actual (como Quiet Luxury, Neo-Sartorial core, Athletic Preppy, Heritage, Boho Chic, o Minimalist Tailoring) detallando qué siluetas debería buscar y por qué encaja con su personalidad.
+2. 'analisis_capsula': Un análisis sencillo de 1-2 párrafos que asigne un "estilo de tendencia" idóneo para su perfil actual (como Estilo Casual Moderno, Clásico Elegante, Minimalista o Deportivo Chic) detallando qué siluetas debería buscar y por qué encaja con su personalidad de manera clara y directa, sin usar términos pretenciosos de moda.
 3. 'proxima_compra_estrella': Una sola sugerencia sumamente detallada e ideal para su próxima adquisición estrella que resolvería su vestimenta para alcanzar su Estilo Objetivo.
    Para esta compra estrella, genera también 2 o 3 opciones recomendadas de marcas reconocidas disponibles en plataformas multimarca (Zalando, ASOS, Uniqlo, etc.) con sus precios aproximados y términos de búsqueda exactos.
 
@@ -1831,49 +1831,49 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
 
     res.json(JSON.parse(response.text.trim()));
   } catch (error: any) {
-    console.error("Error en analizar-compras, aplicando fallback de atelier:", error);
+    console.error("Error en analizar-compras, aplicando fallback de compras:", error);
     res.json({
       basicos_faltantes: [
         {
-          nombre_prenda: "Camisa Oxford blanca clásica semi-entallada",
+          nombre_prenda: "Camisa blanca de algodón clásica",
           categoria: "top",
-          por_que_es_clave: "Actúa como un conector universal que reduce el ruido en combinaciones de chaquetas y cazadoras.",
-          rango_color_sugerido: "Blanco óptico o azul celeste",
+          por_que_es_clave: "Combina de forma universal con cualquier pantalón o chaqueta de tu armario.",
+          rango_color_sugerido: "Blanco o azul claro",
           propuestas_tiendas: [
             {
               marca: "Selected Homme",
-              modelo: "Camisa Oxford de algodón orgánico regular",
+              modelo: "Camisa Oxford de algodón orgánico",
               precio_aproximado: "49,99 €",
               termino_busqueda: "Selected Homme camisa oxford blanca"
             },
             {
               marca: "Massimo Dutti",
-              modelo: "Camisa sarga 100% algodón sastre",
+              modelo: "Camisa de algodón de corte clásico",
               precio_aproximado: "59,95 €",
               termino_busqueda: "Massimo Dutti camisa blanca"
             }
           ]
         }
       ],
-      analisis_capsula: "Tu armario tiene un excelente potencial smart-casual. Sugerimos aproximarlo al estilo 'Quiet Luxury', donde la calidad del tejido y la atemporalidad del color predominen sobre cualquier logotipo.",
+      analisis_capsula: "Tu armario tiene un excelente potencial para lucir looks diarios muy combinables. Sugerimos buscar un estilo sencillo y atemporal, donde la comodidad y los tonos neutros te permitan vestir bien sin complicaciones.",
       proxima_compra_estrella: {
-        item: "Chaqueta desestructurada con hombro camisero (spalla camicia)",
+        item: "Chaqueta ligera de mezcla de lino y algodón",
         tipo: "top",
-        descripcion_detallada: "Americana ultra-ligera tejida en mezcla de lana-lino, sin hombreras, que ofrece la silueta y porte de un sastre formal combinada con la comodidad de un cárdigan de punto.",
-        potencial_combinaciones_explicado: "Elevará instantáneamente cualquiera de tus pantalones chinos o vaqueros diarios, aportando autoridad sastrera con espíritu relajado.",
-        rango_precio_estimado_en_euros: "120€ - 240€",
+        descripcion_detallada: "Una chaqueta ligera sin hombreras, ideal para usar sobre camisetas o camisas y dar un aire arreglado pero informal.",
+        potencial_combinaciones_explicado: "Es perfecta para combinar con tus pantalones chinos o vaqueros diarios, aportando un toque arreglado de manera muy cómoda.",
+        rango_precio_estimado_en_euros: "80€ - 150€",
         propuestas_tiendas: [
           {
             marca: "Massimo Dutti",
-            modelo: "Americana de lino desestructurada slim fit",
+            modelo: "Chaqueta ligera de lino regular fit",
             precio_aproximado: "149,00 €",
-            termino_busqueda: "Massimo Dutti americana lino desestructurada"
+            termino_busqueda: "Massimo Dutti chaqueta lino"
           },
           {
             marca: "Selected Homme",
-            modelo: "Blazer lino-lana melange",
+            modelo: "Chaqueta de lino y algodón casual",
             precio_aproximado: "119,99 €",
-            termino_busqueda: "Selected Homme blazer lino"
+            termino_busqueda: "Selected Homme chaqueta lino"
           }
         ]
       },
@@ -1890,19 +1890,19 @@ app.post("/api/plan-clima", async (req, res) => {
       ? prendas.map((p: any) => `- ${p.nombre} (${p.categoria}, Tejido: ${p.tejido}, Color: ${p.color})`).join("\n")
       : "Ninguna prenda seleccionada.";
 
-    const promptText = `Actúas como el sastre meteorológico y asesor de estilismo inteligente de la firma premium de caballero ESPEJO.
-Analiza la idoneidad térmica y sastrera del siguiente look planificado para el clima actual:
+    const promptText = `Actúas como un asesor de clima y estilismo inteligente para ESPEJO.
+Analiza la idoneidad térmica y práctica del siguiente look planificado para el clima actual:
 - Evento/Look: "${nombre_look}"
 - Ubicación: ${ciudad}
-- Clima simulado: ${temperatura}°C, con un cielo "${condicion}".
+- Clima: ${temperatura}°C, con un cielo "${condicion}".
 
 Prendas seleccionadas por el cliente:
 ${inventoryText}
 
 Evalúa técnicamente:
-1. Protección climática: ¿El tipo de calzado y abrigos es idóneo? (Ej: Evitar ante o lona en lluvias; recomendar sintonía de lana para el frío, o lino para calor intenso).
-2. Estilo y coherencia sastrera: ¿Combina la formalidad y el corte?
-Escribe una reseña extremadamente elegante, concisa (máximo 3 líneas) y sofisticada. Utiliza términos de sastrería italiana como 'sprezzatura', 'capas', 'sarto' o 'desestructurado'.`;
+1. Protección contra el clima: ¿El calzado y prendas de abrigo son idóneos para este clima? (Ej: evitar calzado de lona si llueve; recomendar abrigo si hace frío, o telas frescas como lino si hace mucho calor).
+2. Estilo y coherencia general: ¿Combina bien la ropa seleccionada?
+Escribe una sugerencia muy útil, práctica y sencilla (máximo 3 líneas). Usa un tono muy amigable y accesible para todo el mundo. No utilices jergas complejas de sastrería ni palabras pretenciosas.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
@@ -1913,10 +1913,10 @@ Escribe una reseña extremadamente elegante, concisa (máximo 3 líneas) y sofis
       }
     });
 
-    res.json({ consejo: response.text ? response.text.trim() : "Looks balanceados óptimamente para el clima sastrero." });
+    res.json({ consejo: response.text ? response.text.trim() : "Looks balanceados de forma ideal para el clima de hoy." });
   } catch (err: any) {
     console.error("Error en plan-clima:", err);
-    res.json({ consejo: "Sintonía térmica impecable. Tus capas exteriores ofrecen el resguardo clásico ideal para un caballero refinado." });
+    res.json({ consejo: "Combinación ideal para el clima de hoy. El uso de capas te mantendrá cómodo ante cualquier cambio de temperatura inesperado." });
   }
 });
 
@@ -1929,7 +1929,7 @@ app.post("/api/sarto-finance", async (req, res) => {
       ? prendas.map((p: any) => `- "${p.nombre}" (${p.categoria}): Coste ${p.precio}€, Usado ${p.usos} veces (CPW: ${p.usos > 0 ? (p.precio / p.usos).toFixed(2) : p.precio}€/uso)`).join("\n")
       : "Sin prendas.";
 
-    const promptText = `Actúas como el consultor de inversiones y sastre financiero de la firma de lujo de caballero ESPEJO.
+    const promptText = `Actúas como un asesor financiero de armario y consumo sostenible de la firma ESPEJO.
 Analiza el rendimiento de este armario digital y sus estadísticas de Coste por Uso (CPW):
 - Valor total invertido: ${total_invertido} €
 - Total de usos registrados: ${total_usos} usos
@@ -1938,10 +1938,10 @@ Analiza el rendimiento de este armario digital y sus estadísticas de Coste por 
 Detalle de prendas clave:
 ${itemsData}
 
-Elabora un veredicto de Slow Fashion y finanzas sastreras:
-- Identifica qué prendas están dando el máximo rendimiento (tus héroes).
-- Identifica las prendas caras que están olvidadas en el perchero y cómo puede el cliente darles salida (ej. proponer combinarlas de forma casual, o sugerir venderlas en Vinted para financiar un nuevo sastre a medida).
-Escribe un análisis refinado, perspicaz y sofisticado (máximo 4 líneas de texto). No incluyas listas de viñetas, manténlo como un párrafo continuo majestuoso.`;
+Elabora un consejo práctico de moda sostenible y amortización de prendas:
+- Identifica qué prendas están dándole el máximo rendimiento al usuario (las que más usa en relación a su coste).
+- Identifica las prendas caras que están olvidadas y dale un consejo amigable para sacarles más partido (ej. proponer combinarlas de forma más casual o diaria, o sugerir venderlas en apps de segunda mano).
+Escribe un análisis amigable, sencillo y útil (máximo 4 líneas de texto). No incluyas listas de viñetas, manténlo como un párrafo continuo y directo. No utilices jergas complejas de sastrería ni palabras rebuscadas.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
@@ -1952,10 +1952,10 @@ Escribe un análisis refinado, perspicaz y sofisticado (máximo 4 líneas de tex
       }
     });
 
-    res.json({ consejo: response.text ? response.text.trim() : "Estudio financiero completado. Maximiza tus inversiones alternando prendas formales con géneros de punto." });
+    res.json({ consejo: response.text ? response.text.trim() : "Estudio financiero completado. Maximiza tus prendas alternando tu ropa más formal en tus salidas de diario." });
   } catch (err: any) {
     console.error("Error en sarto-finance:", err);
-    res.json({ consejo: "Estudio financiero completado. Tus héroes de armario sintonizan a la perfección. Intenta amortizar americanas estructuradas incorporándolas en looks de fin de semana." });
+    res.json({ consejo: "Estudio de prendas completado. Tus prendas clave están rindiendo muy bien. Intenta amortizar tus chaquetas o abrigos más caros incorporándolos en conjuntos informales de fin de semana." });
   }
 });
 

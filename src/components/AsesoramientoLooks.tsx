@@ -201,7 +201,7 @@ export default function AsesoramientoLooks({
   useEffect(() => {
     if (selectedHistorialItem) return;
 
-    const hasOnlyInstantOrEmpty = looks.length === 0 || looks.every(l => l.titulo.includes("Sartorial Instantáneo"));
+    const hasOnlyInstantOrEmpty = looks.length === 0 || looks.every(l => l.titulo.includes("Sugerencia Rápida"));
     
     if (armario.length > 0 && hasOnlyInstantOrEmpty && !loading) {
       const tops = armario.filter((p) => p.categoria === "top");
@@ -214,14 +214,14 @@ export default function AsesoramientoLooks({
       // 1. Atuendo Boutique Esencial
       if (tops.length > 0 || pantalones.length > 0) {
         generatedInstantLooks.push({
-          titulo: "Atuendo Boutique Esencial (Sartorial Instantáneo)",
+          titulo: "Atuendo Esencial (Sugerencia Rápida)",
           id_prendas: [
             ...(tops.length > 0 ? [tops[0].id] : []),
             ...(pantalones.length > 0 ? [pantalones[0].id] : []),
             ...(calzados.length > 0 ? [calzados[0].id] : []),
             ...(accesorios.length > 0 ? [accesorios[0].id] : [])
           ],
-          porque: "Una elegante combinación sastrera inmediata. Hemos emparejado tus mejores prendas superiores con una faja formal estructurada para conseguir una caída limpia y armonizada sin esperas de procesamiento.",
+          porque: "Una combinación clásica e inmediata. Hemos emparejado tus mejores prendas para conseguir un look equilibrado y limpio de manera instantánea y sin esperas.",
           pelo_sugerido: "Corte o peinado texturizado con movimiento natural",
           barba_sugerida: "Estilo facial despejado, hidratado y luminoso",
           consejo_barberia: "Aplica protector térmico y crema de peinado para un acabado sedoso y flexible."
@@ -231,14 +231,14 @@ export default function AsesoramientoLooks({
       // 2. Silueta Urbana de Contraste
       if (pantalones.length > 0 && (tops.length > 1 || calzados.length > 0)) {
         generatedInstantLooks.push({
-          titulo: "Silueta Urbana de Contraste (Sartorial Instantáneo)",
+          titulo: "Conjunto Urbano con Contraste (Sugerencia Rápida)",
           id_prendas: [
             ...(tops.length > 1 ? [tops[1].id] : tops.length > 0 ? [tops[0].id] : []),
             ...[pantalones[0].id],
             ...(calzados.length > 1 ? [calzados[1].id] : calzados.length > 0 ? [calzados[0].id] : []),
             ...(accesorios.length > 1 ? [accesorios[1].id] : accesorios.length > 0 ? [accesorios[0].id] : [])
           ],
-          porque: "Una silueta casual-chic idónea para tarde noche o almuerzos de negocios discretos. El contraste de color enriquece la figura corporal con sutileza editorial.",
+          porque: "Un conjunto cómodo e ideal para salir de tarde o para reuniones de trabajo informales. El contraste de colores resalta tu estilo de forma natural.",
           pelo_sugerido: "Estilo moderno con volumen suave",
           barba_sugerida: "Rasgos limpios o maquillaje ligero satinado",
           consejo_barberia: "Una bruma hidratante o bálsamo facial mantendrá tu piel impecable y radiante."
@@ -248,14 +248,14 @@ export default function AsesoramientoLooks({
       // 3. Línea Purificada de Gala
       if (tops.length > 0 || pantalones.length > 0) {
         generatedInstantLooks.push({
-          titulo: "Línea Purificada de Gala (Sartorial Instantáneo)",
+          titulo: "Conjunto Formal de Gala (Sugerencia Rápida)",
           id_prendas: [
             ...(tops.length > 2 ? [tops[2].id] : tops.length > 0 ? [tops[0].id] : []),
             ...(pantalones.length > 1 ? [pantalones[1].id] : pantalones.length > 0 ? [pantalones[0].id] : []),
             ...(calzados.length > 0 ? [calzados[0].id] : []),
             ...(accesorios.length > 0 ? [accesorios[0].id] : [])
           ],
-          porque: "Estilo distinguido de máxima formalidad. Ideal para galas u ocasiones solemnes que reclamen un balance sobrio y distinguido.",
+          porque: "Estilo distinguido de máxima formalidad. Ideal para eventos importantes que requieran un aspecto serio y bien arreglado.",
           pelo_sugerido: "Peinado pulido de alta peluquería",
           barba_sugerida: "Facciones definidas o maquillaje de contorno sutil",
           consejo_barberia: "Utiliza un cepillo suave para esculpir perfectamente cada volumen de forma fluida."
@@ -326,12 +326,12 @@ export default function AsesoramientoLooks({
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "Fallo estilístico en la IA.");
+        throw new Error(errData.error || "Fallo en la Inteligencia Artificial.");
       }
 
       const decoded = await res.json();
       if (!decoded.looks || decoded.looks.length === 0) {
-        throw new Error("El sastre virtual no pudo proponer looks en base a tu actual armario.");
+        throw new Error("La Inteligencia Artificial no pudo proponer combinaciones con las prendas de tu armario.");
       }
       setLooks(decoded.looks);
       if (onLooksGenerados) {
@@ -339,7 +339,7 @@ export default function AsesoramientoLooks({
       }
     } catch (err: any) {
       console.error(err);
-      let errorFriendly = err.message || "Fallo en la comunicación con tu estilista virtual.";
+      let errorFriendly = err.message || "Fallo en la comunicación con tu asesor de imagen virtual.";
       if (err.message && (err.message.toLowerCase().includes("fetch") || err.message.toLowerCase().includes("failed"))) {
         errorFriendly = "No se ha podido conectar con el vestidor de Espejo. Por favor, comprueba tu red o inténtalo de nuevo para que podamos coordinar tus prendas.";
       }
@@ -777,23 +777,23 @@ export default function AsesoramientoLooks({
                 <div className="space-y-6">
                   {/* Title & Description of active Look */}
                   <div>
-                    {selectedLook.titulo.includes("Sartorial Instantáneo") ? (
+                    {selectedLook.titulo.includes("Sugerencia Rápida") ? (
                       <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="text-[9px] bg-laton/15 text-laton border border-laton/30 px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans">
-                          Catálogo Express (Sin IA)
+                          Catálogo Rápido (Sin Espera)
                         </span>
-                        <span className="text-[10px] text-tinta-apagada">Sinergia Automática de Armario</span>
+                        <span className="text-[10px] text-tinta-apagada">Combinación Automática de Armario</span>
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="text-[9px] bg-[#18181B] text-fondo px-2.5 py-1 rounded font-extrabold tracking-wider uppercase font-sans animate-pulse">
-                          Bespoke por Gemini sastre IA
+                          Diseñado por la Inteligencia Artificial de Espejo
                         </span>
-                        <span className="text-[10px] text-laton font-medium">Coordinación Exclusiva</span>
+                        <span className="text-[10px] text-laton font-medium">Estilo Exclusivo</span>
                       </div>
                     )}
                     <h3 className="font-serif text-2xl font-bold text-tinta italic mt-1 leading-tight">
-                      {selectedLook.titulo.replace(" (Sartorial Instantáneo)", "")}
+                      {selectedLook.titulo.replace(" (Sugerencia Rápida)", "")}
                     </h3>
                     <p className="text-sm font-light text-tinta/80 mt-3 leading-relaxed">
                       {selectedLook.porque}
@@ -854,8 +854,8 @@ export default function AsesoramientoLooks({
                       return (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between border-b border-linea/60 pb-2">
-                            <h4 className="text-xs uppercase tracking-widest text-[#18181B] font-bold">Galán de Noche (Perchero Virtual)</h4>
-                            <span className="text-[9px] font-mono text-tinta-apagada">SARTORIAL SCHEMATIC</span>
+                             <h4 className="text-xs uppercase tracking-widest text-[#18181B] font-bold">Tu Conjunto Elegido (Perchero Virtual)</h4>
+                             <span className="text-[9px] font-mono text-tinta-apagada">VISTA DETALLADA</span>
                           </div>
                           
                           <div className="relative bg-[#1a1610] rounded-xl border border-linea/80 p-5 overflow-hidden">
@@ -1040,7 +1040,7 @@ export default function AsesoramientoLooks({
                             !selectedLook.simulatedImageUrl ? (
                               <div className="space-y-3 text-left">
                                 <p className="text-[11.5px] text-tinta-apagada leading-relaxed font-light font-sans">
-                                  Ver tu fisonomía adaptada. El retoque IA recreará tu rostro adaptando exactamente este peinado y estilo facial sugeridos, ambientándote en un exclusivo atelier de imagen.
+                                  Ver tu estilo adaptado. El retoque IA recreará tu rostro adaptando exactamente este peinado y estilo facial sugeridos, mostrándote cómo te quedaría.
                                 </p>
                                 <button
                                   type="button"
@@ -1084,7 +1084,7 @@ export default function AsesoramientoLooks({
                                       <span>BOCETO EDITORIAL ACTIVO</span>
                                     </div>
                                     <p className="text-tinta-apagada leading-relaxed text-[10.5px]">
-                                      Hemos compuesto tu fotografía en una proyección sastrera. Para habilitar un retoque fotorrealista completo sobre tu fisonomía mediante Inteligencia Artificial, se requiere autorizar la cuota de imagen en AI Studio (procediendo con la opción de Créditos/Paid Flow).
+                                      Hemos creado una simulación visual con tu fotografía. Para habilitar un retoque fotorrealista completo sobre tu rostro mediante Inteligencia Artificial, se requiere autorizar la cuota de imagen en AI Studio (procediendo con la opción de Créditos/Paid Flow).
                                     </p>
                                   </div>
                                 )}
@@ -1106,7 +1106,7 @@ export default function AsesoramientoLooks({
                             <div className="space-y-4 text-left">
                               <div className="p-3 bg-[#F4F4F5] border border-linea/60 rounded-lg space-y-3">
                                 <div className="flex justify-between items-center flex-wrap gap-2">
-                                  <span className="text-[10px] text-[#18181B] font-bold uppercase tracking-wider block">Probador de Sastrería Digital</span>
+                                  <span className="text-[10px] text-[#18181B] font-bold uppercase tracking-wider block">Probador de Ropa Virtual</span>
                                   
                                   {/* Custom Switcher between Interactive and AI modes */}
                                   <div className="flex gap-1 bg-fondo p-0.5 rounded border border-linea">
@@ -1330,7 +1330,7 @@ export default function AsesoramientoLooks({
                                     <div className="bg-[#1e1a14] p-3.5 rounded-lg border border-linea/80 space-y-4 font-sans text-tinta shadow-lg">
                                       <div className="flex justify-between items-center border-b border-linea/40 pb-2 flex-wrap gap-2">
                                         <div className="flex flex-col">
-                                          <span className="text-[10px] uppercase text-laton font-bold tracking-widest font-mono">Taller de Sastrería Digital</span>
+                                          <span className="text-[10px] uppercase text-laton font-bold tracking-widest font-mono">Ajuste de Prenda Virtual</span>
                                           <span className="text-[8px] text-tinta-apagada font-mono uppercase mt-0.5">Prenda: {armario.find(p => p.id === selectedGarmentId)?.nombre || "Cargada"}</span>
                                         </div>
                                         <div className="flex gap-1.5 flex-wrap">
@@ -1789,7 +1789,7 @@ export default function AsesoramientoLooks({
                                           <span>BOCETO EDITORIAL ACTIVO (MODO DE RESERVA)</span>
                                         </div>
                                         <p className="text-tinta-apagada leading-relaxed text-[10.5px]">
-                                          Esta vista previa utiliza nuestro diseño de Sastrería Boutique AI para ilustrar la combinación: tu foto original se mantiene a la izquierda ("Referencia Base") y el maniquí a la derecha ("Fitting Sartorial") **se viste digitalmente con los colores y los cortes sugeridos de tu look**.
+                                          Esta vista previa utiliza nuestro diseño de Asesor de Imagen AI para ilustrar la combinación: tu foto original se mantiene a la izquierda ("Foto Base") y el maniquí a la derecha ("Modelo de Ajuste") **se viste digitalmente con los colores y prendas sugeridas para tu look**.
                                         </p>
                                         <p className="text-tinta-apagada/80 leading-relaxed text-[10px] mt-1.5 border-t border-linea/20 pt-1.5">
                                           Para realizar una proyección fotorrealista directa que modifique y reemplace visualmente la ropa de tu foto real mediante inteligencia artificial generativa, se requiere autorizar la cuota en el panel de AI Studio (Dressing-credits flow).
@@ -1798,7 +1798,7 @@ export default function AsesoramientoLooks({
                                     )}
 
                                     <div className="flex justify-between items-center bg-fondo border border-linea rounded p-2.5">
-                                      <span className="text-[10px] text-tinta-apagada leading-none">¿Te convence este Dressing?</span>
+                                      <span className="text-[10px] text-tinta-apagada leading-none">¿Te convence esta combinación?</span>
                                       <button
                                         type="button"
                                         onClick={() => triggerSimulation(activeLookIndex, selectedLook, true)}
@@ -1846,7 +1846,7 @@ export default function AsesoramientoLooks({
                               </h4>
                               <div className="flex justify-between items-center text-[7px] text-[#52525B] tracking-wider uppercase border-t border-b border-[#E4E4E7]/40 mt-1 px-1 py-0.5 font-sans">
                                 <span>VOL. 04 / EDICIÓN ESPECIAL</span>
-                                <span>SARTORIAL MALE</span>
+                                <span>EDICIÓN ESTILO</span>
                               </div>
                             </div>
 
