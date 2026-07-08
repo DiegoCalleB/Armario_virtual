@@ -321,6 +321,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [editFormalidad, setEditFormalidad] = useState(3);
   const [editColor, setEditColor] = useState("");
   const [editTejido, setEditTejido] = useState("");
+  const [editMarca, setEditMarca] = useState("");
   const [editComposicionTejido, setEditComposicionTejido] = useState("");
   const [editPrecioCompra, setEditPrecioCompra] = useState<number | "">("");
   const [editVecesPuesto, setEditVecesPuesto] = useState<number>(0);
@@ -833,6 +834,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
             formalidad: isNaN(formalidadVal) ? 3 : Math.max(1, Math.min(5, formalidadVal)),
             temporada: (item.temporada as TemporadaPrenda) || "todo",
             imageSrc: croppedImg,
+            marca: item.marca || "No identificada",
             tejido: item.tejido || "Algodón mixto",
             tags: Array.isArray(item.tags) ? item.tags : ["Modern", "Básico"],
           };
@@ -2515,6 +2517,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       setEditFormalidad(prenda.formalidad || 3);
                       setEditColor(prenda.color || "#000000");
                       setEditTejido(prenda.tejido || "");
+                      setEditMarca(prenda.marca || "No identificada");
                       setEditComposicionTejido(prenda.composicion_tejido || "");
                       setEditPrecioCompra(prenda.precio_compra !== undefined ? prenda.precio_compra : "");
                       setEditVecesPuesto(prenda.veces_puesto !== undefined ? prenda.veces_puesto : 0);
@@ -2580,6 +2583,12 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       {prenda.descripcion && (
                         <p className="text-[10px] text-tinta-apagada line-clamp-1 italic mt-1 font-light border-l border-laton-apagado/30 pl-1.5">
                           {prenda.descripcion}
+                        </p>
+                      )}
+
+                      {prenda.marca && prenda.marca !== "No identificada" && prenda.marca !== "" && (
+                        <p className="text-[10px] text-laton font-medium mt-1">
+                          🏷️ Marca: <span className="text-tinta/80 font-normal">{prenda.marca}</span>
                         </p>
                       )}
 
@@ -2717,6 +2726,18 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                             value={editNombre}
                             onChange={(e) => setEditNombre(e.target.value)}
                             placeholder="Ej: Camisa de Lino Azul"
+                            className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
+                          />
+                        </div>
+
+                        {/* Marca */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Marca de la Prenda (Detectada o manual)</label>
+                          <input
+                            type="text"
+                            value={editMarca}
+                            onChange={(e) => setEditMarca(e.target.value)}
+                            placeholder="Ej: Nike, Levi's, Zara, Tommy Hilfiger, No identificada"
                             className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
                           />
                         </div>
@@ -2921,13 +2942,14 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                             temporada: editTemporada,
                             formalidad: editFormalidad,
                             color: editColor,
+                            marca: editMarca || undefined,
                             tejido: editTejido || undefined,
                             composicion_tejido: editComposicionTejido || undefined,
                             precio_compra: editPrecioCompra !== "" ? editPrecioCompra : undefined,
                             veces_puesto: editVecesPuesto,
                             tags: finalTags,
                             descripcion: editDescripcion,
-                          };
+                          } as Prenda;
 
                           if (onPrendaActualizada) {
                             onPrendaActualizada(updatedPrenda);
@@ -3058,8 +3080,16 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                         </div>
 
                         {/* AI Detected Fabric, Composition and Tags */}
-                        {(selectedPrenda.tejido || selectedPrenda.composicion_tejido || (selectedPrenda.tags && selectedPrenda.tags.filter(t => !t.startsWith("armario:")).length > 0)) && (
+                        {(selectedPrenda.marca || selectedPrenda.tejido || selectedPrenda.composicion_tejido || (selectedPrenda.tags && selectedPrenda.tags.filter(t => !t.startsWith("armario:")).length > 0)) && (
                           <div className="p-3.5 bg-fondo border border-linea/60 rounded space-y-2.5">
+                            {selectedPrenda.marca && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-[10px] uppercase tracking-wider text-laton font-bold">Marca Detectada</span>
+                                <span className="text-tinta font-semibold bg-laton/10 px-2.5 py-0.5 rounded border border-laton/25 text-xs">
+                                  {selectedPrenda.marca}
+                                </span>
+                              </div>
+                            )}
                             {selectedPrenda.tejido && (
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-[10px] uppercase tracking-wider text-laton font-bold">Tejido Identificado</span>

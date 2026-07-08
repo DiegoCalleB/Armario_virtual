@@ -18,6 +18,7 @@ export interface Prenda {
   temporada: TemporadaPrenda;
   imageSrc: string; // Base64 representation of item
   descripcion?: string; // Observaciones opcionales o notas sobre la prenda
+  marca?: string; // Marca de la prenda detectada o ingresada (ej: Nike, Adidas, Zara, Tommy Hilfiger, etc.)
   tejido?: string; // Tipo de tejido identificado por la IA (ej: Algodón, Lana, Denim, etc.)
   tags?: string[]; // Etiquetas automatizadas de estilo y corte
   precio_compra?: number; // Coste en euros para calcular Cost-per-Wear

@@ -470,7 +470,8 @@ Para cada prenda de ropa o calzado identificada de forma independiente, determin
 5. Temporada: "verano", "invierno" o "todo".
 6. Tejido o material (ej: "Lana", "Algodón", "Lino", "Vaquero", "Cuero", "Seda", "Punto").
 7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Ajustado", "Atemporal", "Clásico", "Básico", "Ancho"]).
-8. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0.0 a 1.0 (donde box_ymin es el borde superior como float (ej: 0.15), box_xmin el borde izquierdo (ej: 0.25), box_ymax el borde inferior (ej: 0.55) y box_xmax el borde derecho (ej: 0.75) de la prenda en la imagen).
+8. Marca de la prenda (brand) si hay algún logotipo, bordado, estampado, etiqueta o tipografía legible en la foto que lo indique (ej: "Nike", "Adidas", "Levi's", "Zara", "Tommy Hilfiger", "Puma", "Gucci", etc.). Si no hay marcas ni logos visibles de forma clara en la imagen, asigna "No identificada" o una cadena vacía.
+9. Su caja delimitadora (bounding box) en coordenadas normalizadas de 0.0 a 1.0 (donde box_ymin es el borde superior como float (ej: 0.15), box_xmin el borde izquierdo (ej: 0.25), box_ymax el borde inferior (ej: 0.55) y box_xmax el borde derecho (ej: 0.75) de la prenda en la imagen).
 
 DIRECTRICES CRÍTICAS PARA LAS COORDENADAS (box_ymin, box_xmin, box_ymax, box_xmax):
 - Cada prenda que identifiques DEBE tener una caja delimitadora (bounding box) extremadamente precisa y realista, que corresponda ÚNICAMENTE al área real de esa prenda en la foto.
@@ -494,6 +495,7 @@ Determina con precisión:
 5. Temporada idónea: "verano", "invierno" o "todo".
 6. Tejido o material de confección (ej: "Lana", "Algodón", "Lino", "Vaquero", "Cuero", "Seda").
 7. Lista de 2 a 4 etiquetas (tags) breves de estilo y silueta (ej: ["Ajustado", "Atemporal", "Clásico", "Básico", "Ancho"]).
+8. Marca de la prenda (brand), si hay algún logotipo, bordado, estampado, etiqueta o tipografía legible en la foto que lo indique (ej: "Nike", "Adidas", "Levi's", "Zara", "Tommy Hilfiger", "Puma", "Gucci", etc.). Si no hay marcas ni logos visibles de forma clara en la imagen, asigna "No identificada" o una cadena vacía.
 
 Responde estrictamente con el formato JSON definido en el esquema de respuesta.`;
 
@@ -531,6 +533,10 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
                     type: Type.STRING,
                     description: "Material o tejido de la prenda.",
                   },
+                  marca: {
+                    type: Type.STRING,
+                    description: "Marca de la prenda (ej: 'Nike', 'Zara', 'Adidas', 'Levi\\'s', etc.) si es detectable por su logo o tipografía en la foto. De lo contrario, cadena vacía o 'No identificada'.",
+                  },
                   tags: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING },
@@ -553,7 +559,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
                     description: "Coordenada X derecha (borde derecho de la prenda como float entre 0.0 y 1.0).",
                   }
                 },
-                required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags", "box_ymin", "box_xmin", "box_ymax", "box_xmax"],
+                required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "marca", "tags", "box_ymin", "box_xmin", "box_ymax", "box_xmax"],
               },
             },
           },
@@ -586,13 +592,17 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
               type: Type.STRING,
               description: "Material o tejido de la prenda.",
             },
+            marca: {
+              type: Type.STRING,
+              description: "Marca de la prenda (ej: 'Nike', 'Zara', 'Adidas', 'Levi\\'s', etc.) si es detectable por su logo o tipografía en la foto. De lo contrario, cadena vacía o 'No identificada'.",
+            },
             tags: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
               description: "2 a 4 etiquetas breves descriptivas del corte, estilo o silueta.",
             },
           },
-          required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "tags"],
+          required: ["nombre", "categoria", "color", "formalidad", "temporada", "tejido", "marca", "tags"],
         };
 
     const response = await callGeminiWithRetry(() =>
@@ -744,6 +754,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
             color: "#1d2b42",
             formalidad: 4,
             temporada: "todo",
+            marca: "No identificada",
             box_ymin: 150,
             box_xmin: 150,
             box_ymax: 850,
@@ -759,6 +770,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
         color: "#1d2b42",
         formalidad: 4,
         temporada: "todo",
+        marca: "No identificada",
         _is_fallback: true
       });
     }

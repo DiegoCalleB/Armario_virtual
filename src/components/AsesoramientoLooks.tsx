@@ -452,6 +452,7 @@ export default function AsesoramientoLooks({
   }>>({});
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null);
   const [lockAspectRatio, setLockAspectRatio] = useState(true);
+  const [autoArrangeMode, setAutoArrangeMode] = useState<"libre" | "apilado" | "desglosado">("libre");
 
   // Auto-initialize standard body coordinates when active look or wardrobe changes
   useEffect(() => {
@@ -487,21 +488,43 @@ export default function AsesoramientoLooks({
       return 0;
     });
 
+    const topsInLook = sortedMatching.filter(p => p.categoria === "top");
+    let topIdxCounter = 0;
+
     sortedMatching.forEach((garment, idx) => {
       let defaultY = 40;
       let defaultScale = 100;
+      let defaultX = 50;
 
       switch (garment.categoria) {
         case "top":
-          defaultY = 32;
-          defaultScale = 110;
+          if (topsInLook.length >= 2) {
+            // Stagger coordinates so base layers peak out from behind outerwear beautifully
+            if (topIdxCounter === 0) {
+              defaultY = 31;
+              defaultScale = 98;
+              defaultX = 50;
+            } else if (topIdxCounter === 1) {
+              defaultY = 33;
+              defaultScale = 108;
+              defaultX = 51;
+            } else {
+              defaultY = 34;
+              defaultScale = 116;
+              defaultX = 52.5;
+            }
+            topIdxCounter++;
+          } else {
+            defaultY = 32;
+            defaultScale = 110;
+          }
           break;
         case "pantalon":
-          defaultY = 62;
+          defaultY = 63;
           defaultScale = 110;
           break;
         case "calzado":
-          defaultY = 85;
+          defaultY = 84;
           defaultScale = 75;
           break;
         case "accesorio":
@@ -512,13 +535,13 @@ export default function AsesoramientoLooks({
 
       newPositions[garment.id] = {
         id: garment.id,
-        x: 50,
+        x: defaultX,
         y: defaultY,
         scale: defaultScale,
         scaleX: 100,
         scaleY: 100,
         rotation: 0,
-        zIndex: 10 + idx,
+        zIndex: garment.categoria === "top" ? (11 + sortedMatching.indexOf(garment)) : (garment.categoria === "pantalon" ? 10 : (garment.categoria === "calzado" ? 9 : 15)),
         flip: false,
         visible: true,
         // Set multiply by default so white background clothing photos automatically strip out white boxes
@@ -530,6 +553,7 @@ export default function AsesoramientoLooks({
     });
 
     setGarmentPositions(newPositions);
+    setAutoArrangeMode(topsInLook.length >= 2 ? "apilado" : "libre");
     if (matching.length > 0) {
       setSelectedGarmentId(matching[0].id);
     } else {
@@ -546,6 +570,7 @@ export default function AsesoramientoLooks({
     const currentX = ((e.clientX - rect.left) / rect.width) * 100;
     const currentY = ((e.clientY - rect.top) / rect.height) * 100;
 
+    setAutoArrangeMode("libre");
     setGarmentPositions(prev => ({
       ...prev,
       [draggedGarmentId]: {
@@ -558,6 +583,150 @@ export default function AsesoramientoLooks({
 
   const handlePointerUp = () => {
     setDraggedGarmentId(null);
+  };
+
+  const handleAutoArrangeLayers = (mode: "apilado" | "desglosado") => {
+    if (!selectedLook) return;
+    const matching = getResilientMatchingGarments(selectedLook.id_prendas, armario);
+    if (matching.length === 0) return;
+
+    const tops = matching.filter(p => p.categoria === "top")
+      .sort((a, b) => obtenerCapaDePrenda(a).nivel - obtenerCapaDePrenda(b).nivel);
+    const pantalones = matching.filter(p => p.categoria === "pantalon");
+    const calzados = matching.filter(p => p.categoria === "calzado");
+    const accesorios = matching.filter(p => p.categoria === "accesorio");
+
+    const updatedPositions = { ...garmentPositions };
+
+    if (mode === "apilado") {
+      // 1. Stack Tops neatly: lower levels (inner/base) underneath and smaller, higher levels (outer/coat) on top and larger
+      tops.forEach((item, idx) => {
+        if (!updatedPositions[item.id]) return;
+        // Optimal vertical cascading and sizing
+        // idx 0 is Capa Base, idx 1 is Capa Intermedia, idx 2 is Capa de Abrigo/Exterior
+        let scaleVal = 98;
+        let yOffset = 31;
+        let xOffset = 50;
+
+        if (idx === 1) {
+          scaleVal = 108;
+          yOffset = 33;
+          xOffset = 51;
+        } else if (idx >= 2) {
+          scaleVal = 116;
+          yOffset = 34;
+          xOffset = 52.5; // shift outer garment slightly so inner necklines and chest details are visible!
+        }
+
+        updatedPositions[item.id] = {
+          ...updatedPositions[item.id],
+          x: xOffset,
+          y: yOffset,
+          scale: scaleVal,
+          zIndex: 11 + idx,
+          visible: true
+        };
+      });
+
+      // 2. Align Pants
+      pantalones.forEach((item) => {
+        if (!updatedPositions[item.id]) return;
+        updatedPositions[item.id] = {
+          ...updatedPositions[item.id],
+          x: 50,
+          y: 63,
+          scale: 110,
+          zIndex: 10,
+          visible: true
+        };
+      });
+
+      // 3. Align shoes
+      calzados.forEach((item) => {
+        if (!updatedPositions[item.id]) return;
+        updatedPositions[item.id] = {
+          ...updatedPositions[item.id],
+          x: 50,
+          y: 84,
+          scale: 75,
+          zIndex: 9,
+          visible: true
+        };
+      });
+
+      // 4. Align accessories
+      accesorios.forEach((item) => {
+        if (!updatedPositions[item.id]) return;
+        updatedPositions[item.id] = {
+          ...updatedPositions[item.id],
+          x: 50,
+          y: 18,
+          scale: 45,
+          zIndex: 15,
+          visible: true
+        };
+      });
+
+      setGarmentPositions(updatedPositions);
+      setAutoArrangeMode("apilado");
+    } else if (mode === "desglosado") {
+      // Exploded View: separate layers side-by-side to show they are both active and selectable
+      if (tops.length > 0) {
+        const spacing = 80 / (tops.length + 1);
+        tops.forEach((item, idx) => {
+          if (!updatedPositions[item.id]) return;
+          // Calculate spread x coordinates (e.g. for 2 tops: 33.3% and 66.6%)
+          const xPos = spacing * (idx + 1) + 10;
+          updatedPositions[item.id] = {
+            ...updatedPositions[item.id],
+            x: parseFloat(xPos.toFixed(1)),
+            y: 31,
+            scale: 85, // slightly smaller to fit nicely side by side
+            zIndex: 11 + idx,
+            visible: true
+          };
+        });
+      }
+
+      pantalones.forEach((item) => {
+        if (!updatedPositions[item.id]) return;
+        updatedPositions[item.id] = {
+          ...updatedPositions[item.id],
+          x: 50,
+          y: 63,
+          scale: 110,
+          zIndex: 10,
+          visible: true
+        };
+      });
+
+      calzados.forEach((item) => {
+        if (!updatedPositions[item.id]) return;
+        updatedPositions[item.id] = {
+          ...updatedPositions[item.id],
+          x: 50,
+          y: 84,
+          scale: 75,
+          zIndex: 9,
+          visible: true
+        };
+      });
+
+      accesorios.forEach((item) => {
+        if (!updatedPositions[item.id]) return;
+        updatedPositions[item.id] = {
+          ...updatedPositions[item.id],
+          x: 50,
+          y: 18,
+          scale: 45,
+          zIndex: 15,
+          visible: true
+        };
+      });
+
+      setGarmentPositions(updatedPositions);
+      setAutoArrangeMode("desglosado");
+    }
   };
 
   const handleSwapGarment = (oldId: string, newId: string) => {
@@ -1242,6 +1411,85 @@ export default function AsesoramientoLooks({
                               {cuerpoMode === "interactivo" ? (
                                 /* INTERACTIVE DRESSING WORKBENCH */
                                 <div className="space-y-4">
+                                  {/* Stacking Layer Advisor */}
+                                  {(() => {
+                                    const matching = getResilientMatchingGarments(selectedLook.id_prendas, armario);
+                                    const tops = matching.filter(p => p.categoria === "top")
+                                      .sort((a, b) => obtenerCapaDePrenda(a).nivel - obtenerCapaDePrenda(b).nivel);
+                                    
+                                    if (tops.length < 2) return null;
+
+                                    return (
+                                      <div className="p-3 bg-[#1e1a14] border border-laton/35 rounded-lg space-y-2.5 text-left shadow-lg">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1.5">
+                                            <Sparkles size={13} className="text-laton animate-pulse shrink-0" />
+                                            <span className="text-[10px] font-mono uppercase font-extrabold text-laton tracking-wider">
+                                              Asistente de Superposición Inteligente
+                                            </span>
+                                          </div>
+                                          <span className="text-[8px] bg-laton/10 border border-laton/20 text-laton font-bold px-1.5 py-0.5 rounded font-mono uppercase">
+                                            {tops.length} capas
+                                          </span>
+                                        </div>
+
+                                        <p className="text-[10.5px] text-tinta-apagada leading-normal">
+                                          Hemos detectado prendas de abrigo y capas base superpuestas. ¿Cómo prefieres verlas en tu silueta virtual?
+                                        </p>
+
+                                        {/* Colored flow of layers */}
+                                        <div className="flex items-center gap-1.5 flex-wrap py-1 border-t border-b border-linea/10">
+                                          {tops.map((item, idx) => {
+                                            const capaInfo = obtenerCapaDePrenda(item);
+                                            return (
+                                              <div key={item.id} className="flex items-center gap-1 bg-fondo/20 border border-linea/20 px-2 py-0.5 rounded text-[9px] shrink-0">
+                                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                                                <span className="font-semibold truncate max-w-[80px]" title={item.nombre}>
+                                                  {item.nombre}
+                                                </span>
+                                                <span className={`text-[6.5px] font-mono font-bold px-1 py-0.2 rounded ${capaInfo.color} ${capaInfo.bg}`}>
+                                                  C{capaInfo.nivel}
+                                                </span>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+
+                                        {/* Action buttons to trigger the stacking suggestion */}
+                                        <div className="flex gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAutoArrangeLayers("apilado")}
+                                            className={`flex-1 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded border transition flex items-center justify-center gap-1 ${
+                                              autoArrangeMode === "apilado"
+                                                ? "bg-laton text-fondo border-laton"
+                                                : "bg-transparent border-laton text-laton hover:bg-laton/10"
+                                            }`}
+                                          >
+                                            ✨ Apilar Capas
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAutoArrangeLayers("desglosado")}
+                                            className={`flex-1 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded border transition flex items-center justify-center gap-1 ${
+                                              autoArrangeMode === "desglosado"
+                                                ? "bg-laton text-fondo border-laton"
+                                                : "bg-transparent border-linea text-tinta-apagada hover:text-tinta hover:border-laton-apagado"
+                                            }`}
+                                          >
+                                            📂 Ver Separadas
+                                          </button>
+                                        </div>
+                                        
+                                        {autoArrangeMode === "apilado" && (
+                                          <p className="text-[9px] text-laton italic text-center leading-tight">
+                                            ✔ Apilado activo: la capa exterior se ha escalado (+10%) y desplazado sutilmente para revelar los bordes de la capa base.
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+
                                   {/* Absolute Placement Canvas in 3:4 */}
                                   <div 
                                     className="relative w-full max-w-[320px] mx-auto aspect-[3/4] bg-tarjeta border border-laton/40 rounded-lg overflow-hidden shadow-2xl shadow-black/90 select-none cursor-crosshair touch-none"
