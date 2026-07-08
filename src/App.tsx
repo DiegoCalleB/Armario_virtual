@@ -227,6 +227,7 @@ export default function App() {
       document.documentElement.style.setProperty("--linea-color", "#E8E0D5");
       document.documentElement.style.setProperty("--tinta-color", "#2C2520");
       document.documentElement.style.setProperty("--tinta-apagada-color", "#756B61");
+      document.documentElement.style.setProperty("--tarjeta-color", "#FFFFFF");
     } else {
       // Procedurally generate a fully compatible, premium-quality theme matching the selected accent color!
       // Extremely subtle tint of the accent mixed with white for the master canvas background
@@ -248,6 +249,10 @@ export default function App() {
       // Coordinated secondary/muted body text color
       const tintaApagada = mixColors(accentColor, "#4F4F4F", 0.40);
       document.documentElement.style.setProperty("--tinta-apagada-color", tintaApagada);
+
+      // Coordinated card background color (almost pure white, but subtly warmed/cooled)
+      const tarjeta = mixColors(accentColor, "#FFFFFF", 0.992);
+      document.documentElement.style.setProperty("--tarjeta-color", tarjeta);
     }
   }, [accentColor]);
 
@@ -338,11 +343,12 @@ export default function App() {
   const [storageError, setStorageError] = useState<{ error: string; buckets: string[] } | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
   const [copiedSecureSql, setCopiedSecureSql] = useState(false);
+  const [writeError, setWriteError] = useState<{ operation: string; error: string; message: string } | null>(null);
 
   // Mobile drawer state
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-  // Listen to Supabase storage upload errors to notify RLS instructions
+  // Listen to Supabase storage upload errors and write errors
   useEffect(() => {
     const handleStorageError = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -351,9 +357,19 @@ export default function App() {
         buckets: customEvent.detail?.buckets || ["prendas", "prendas-imagenes"]
       });
     };
+    const handleWriteError = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setWriteError({
+        operation: customEvent.detail?.operation || "Escritura",
+        error: customEvent.detail?.error || "Error de red/permisos",
+        message: customEvent.detail?.message || "No se pudo sincronizar en la nube."
+      });
+    };
     window.addEventListener("supabase-storage-error", handleStorageError);
+    window.addEventListener("supabase-write-error", handleWriteError);
     return () => {
       window.removeEventListener("supabase-storage-error", handleStorageError);
+      window.removeEventListener("supabase-write-error", handleWriteError);
     };
   }, []);
 
@@ -1285,6 +1301,47 @@ export default function App() {
               <div className="flex justify-end gap-2.5 pt-1">
                 <button
                   onClick={() => setStorageError(null)}
+                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest text-tinta-apagada hover:text-white rounded border border-linea/60 cursor-pointer transition font-bold"
+                >
+                  Entendido
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Write Operation Error Banner */}
+          {writeError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-amber-950/20 border border-amber-900/40 rounded-xl p-5 space-y-4 text-left shadow-lg overflow-hidden relative z-20 mb-4"
+            >
+              <button
+                onClick={() => setWriteError(null)}
+                className="absolute top-4 right-4 text-tinta-apagada hover:text-white transition cursor-pointer"
+                title="Cerrar aviso"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="flex gap-3">
+                <span className="p-2 bg-amber-900/30 text-amber-400 rounded-lg shrink-0 flex items-center justify-center h-10 w-10">
+                  <AlertTriangle size={20} />
+                </span>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-sm font-bold tracking-wider text-amber-200 uppercase">
+                    Problema de Sincronización ({writeError.operation})
+                  </h3>
+                  <p className="text-[11px] text-tinta-apagada leading-relaxed">
+                    {writeError.message} <span className="opacity-60">({writeError.error})</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-1">
+                <button
+                  onClick={() => setWriteError(null)}
                   className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest text-tinta-apagada hover:text-white rounded border border-linea/60 cursor-pointer transition font-bold"
                 >
                   Entendido

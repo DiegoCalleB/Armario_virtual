@@ -312,6 +312,8 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
     }
   }, [prendas, friendConnected, friendName]);
   const [customDescripcion, setCustomDescripcion] = useState("");
+  const [selectedPrendaTags, setSelectedPrendaTags] = useState<string[]>([]);
+  const [capsuleSavedFlash, setCapsuleSavedFlash] = useState(false);
   const [showVintedSync, setShowVintedSync] = useState(false);
   const [vintedDraft, setVintedDraft] = useState<{
     titulo: string;
@@ -2487,6 +2489,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     layoutId={prenda.id}
                     onClick={() => {
                       setSelectedPrenda(prenda);
+                      setSelectedPrendaTags(prenda.tags || []);
                       setCustomDescripcion(prenda.descripcion || "");
                       setShowVintedSync(false);
                       setVintedDraft(null);
@@ -2662,20 +2665,20 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       </div>
 
                       {/* Attributes Grid */}
-                      <div className="grid grid-cols-2 gap-3 p-3 bg-fondo2/40 border border-linea/60 rounded">
+                      <div className="grid grid-cols-2 gap-3.5 p-3.5 bg-fondo2/40 border border-linea/60 rounded">
                         <div>
-                          <span className="text-[8px] uppercase tracking-wider text-tinta-apagada/80 font-medium">
+                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
                             Temporada
                           </span>
-                          <p className="text-xs text-tinta font-medium mt-0.5 flex items-center gap-1">
+                          <p className="text-sm text-tinta font-medium mt-1 flex items-center gap-1.5">
                             {selectedPrenda.temporada === "verano" && (
                               <>
-                                <Sun size={10} className="text-amber-400" /> Verano / Primavera
+                                <Sun size={12} className="text-amber-500" /> Verano / Primavera
                               </>
                             )}
                             {selectedPrenda.temporada === "invierno" && (
                               <>
-                                <Snowflake size={10} className="text-sky-400" /> Invierno / Otoño
+                                <Snowflake size={12} className="text-sky-500" /> Invierno / Otoño
                               </>
                             )}
                             {selectedPrenda.temporada === "todo" && <>Multiestacional (Todo el Año)</>}
@@ -2683,14 +2686,14 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                         </div>
 
                         <div>
-                          <span className="text-[8px] uppercase tracking-wider text-tinta-apagada/80 font-medium">
+                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
                             Formalidad
                           </span>
-                          <div className="flex items-center gap-0.5 mt-1">
+                          <div className="flex items-center gap-1 mt-1.5">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star
                                 key={i}
-                                size={9}
+                                size={11}
                                 className={i < selectedPrenda.formalidad ? "fill-laton text-laton" : "text-linea"}
                               />
                             ))}
@@ -2698,12 +2701,12 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                         </div>
 
                         <div>
-                          <span className="text-[8px] uppercase tracking-wider text-tinta-apagada/80 font-medium">
+                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
                             Tono Dominante
                           </span>
-                          <p className="text-xs text-tinta font-mono max-w-[120px] truncate uppercase flex items-center gap-1.5 mt-0.5">
+                          <p className="text-sm text-tinta font-mono max-w-[120px] truncate uppercase flex items-center gap-2 mt-1">
                             <span
-                              className="w-3 h-3 rounded-full border border-white/20 inline-block shrink-0"
+                              className="w-3.5 h-3.5 rounded-full border border-white/30 inline-block shrink-0 shadow-xs"
                               style={{ backgroundColor: selectedPrenda.color }}
                             />
                             {selectedPrenda.color}
@@ -2711,10 +2714,10 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                         </div>
 
                         <div>
-                          <span className="text-[8px] uppercase tracking-wider text-tinta-apagada/80 font-medium">
+                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
                             Identificador
                           </span>
-                          <p className="text-[10px] font-mono text-tinta-apagada truncate mt-0.5">
+                          <p className="text-xs font-mono text-tinta-apagada truncate mt-1">
                             #{selectedPrenda.id.split("_")[1] || selectedPrenda.id}
                           </p>
                         </div>
@@ -2722,19 +2725,19 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
 
                       {/* AI Detected Fabric and Tags */}
                       {(selectedPrenda.tejido || (selectedPrenda.tags && selectedPrenda.tags.length > 0)) && (
-                        <div className="p-3 bg-fondo border border-linea/60 rounded space-y-2">
+                        <div className="p-3.5 bg-fondo border border-linea/60 rounded space-y-2.5">
                           {selectedPrenda.tejido && (
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-[9px] uppercase tracking-wider text-laton font-medium">Tejido Identificado</span>
-                              <span className="text-tinta font-semibold bg-linea/40 px-2 py-0.5 rounded border border-linea/20 text-[10.5px]">{selectedPrenda.tejido}</span>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-[10px] uppercase tracking-wider text-laton font-bold">Tejido Identificado</span>
+                              <span className="text-tinta font-semibold bg-linea/40 px-2.5 py-0.5 rounded border border-linea/20 text-xs">{selectedPrenda.tejido}</span>
                             </div>
                           )}
                           {selectedPrenda.tags && selectedPrenda.tags.length > 0 && (
-                            <div className="space-y-1">
-                              <span className="text-[9px] uppercase tracking-wider text-laton font-medium block">Estilo & Silueta Automáticos</span>
-                              <div className="flex flex-wrap gap-1">
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] uppercase tracking-wider text-laton font-bold block">Estilo & Silueta Automáticos</span>
+                              <div className="flex flex-wrap gap-1.5">
                                 {selectedPrenda.tags.map((tg, iIdx) => (
-                                  <span key={iIdx} className="text-[9px] font-sans px-2 py-0.5 rounded bg-[#F4F4F5] text-[#18181B] border border-laton/20">
+                                  <span key={iIdx} className="text-[10.5px] font-sans px-2.5 py-0.5 rounded bg-[#F4F4F5] text-[#18181B] border border-laton/20 font-medium">
                                     #{tg}
                                   </span>
                                 ))}
@@ -2745,20 +2748,27 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       )}
 
                       {/* Wardrobe Capsules Membership */}
-                      <div className="space-y-2 p-3 bg-[#F4F4F5]/30 border border-laton/10 rounded">
-                        <span className="text-[9px] uppercase tracking-wider text-laton font-extrabold block">
-                          Clasificación de Armario (Cápsulas)
-                        </span>
+                      <div className="space-y-2 p-3 bg-[#F4F4F5]/30 border border-laton/10 rounded relative">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] uppercase tracking-wider text-laton font-extrabold block">
+                            Clasificación de Armario (Cápsulas)
+                          </span>
+                          {capsuleSavedFlash && (
+                            <span className="text-[9px] text-green-600 dark:text-green-400 font-bold animate-pulse flex items-center gap-1">
+                              ✓ Guardado
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
                           {armariosDisponibles.map((arm) => {
-                            const isMember = getArmariosDePrenda(selectedPrenda).includes(arm);
+                            const isMember = getArmariosDePrenda({ ...selectedPrenda, tags: selectedPrendaTags }).includes(arm);
                             return (
                               <button
                                 key={arm}
                                 type="button"
                                 onClick={() => {
                                   if (!selectedPrenda) return;
-                                  const currentArmarios = getArmariosDePrenda(selectedPrenda);
+                                  const currentArmarios = getArmariosDePrenda({ ...selectedPrenda, tags: selectedPrendaTags });
                                   let nextArmarios = currentArmarios;
                                   if (!currentArmarios.includes(arm)) {
                                     nextArmarios = [...nextArmarios, arm];
@@ -2768,13 +2778,25 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                                       nextArmarios = ["normal"];
                                     }
                                   }
-                                  setSelectedPrenda({
+                                  const nextTags = [
+                                    ...(selectedPrendaTags || []).filter(t => typeof t === "string" && !t.startsWith("armario:")),
+                                    ...nextArmarios.map(a => `armario:${a}`)
+                                  ];
+                                  setSelectedPrendaTags(nextTags);
+                                  
+                                  const updatedPrenda = {
                                     ...selectedPrenda,
-                                    tags: [
-                                      ...(selectedPrenda.tags || []).filter(t => typeof t === "string" && !t.startsWith("armario:")),
-                                      ...nextArmarios.map(a => `armario:${a}`)
-                                    ]
-                                  });
+                                    tags: nextTags
+                                  };
+                                  setSelectedPrenda(updatedPrenda);
+                                  
+                                  // Auto-save instantly to storage & Supabase
+                                  if (onPrendaActualizada) {
+                                    onPrendaActualizada(updatedPrenda);
+                                  }
+                                  
+                                  setCapsuleSavedFlash(true);
+                                  setTimeout(() => setCapsuleSavedFlash(false), 2000);
                                 }}
                                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] border cursor-pointer select-none transition ${
                                   isMember
@@ -2849,6 +2871,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           if (onPrendaActualizada && selectedPrenda) {
                             onPrendaActualizada({
                               ...selectedPrenda,
+                              tags: selectedPrendaTags,
                               descripcion: customDescripcion,
                             });
                           }

@@ -35,6 +35,44 @@ export const isSupabaseConfigured = isConfigured;
 export const supabase = supabaseClient;
 
 /**
+ * Ejecuta una operación asíncrona con reintentos basados en exponential backoff (máximo 3 reintentos).
+ * Si falla definitivamente, despacha un evento global "supabase-write-error" para notificar al usuario.
+ */
+async function executeWithRetry<T>(
+  operationName: string,
+  fn: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      attempt++;
+      if (attempt > maxRetries) {
+        console.error(`[Supabase Retry] Error definitivo en "${operationName}" tras ${maxRetries} reintentos:`, error);
+        
+        // Despachar evento para notificar al usuario
+        const errorMsg = error?.message || String(error || "Error de red/permisos");
+        const writeErrorEvent = new CustomEvent("supabase-write-error", {
+          detail: {
+            operation: operationName,
+            error: errorMsg,
+            message: `No se pudo sincronizar la información de "${operationName}" en la base de datos tras varios intentos. Se ha guardado una copia en local para evitar pérdidas de información.`
+          }
+        });
+        window.dispatchEvent(writeErrorEvent);
+        
+        throw error;
+      }
+      const delay = Math.pow(2, attempt) * 100 + Math.random() * 50;
+      console.warn(`[Supabase Retry] Intento ${attempt} fallido para "${operationName}". Reintentando en ${Math.round(delay)}ms... Error:`, error);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
+/**
  * Convierte un Base64 a un ArrayBuffer y lo sube al Bucket de Supabase Storage.
  * Retorna la URL pública si la subida es exitosa; de lo contrario, el Base64 original.
  */
@@ -189,7 +227,7 @@ export async function saveUserRostro(userId: string, rostro: Rostro): Promise<Ro
       finalImageUrl = await uploadBase64ToStorage(userId, rostro.imageSrc, "prendas_armario");
     }
 
-    const { error } = await supabase.from("rostro").upsert({
+    const rowData = {
       user_id: userId,
       forma_cara: rostro.forma_cara,
       pelo_actual: rostro.pelo_actual,
@@ -197,11 +235,30 @@ export async function saveUserRostro(userId: string, rostro: Rostro): Promise<Ro
       clave: rostro.clave,
       image_src: finalImageUrl || "",
       updated_at: new Date().toISOString(),
-    });
+    };
 
-    if (error) {
-      console.error("Error saving user rostro to Supabase:", error);
-    }
+    await executeWithRetry("Guardar Rostro", async () => {
+      const { data: existing, error: fetchError } = await supabase
+        .from("rostro")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (existing) {
+        const { error } = await supabase
+          .from("rostro")
+          .update(rowData)
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("rostro")
+          .insert(rowData);
+        if (error) throw error;
+      }
+    });
 
     return { ...rostro, imageSrc: finalImageUrl };
   } catch (err) {
@@ -278,7 +335,7 @@ export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<Pr
       finalImageUrl = await uploadBase64ToStorage(userId, prenda.imageSrc, "prendas_armario");
     }
 
-    const { error } = await supabase.from("prendas").insert({
+    const rowData = {
       id: prenda.id,
       user_id: userId,
       nombre: prenda.nombre,
@@ -293,12 +350,35 @@ export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<Pr
       precio_compra: prenda.precio_compra !== undefined ? prenda.precio_compra : null,
       veces_puesto: prenda.veces_puesto !== undefined ? prenda.veces_puesto : 0,
       composicion_tejido: prenda.composicion_tejido || null,
-      created_at: new Date().toISOString(),
-    });
+    };
 
-    if (error) {
-      console.error("Error inserting prenda into Supabase:", error);
-    }
+    await executeWithRetry("Guardar Prenda", async () => {
+      const { data: existing, error: fetchError } = await supabase
+        .from("prendas")
+        .select("id")
+        .eq("id", prenda.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (existing) {
+        const { error } = await supabase
+          .from("prendas")
+          .update(rowData)
+          .eq("id", prenda.id)
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("prendas")
+          .insert({
+            ...rowData,
+            created_at: new Date().toISOString(),
+          });
+        if (error) throw error;
+      }
+    });
 
     return { ...prenda, imageSrc: finalImageUrl };
   } catch (err) {
@@ -317,28 +397,50 @@ export async function updateUserPrenda(userId: string, prenda: Prenda): Promise<
       finalImageUrl = await uploadBase64ToStorage(userId, prenda.imageSrc, "prendas_armario");
     }
 
-    const { error } = await supabase
-      .from("prendas")
-      .update({
-        nombre: prenda.nombre,
-        categoria: prenda.categoria,
-        color: prenda.color,
-        formalidad: prenda.formalidad,
-        temporada: prenda.temporada,
-        image_src: finalImageUrl,
-        descripcion: prenda.descripcion || null,
-        tejido: prenda.tejido || null,
-        tags: prenda.tags || [],
-        precio_compra: prenda.precio_compra !== undefined ? prenda.precio_compra : null,
-        veces_puesto: prenda.veces_puesto !== undefined ? prenda.veces_puesto : 0,
-        composicion_tejido: prenda.composicion_tejido || null,
-      })
-      .eq("id", prenda.id)
-      .eq("user_id", userId);
+    const rowData = {
+      id: prenda.id,
+      user_id: userId,
+      nombre: prenda.nombre,
+      categoria: prenda.categoria,
+      color: prenda.color,
+      formalidad: prenda.formalidad,
+      temporada: prenda.temporada,
+      image_src: finalImageUrl,
+      descripcion: prenda.descripcion || null,
+      tejido: prenda.tejido || null,
+      tags: prenda.tags || [],
+      precio_compra: prenda.precio_compra !== undefined ? prenda.precio_compra : null,
+      veces_puesto: prenda.veces_puesto !== undefined ? prenda.veces_puesto : 0,
+      composicion_tejido: prenda.composicion_tejido || null,
+    };
 
-    if (error) {
-      console.error("Error updating prenda in Supabase:", error);
-    }
+    await executeWithRetry("Actualizar Prenda", async () => {
+      const { data: existing, error: fetchError } = await supabase
+        .from("prendas")
+        .select("id")
+        .eq("id", prenda.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (existing) {
+        const { error } = await supabase
+          .from("prendas")
+          .update(rowData)
+          .eq("id", prenda.id)
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("prendas")
+          .insert({
+            ...rowData,
+            created_at: new Date().toISOString(),
+          });
+        if (error) throw error;
+      }
+    });
 
     return { ...prenda, imageSrc: finalImageUrl };
   } catch (err) {
@@ -352,15 +454,14 @@ export async function deleteUserPrenda(userId: string, prendaId: string): Promis
     return;
   }
   try {
-    const { error } = await supabase
-      .from("prendas")
-      .delete()
-      .eq("id", prendaId)
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error deleting prenda from Supabase:", error);
-    }
+    await executeWithRetry("Eliminar Prenda", async () => {
+      const { error } = await supabase
+        .from("prendas")
+        .delete()
+        .eq("id", prendaId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    });
   } catch (err) {
     console.error("Critical error in deleteUserPrenda:", err);
   }
@@ -413,27 +514,26 @@ export async function saveUserHistorialItem(userId: string, item: HistorialLook)
     return;
   }
   try {
-    const { error } = await supabase.from("historial").insert({
-      id: item.id,
-      user_id: userId,
-      fecha: item.fecha,
-      ocasion: item.ocasion,
-      clima: item.clima,
-      look_titulo: item.look.titulo,
-      look_porque: item.look.porque,
-      look_pelo_sugerido: item.look.pelo_sugerido,
-      look_barba_sugerida: item.look.barba_sugerida,
-      look_consejo_barberia: item.look.consejo_barberia,
-      look_id_prendas: item.look.id_prendas,
-      look_simulated_image_url: item.look.simulatedImageUrl || null,
-      look_simulated_full_body_image_url: item.look.simulatedFullBodyImageUrl || null,
-      favorito: item.favorito,
-      created_at: new Date().toISOString(),
+    await executeWithRetry("Guardar Historial de Look", async () => {
+      const { error } = await supabase.from("historial").insert({
+        id: item.id,
+        user_id: userId,
+        fecha: item.fecha,
+        ocasion: item.ocasion,
+        clima: item.clima,
+        look_titulo: item.look.titulo,
+        look_porque: item.look.porque,
+        look_pelo_sugerido: item.look.pelo_sugerido,
+        look_barba_sugerida: item.look.barba_sugerida,
+        look_consejo_barberia: item.look.consejo_barberia,
+        look_id_prendas: item.look.id_prendas,
+        look_simulated_image_url: item.look.simulatedImageUrl || null,
+        look_simulated_full_body_image_url: item.look.simulatedFullBodyImageUrl || null,
+        favorito: item.favorito,
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
     });
-
-    if (error) {
-      console.error("Error inserting historial item into Supabase:", error);
-    }
   } catch (err) {
     console.error("Critical error in saveUserHistorialItem:", err);
   }
@@ -462,11 +562,10 @@ export async function saveMultipleUserHistorialItems(userId: string, items: Hist
       created_at: new Date().toISOString(),
     }));
 
-    const { error } = await supabase.from("historial").insert(payload);
-
-    if (error) {
-      console.error("Error inserting multiple historial items into Supabase:", error);
-    }
+    await executeWithRetry("Guardar Múltiples Historiales", async () => {
+      const { error } = await supabase.from("historial").insert(payload);
+      if (error) throw error;
+    });
   } catch (err) {
     console.error("Critical error in saveMultipleUserHistorialItems:", err);
   }
@@ -489,15 +588,14 @@ export async function updateUserHistorialItemImage(
       updatePayload.look_simulated_image_url = imageUrl;
     }
 
-    const { error } = await supabase
-      .from("historial")
-      .update(updatePayload)
-      .eq("id", itemId)
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error updating image in historical item in Supabase:", error);
-    }
+    await executeWithRetry("Actualizar Imagen de Historial", async () => {
+      const { error } = await supabase
+        .from("historial")
+        .update(updatePayload)
+        .eq("id", itemId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    });
   } catch (err) {
     console.error("Critical error in updateUserHistorialItemImage:", err);
   }
@@ -512,15 +610,14 @@ export async function toggleUserHistorialItemFavorito(
     return;
   }
   try {
-    const { error } = await supabase
-      .from("historial")
-      .update({ favorito: newFavoritoState })
-      .eq("id", itemId)
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error toggling favorito in historical item in Supabase:", error);
-    }
+    await executeWithRetry("Alternar Favorito de Historial", async () => {
+      const { error } = await supabase
+        .from("historial")
+        .update({ favorito: newFavoritoState })
+        .eq("id", itemId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    });
   } catch (err) {
     console.error("Critical error in toggleUserHistorialItemFavorito:", err);
   }
@@ -531,15 +628,14 @@ export async function deleteUserHistorialItem(userId: string, itemId: string): P
     return;
   }
   try {
-    const { error } = await supabase
-      .from("historial")
-      .delete()
-      .eq("id", itemId)
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error deleting historical item from Supabase:", error);
-    }
+    await executeWithRetry("Eliminar de Historial", async () => {
+      const { error } = await supabase
+        .from("historial")
+        .delete()
+        .eq("id", itemId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    });
   } catch (err) {
     console.error("Critical error in deleteUserHistorialItem:", err);
   }
@@ -551,14 +647,27 @@ export async function resetUserAllData(userId: string): Promise<void> {
     return;
   }
   try {
-    // Rely on cascade or run deletes in parallel
-    const deleteRostro = supabase.from("rostro").delete().eq("user_id", userId);
-    const deletePrendas = supabase.from("prendas").delete().eq("user_id", userId);
-    const deleteHistorial = supabase.from("historial").delete().eq("user_id", userId);
-    const deletePerfil = supabase.from("perfil_estilo").delete().eq("user_id", userId);
-    const deletePlanificaciones = supabase.from("planificaciones").delete().eq("user_id", userId);
+    await executeWithRetry("Restablecer Datos del Usuario", async () => {
+      const deleteRostro = supabase.from("rostro").delete().eq("user_id", userId);
+      const deletePrendas = supabase.from("prendas").delete().eq("user_id", userId);
+      const deleteHistorial = supabase.from("historial").delete().eq("user_id", userId);
+      const deletePerfil = supabase.from("perfil_estilo").delete().eq("user_id", userId);
+      const deletePlanificaciones = supabase.from("planificaciones").delete().eq("user_id", userId);
 
-    await Promise.all([deleteRostro, deletePrendas, deleteHistorial, deletePerfil, deletePlanificaciones]);
+      const [resRostro, resPrendas, resHistorial, resPerfil, resPlan] = await Promise.all([
+        deleteRostro,
+        deletePrendas,
+        deleteHistorial,
+        deletePerfil,
+        deletePlanificaciones
+      ]);
+
+      if (resRostro.error) throw resRostro.error;
+      if (resPrendas.error) throw resPrendas.error;
+      if (resHistorial.error) throw resHistorial.error;
+      if (resPerfil.error) throw resPerfil.error;
+      if (resPlan.error) throw resPlan.error;
+    });
   } catch (err) {
     console.error("Critical error resetting user data in Supabase:", err);
   }
@@ -602,7 +711,7 @@ export async function saveUserPerfil(userId: string, perfil: PerfilEstilo): Prom
     return perfil;
   }
   try {
-    const { error } = await supabase.from("perfil_estilo").upsert({
+    const rowData = {
       user_id: userId,
       estilo_vibe: perfil.estiloVibe || null,
       forma_ser: perfil.formaSer || null,
@@ -611,11 +720,30 @@ export async function saveUserPerfil(userId: string, perfil: PerfilEstilo): Prom
       detalles_libres: perfil.detallesLibres || null,
       respuestas_quiz: perfil.respuestasQuiz || null,
       updated_at: new Date().toISOString(),
-    });
+    };
 
-    if (error) {
-      console.error("Error saving user style profile to Supabase:", error);
-    }
+    await executeWithRetry("Guardar Perfil de Estilo", async () => {
+      const { data: existing, error: fetchError } = await supabase
+        .from("perfil_estilo")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (existing) {
+        const { error } = await supabase
+          .from("perfil_estilo")
+          .update(rowData)
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("perfil_estilo")
+          .insert(rowData);
+        if (error) throw error;
+      }
+    });
     return perfil;
   } catch (err) {
     console.error("Critical error in saveUserPerfil:", err);
@@ -661,20 +789,19 @@ export async function saveUserPlanificacion(userId: string, plan: LookPlanificad
     return;
   }
   try {
-    const { error } = await supabase.from("planificaciones").insert({
-      id: plan.id,
-      user_id: userId,
-      fecha: plan.fecha,
-      nombre_look: plan.nombre_look,
-      prendas_ids: plan.prendasIds,
-      clima_simulado: plan.clima_simulado,
-      comentarios_sastre: plan.comentarios_sastre || null,
-      created_at: new Date().toISOString(),
+    await executeWithRetry("Guardar Planificación Semanal", async () => {
+      const { error } = await supabase.from("planificaciones").insert({
+        id: plan.id,
+        user_id: userId,
+        fecha: plan.fecha,
+        nombre_look: plan.nombre_look,
+        prendas_ids: plan.prendasIds,
+        clima_simulado: plan.clima_simulado,
+        comentarios_sastre: plan.comentarios_sastre || null,
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
     });
-
-    if (error) {
-      console.error("Error inserting planificacion into Supabase:", error);
-    }
   } catch (err) {
     console.error("Critical error in saveUserPlanificacion:", err);
   }
@@ -685,15 +812,14 @@ export async function deleteUserPlanificacion(userId: string, planId: string): P
     return;
   }
   try {
-    const { error } = await supabase
-      .from("planificaciones")
-      .delete()
-      .eq("id", planId)
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error deleting planificacion from Supabase:", error);
-    }
+    await executeWithRetry("Eliminar Planificación", async () => {
+      const { error } = await supabase
+        .from("planificaciones")
+        .delete()
+        .eq("id", planId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    });
   } catch (err) {
     console.error("Critical error in deleteUserPlanificacion:", err);
   }
@@ -745,44 +871,65 @@ export async function saveUserArmariosLista(userId: string, lista: string[]): Pr
   }
   try {
     // 1. Save to dedicated table if possible
-    const { error: deleteError } = await supabase
-      .from("armarios_personalizados")
-      .delete()
-      .eq("user_id", userId);
-
-    if (!deleteError && lista.length > 0) {
-      const payload = lista.map(nombre => ({ user_id: userId, nombre }));
-      const { error: insertError } = await supabase
+    await executeWithRetry("Guardar Armarios en Tabla Dedicada", async () => {
+      const { error: deleteError } = await supabase
         .from("armarios_personalizados")
-        .insert(payload);
-      if (insertError) {
-        console.warn("Could not insert into armarios_personalizados table:", insertError.message);
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+
+      if (lista.length > 0) {
+        const payload = lista.map(nombre => ({ user_id: userId, nombre }));
+        const { error: insertError } = await supabase
+          .from("armarios_personalizados")
+          .insert(payload);
+        if (insertError) throw insertError;
       }
-    }
+    });
   } catch (err) {
     console.warn("Could not save to armarios_personalizados table:", err);
   }
 
   // 2. Save/Backup in style profile respuestas_quiz for backward compatibility & easy migration
   try {
-    const { data: perfilData, error: perfilError } = await supabase
-      .from("perfil_estilo")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    await executeWithRetry("Backup de Armarios en Perfil de Estilo", async () => {
+      const { data: perfilData, error: perfilError } = await supabase
+        .from("perfil_estilo")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    let respuestasQuiz: any = {};
-    if (!perfilError && perfilData) {
-      respuestasQuiz = typeof perfilData.respuestas_quiz === "string"
-        ? JSON.parse(perfilData.respuestas_quiz)
-        : perfilData.respuestas_quiz || {};
-    }
-    respuestasQuiz.armariosDisponibles = lista;
+      if (perfilError) throw perfilError;
 
-    await supabase.from("perfil_estilo").upsert({
-      user_id: userId,
-      respuestas_quiz: respuestasQuiz,
-      updated_at: new Date().toISOString()
+      let respuestasQuiz: any = {};
+      const exists = !!perfilData;
+      if (exists) {
+        respuestasQuiz = typeof perfilData.respuestas_quiz === "string"
+          ? JSON.parse(perfilData.respuestas_quiz)
+          : perfilData.respuestas_quiz || {};
+      }
+      respuestasQuiz.armariosDisponibles = lista;
+
+      if (exists) {
+        const { error } = await supabase
+          .from("perfil_estilo")
+          .update({
+            respuestas_quiz: respuestasQuiz,
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("perfil_estilo")
+          .insert({
+            user_id: userId,
+            respuestas_quiz: respuestasQuiz,
+            updated_at: new Date().toISOString()
+          });
+        if (error) throw error;
+      }
     });
   } catch (err) {
     console.warn("Could not save backup in style profile respuestas_quiz:", err);
