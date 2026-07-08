@@ -41,7 +41,8 @@ export const supabase = supabaseClient;
 async function executeWithRetry<T>(
   operationName: string,
   fn: () => Promise<T>,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  dispatchError: boolean = true
 ): Promise<T> {
   let attempt = 0;
   while (true) {
@@ -52,16 +53,18 @@ async function executeWithRetry<T>(
       if (attempt > maxRetries) {
         console.error(`[Supabase Retry] Error definitivo en "${operationName}" tras ${maxRetries} reintentos:`, error);
         
-        // Despachar evento para notificar al usuario
-        const errorMsg = error?.message || String(error || "Error de red/permisos");
-        const writeErrorEvent = new CustomEvent("supabase-write-error", {
-          detail: {
-            operation: operationName,
-            error: errorMsg,
-            message: `No se pudo sincronizar la información de "${operationName}" en la base de datos tras varios intentos. Se ha guardado una copia en local para evitar pérdidas de información.`
-          }
-        });
-        window.dispatchEvent(writeErrorEvent);
+        if (dispatchError) {
+          // Despachar evento para notificar al usuario
+          const errorMsg = error?.message || String(error || "Error de red/permisos");
+          const writeErrorEvent = new CustomEvent("supabase-write-error", {
+            detail: {
+              operation: operationName,
+              error: errorMsg,
+              message: `No se pudo sincronizar la información de "${operationName}" en la base de datos tras varios intentos. Se ha guardado una copia en local para evitar pérdidas de información.`
+            }
+          });
+          window.dispatchEvent(writeErrorEvent);
+        }
         
         throw error;
       }
@@ -362,21 +365,69 @@ export async function saveUserPrenda(userId: string, prenda: Prenda): Promise<Pr
 
       if (fetchError) throw fetchError;
 
-      if (existing) {
-        const { error } = await supabase
-          .from("prendas")
-          .update(rowData)
-          .eq("id", prenda.id)
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("prendas")
-          .insert({
-            ...rowData,
-            created_at: new Date().toISOString(),
-          });
-        if (error) throw error;
+      const dataToSave: any = { ...rowData };
+
+      const tryWrite = async (payload: any) => {
+        if (existing) {
+          const { error } = await supabase
+            .from("prendas")
+            .update(payload)
+            .eq("id", prenda.id)
+            .eq("user_id", userId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("prendas")
+            .insert({
+              ...payload,
+              created_at: new Date().toISOString(),
+            });
+          if (error) throw error;
+        }
+      };
+
+      let done = false;
+      let writeAttempts = 0;
+      while (!done && writeAttempts < 10) {
+        try {
+          await tryWrite(dataToSave);
+          done = true;
+        } catch (writeErr: any) {
+          writeAttempts++;
+          const errMsg = writeErr?.message || String(writeErr);
+          let columnRemoved = false;
+          
+          // Buscar qué propiedad de dataToSave falló inspeccionando el mensaje de error
+          for (const key of Object.keys(dataToSave)) {
+            if (
+              errMsg.includes(`'${key}'`) || 
+              errMsg.includes(`"${key}"`) || 
+              errMsg.includes(key)
+            ) {
+              console.warn(`[Supabase Fallback] La columna '${key}' no existe en la tabla 'prendas'. Reintentando sin ella...`);
+              delete dataToSave[key];
+              columnRemoved = true;
+              break;
+            }
+          }
+
+          // Fallback adicional para códigos Postgres o palabras clave
+          if (!columnRemoved && (writeErr?.code === "42703" || errMsg.toLowerCase().includes("column") || errMsg.toLowerCase().includes("schema cache"))) {
+            const potentialNewColumns = ["composicion_tejido", "precio_compra", "veces_puesto", "descripcion", "tejido", "tags"];
+            for (const col of potentialNewColumns) {
+              if (dataToSave[col] !== undefined) {
+                console.warn(`[Supabase Fallback] Eliminando columna potencialmente inexistente '${col}' ante error de esquema...`);
+                delete dataToSave[col];
+                columnRemoved = true;
+                break;
+              }
+            }
+          }
+
+          if (!columnRemoved) {
+            throw writeErr;
+          }
+        }
       }
     });
 
@@ -424,21 +475,69 @@ export async function updateUserPrenda(userId: string, prenda: Prenda): Promise<
 
       if (fetchError) throw fetchError;
 
-      if (existing) {
-        const { error } = await supabase
-          .from("prendas")
-          .update(rowData)
-          .eq("id", prenda.id)
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("prendas")
-          .insert({
-            ...rowData,
-            created_at: new Date().toISOString(),
-          });
-        if (error) throw error;
+      const dataToSave: any = { ...rowData };
+
+      const tryWrite = async (payload: any) => {
+        if (existing) {
+          const { error } = await supabase
+            .from("prendas")
+            .update(payload)
+            .eq("id", prenda.id)
+            .eq("user_id", userId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("prendas")
+            .insert({
+              ...payload,
+              created_at: new Date().toISOString(),
+            });
+          if (error) throw error;
+        }
+      };
+
+      let done = false;
+      let writeAttempts = 0;
+      while (!done && writeAttempts < 10) {
+        try {
+          await tryWrite(dataToSave);
+          done = true;
+        } catch (writeErr: any) {
+          writeAttempts++;
+          const errMsg = writeErr?.message || String(writeErr);
+          let columnRemoved = false;
+          
+          // Buscar qué propiedad de dataToSave falló inspeccionando el mensaje de error
+          for (const key of Object.keys(dataToSave)) {
+            if (
+              errMsg.includes(`'${key}'`) || 
+              errMsg.includes(`"${key}"`) || 
+              errMsg.includes(key)
+            ) {
+              console.warn(`[Supabase Fallback] La columna '${key}' no existe en la tabla 'prendas'. Reintentando sin ella...`);
+              delete dataToSave[key];
+              columnRemoved = true;
+              break;
+            }
+          }
+
+          // Fallback adicional para códigos Postgres o palabras clave
+          if (!columnRemoved && (writeErr?.code === "42703" || errMsg.toLowerCase().includes("column") || errMsg.toLowerCase().includes("schema cache"))) {
+            const potentialNewColumns = ["composicion_tejido", "precio_compra", "veces_puesto", "descripcion", "tejido", "tags"];
+            for (const col of potentialNewColumns) {
+              if (dataToSave[col] !== undefined) {
+                console.warn(`[Supabase Fallback] Eliminando columna potencialmente inexistente '${col}' ante error de esquema...`);
+                delete dataToSave[col];
+                columnRemoved = true;
+                break;
+              }
+            }
+          }
+
+          if (!columnRemoved) {
+            throw writeErr;
+          }
+        }
       }
     });
 
@@ -886,7 +985,7 @@ export async function saveUserArmariosLista(userId: string, lista: string[]): Pr
           .insert(payload);
         if (insertError) throw insertError;
       }
-    });
+    }, 3, false);
   } catch (err) {
     console.warn("Could not save to armarios_personalizados table:", err);
   }
@@ -930,7 +1029,7 @@ export async function saveUserArmariosLista(userId: string, lista: string[]): Pr
           });
         if (error) throw error;
       }
-    });
+    }, 3, false);
   } catch (err) {
     console.warn("Could not save backup in style profile respuestas_quiz:", err);
   }
