@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Prenda, Rostro, Look, EventoConfig, HistorialLook, PerfilEstilo } from "../types";
-import { Sparkles, Compass, Thermometer, ChevronRight, CheckCircle2, RotateCcw, HelpCircle, Eye, AlertCircle, Camera, RefreshCw } from "lucide-react";
+import { Sparkles, Compass, Thermometer, ChevronRight, CheckCircle2, RotateCcw, HelpCircle, Eye, AlertCircle, Camera, RefreshCw, Plus, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { fileToBase64, resizeImage, obtenerCapaDePrenda } from "../utils";
 
@@ -754,6 +754,77 @@ export default function AsesoramientoLooks({
     setSelectedGarmentId(newId);
   };
 
+  const handleRemoveGarmentFromLook = (idToRemove: string) => {
+    setLooks(prev => {
+      const updated = [...prev];
+      const currentLook = { ...updated[activeLookIndex] };
+      if (currentLook && currentLook.id_prendas) {
+        currentLook.id_prendas = currentLook.id_prendas.filter(id => String(id) !== String(idToRemove));
+        updated[activeLookIndex] = currentLook;
+      }
+      return updated;
+    });
+
+    setGarmentPositions(prev => {
+      const copy = { ...prev };
+      delete copy[idToRemove];
+      return copy;
+    });
+
+    if (selectedGarmentId === idToRemove) {
+      setSelectedGarmentId(null);
+    }
+  };
+
+  const handleAddGarmentToLook = (newId: string) => {
+    const garment = armario.find(p => p.id === newId);
+    if (!garment) return;
+
+    setLooks(prev => {
+      const updated = [...prev];
+      const currentLook = { ...updated[activeLookIndex] };
+      if (currentLook && currentLook.id_prendas) {
+        if (!currentLook.id_prendas.some(id => String(id) === String(newId))) {
+          currentLook.id_prendas = [...currentLook.id_prendas, newId];
+        }
+        updated[activeLookIndex] = currentLook;
+      }
+      return updated;
+    });
+
+    setGarmentPositions(prev => {
+      if (prev[newId]) return prev;
+      let defaultY = 40;
+      let defaultScale = 100;
+      if (garment.categoria === "top") { defaultY = 32; defaultScale = 110; }
+      else if (garment.categoria === "pantalon") { defaultY = 62; defaultScale = 110; }
+      else if (garment.categoria === "calzado") { defaultY = 85; defaultScale = 75; }
+      else { defaultY = 18; defaultScale = 45; }
+
+      return {
+        ...prev,
+        [newId]: {
+          id: newId,
+          x: 50,
+          y: defaultY,
+          scale: defaultScale,
+          scaleX: 100,
+          scaleY: 100,
+          rotation: 0,
+          zIndex: garment.categoria === "top" ? 12 : (garment.categoria === "pantalon" ? 10 : 9),
+          flip: false,
+          visible: true,
+          blendMode: "multiply",
+          brightness: 100,
+          contrast: 100,
+          opacity: 100
+        }
+      };
+    });
+
+    setSelectedGarmentId(newId);
+  };
+
   const matchingGarments = selectedLook ? getResilientMatchingGarments(selectedLook.id_prendas, armario) : [];
   const tops = matchingGarments.filter(p => p.categoria === "top");
   const pantalones = matchingGarments.filter(p => p.categoria === "pantalon");
@@ -997,7 +1068,7 @@ export default function AsesoramientoLooks({
                       const renderPrendaCardItem = (item: Prenda, compact = false) => {
                         const capaInfo = obtenerCapaDePrenda(item);
                         return (
-                          <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#18181B]/50 transition duration-200 shadow-md">
+                          <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#18181B]/50 transition duration-200 shadow-md relative group">
                             <div className={`${compact ? "w-9 h-9" : "w-12 h-12"} rounded overflow-hidden border border-linea/40 shrink-0 bg-fondo`}>
                               <img
                                 src={item.imageSrc}
@@ -1018,9 +1089,24 @@ export default function AsesoramientoLooks({
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-[8px] text-tinta-apagada px-1.5 py-0.5 rounded bg-fondo font-medium uppercase font-sans shrink-0">
-                                  Nivel {item.formalidad}
-                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span className="text-[8px] text-tinta-apagada px-1.5 py-0.5 rounded bg-fondo font-medium uppercase font-sans shrink-0">
+                                    Nivel {item.formalidad}
+                                  </span>
+                                  {((item.categoria === "top" && tops.length > 1) || item.categoria === "accesorio") && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveGarmentFromLook(item.id);
+                                      }}
+                                      className="p-1 hover:bg-red-950/20 text-red-400 rounded transition-colors"
+                                      title="Quitar del look"
+                                    >
+                                      <X size={11} />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                               <p className="font-serif text-xs font-semibold text-tinta truncate mt-0.5" title={item.nombre}>
                                 {item.nombre}
@@ -1096,6 +1182,48 @@ export default function AsesoramientoLooks({
                                   ) : (
                                     <p className="text-[10px] text-tinta-apagada italic border border-dashed border-linea/40 rounded p-3 text-center bg-fondo/20">Sin prenda superior para el look</p>
                                   )}
+
+                                  {/* Section to add another top as an extra layer (e.g., camiseta base) */}
+                                  {(() => {
+                                    const availableTops = armario.filter(
+                                      p => p.categoria === "top" && !selectedLook.id_prendas.some(id => String(id) === String(p.id))
+                                    );
+                                    if (availableTops.length === 0) return null;
+                                    return (
+                                      <div className="mt-2 bg-[#251e15]/40 border border-laton/10 p-2.5 rounded-lg">
+                                        <p className="text-[9.5px] font-bold text-laton uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                                          <Plus size={11} className="shrink-0 text-laton" />
+                                          <span>Añadir prenda superior (capa / camiseta)</span>
+                                        </p>
+                                        <p className="text-[8px] text-tinta-apagada mb-2">
+                                          Combina varias prendas superiores para crear un conjunto apilado (capa base + capa de abrigo).
+                                        </p>
+                                        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                                          {availableTops.map(item => {
+                                            const capaInfo = obtenerCapaDePrenda(item);
+                                            return (
+                                              <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => handleAddGarmentToLook(item.id)}
+                                                className="flex items-center gap-2 px-2 py-1 bg-[#12100c] border border-linea/30 hover:border-laton rounded-md shrink-0 transition text-left"
+                                              >
+                                                <div className="w-7 h-7 rounded overflow-hidden bg-[#18181B] shrink-0 border border-linea/20">
+                                                  <img src={item.imageSrc} alt="" className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="min-w-0 pr-1">
+                                                  <p className="text-[9.5px] text-white/95 font-medium truncate max-w-[110px] leading-tight">{item.nombre}</p>
+                                                  <span className={`text-[6px] font-mono font-bold px-1 rounded inline-block ${capaInfo.color} ${capaInfo.bg}`}>
+                                                    {capaInfo.etiqueta}
+                                                  </span>
+                                                </div>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
 
