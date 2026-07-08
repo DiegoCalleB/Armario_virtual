@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS public.rostro (
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.rostro ENABLE ROW LEVEL SECURITY;
 
+-- Eliminar políticas antiguas si existen para evitar conflictos
+DROP POLICY IF EXISTS "Permitir lectura individual de rostro" ON public.rostro;
+DROP POLICY IF EXISTS "Permitir inserción individual de rostro" ON public.rostro;
+DROP POLICY IF EXISTS "Permitir actualización individual de rostro" ON public.rostro;
+DROP POLICY IF EXISTS "Permitir borrado individual de rostro" ON public.rostro;
+
 -- Políticas de RLS para 'rostro'
 CREATE POLICY "Permitir lectura individual de rostro" 
     ON public.rostro FOR SELECT 
@@ -63,8 +69,22 @@ CREATE TABLE IF NOT EXISTS public.prendas (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Asegurar que las columnas nuevas existan si la tabla ya estaba creada previamente
+ALTER TABLE public.prendas ADD COLUMN IF NOT EXISTS descripcion TEXT;
+ALTER TABLE public.prendas ADD COLUMN IF NOT EXISTS tejido TEXT;
+ALTER TABLE public.prendas ADD COLUMN IF NOT EXISTS tags TEXT[];
+ALTER TABLE public.prendas ADD COLUMN IF NOT EXISTS precio_compra NUMERIC;
+ALTER TABLE public.prendas ADD COLUMN IF NOT EXISTS veces_puesto INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.prendas ADD COLUMN IF NOT EXISTS composicion_tejido TEXT;
+
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.prendas ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar políticas antiguas si existen para evitar conflictos
+DROP POLICY IF EXISTS "Permitir lectura individual de prendas" ON public.prendas;
+DROP POLICY IF EXISTS "Permitir inserción individual de prendas" ON public.prendas;
+DROP POLICY IF EXISTS "Permitir actualización individual de prendas" ON public.prendas;
+DROP POLICY IF EXISTS "Permitir borrado individual de prendas" ON public.prendas;
 
 -- Políticas de RLS para 'prendas'
 CREATE POLICY "Permitir lectura individual de prendas" 
@@ -108,6 +128,12 @@ CREATE TABLE IF NOT EXISTS public.historial (
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.historial ENABLE ROW LEVEL SECURITY;
 
+-- Eliminar políticas antiguas si existen para evitar conflictos
+DROP POLICY IF EXISTS "Permitir lectura individual de historial" ON public.historial;
+DROP POLICY IF EXISTS "Permitir inserción individual de historial" ON public.historial;
+DROP POLICY IF EXISTS "Permitir actualización individual de historial" ON public.historial;
+DROP POLICY IF EXISTS "Permitir borrado individual de historial" ON public.historial;
+
 -- Políticas de RLS para 'historial'
 CREATE POLICY "Permitir lectura individual de historial" 
     ON public.historial FOR SELECT 
@@ -142,6 +168,12 @@ CREATE TABLE IF NOT EXISTS public.perfil_estilo (
 
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.perfil_estilo ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar políticas antiguas si existen para evitar conflictos
+DROP POLICY IF EXISTS "Permitir lectura individual de perfil_estilo" ON public.perfil_estilo;
+DROP POLICY IF EXISTS "Permitir inserción individual de perfil_estilo" ON public.perfil_estilo;
+DROP POLICY IF EXISTS "Permitir actualización individual de perfil_estilo" ON public.perfil_estilo;
+DROP POLICY IF EXISTS "Permitir borrado individual de perfil_estilo" ON public.perfil_estilo;
 
 -- Políticas de RLS para 'perfil_estilo'
 CREATE POLICY "Permitir lectura individual de perfil_estilo" 
@@ -178,6 +210,12 @@ CREATE TABLE IF NOT EXISTS public.planificaciones (
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.planificaciones ENABLE ROW LEVEL SECURITY;
 
+-- Eliminar políticas antiguas si existen para evitar conflictos
+DROP POLICY IF EXISTS "Permitir lectura individual de planificaciones" ON public.planificaciones;
+DROP POLICY IF EXISTS "Permitir inserción individual de planificaciones" ON public.planificaciones;
+DROP POLICY IF EXISTS "Permitir actualización individual de planificaciones" ON public.planificaciones;
+DROP POLICY IF EXISTS "Permitir borrado individual de planificaciones" ON public.planificaciones;
+
 -- Políticas de RLS para 'planificaciones'
 CREATE POLICY "Permitir lectura individual de planificaciones" 
     ON public.planificaciones FOR SELECT 
@@ -208,6 +246,11 @@ CREATE TABLE IF NOT EXISTS public.armarios_personalizados (
 
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.armarios_personalizados ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar políticas antiguas si existen para evitar conflictos
+DROP POLICY IF EXISTS "Permitir lectura de armarios_personalizados de usuario" ON public.armarios_personalizados;
+DROP POLICY IF EXISTS "Permitir inserción de armarios_personalizados de usuario" ON public.armarios_personalizados;
+DROP POLICY IF EXISTS "Permitir borrado de armarios_personalizados de usuario" ON public.armarios_personalizados;
 
 -- Políticas de RLS para 'armarios_personalizados'
 CREATE POLICY "Permitir lectura de armarios_personalizados de usuario" 

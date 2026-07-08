@@ -3,7 +3,7 @@ import { Prenda, CategoriaPrenda, TemporadaPrenda } from "../types";
 import { fileToBase64, resizeImage, getCategoryLabel, removeBackgroundAndSharpenCanvas } from "../utils";
 import { getShareCodeFromEmail, getWardrobeFromRegistry } from "../utils/share";
 import { supabase, fetchUserArmariosLista, saveUserArmariosLista } from "../supabase";
-import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, Plus, Trash2, SlidersHorizontal, Sun, Snowflake, Star, Tag, AlertCircle, Sparkles, Camera, X, FileText, Check, ShoppingBag, ExternalLink, Clipboard, ArrowRight, Users, Image, RefreshCw, Briefcase, Folder, Search, ChevronDown, ChevronUp, Edit } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import GooglePhotosPicker from "./GooglePhotosPicker";
 
@@ -314,6 +314,19 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
   const [customDescripcion, setCustomDescripcion] = useState("");
   const [selectedPrendaTags, setSelectedPrendaTags] = useState<string[]>([]);
   const [capsuleSavedFlash, setCapsuleSavedFlash] = useState(false);
+  const [isEditingPrenda, setIsEditingPrenda] = useState(false);
+  const [editNombre, setEditNombre] = useState("");
+  const [editCategoria, setEditCategoria] = useState<CategoriaPrenda>("top");
+  const [editTemporada, setEditTemporada] = useState<TemporadaPrenda>("todo");
+  const [editFormalidad, setEditFormalidad] = useState(3);
+  const [editColor, setEditColor] = useState("");
+  const [editTejido, setEditTejido] = useState("");
+  const [editComposicionTejido, setEditComposicionTejido] = useState("");
+  const [editPrecioCompra, setEditPrecioCompra] = useState<number | "">("");
+  const [editVecesPuesto, setEditVecesPuesto] = useState<number>(0);
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [editTagsText, setEditTagsText] = useState("");
+  const [editDescripcion, setEditDescripcion] = useState("");
   const [showVintedSync, setShowVintedSync] = useState(false);
   const [vintedDraft, setVintedDraft] = useState<{
     titulo: string;
@@ -2495,6 +2508,20 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                       setVintedDraft(null);
                       setVintedSyncStatus("idle");
                       setCopiedText(false);
+                      setIsEditingPrenda(false);
+                      setEditNombre(prenda.nombre || "");
+                      setEditCategoria(prenda.categoria || "top");
+                      setEditTemporada(prenda.temporada || "todo");
+                      setEditFormalidad(prenda.formalidad || 3);
+                      setEditColor(prenda.color || "#000000");
+                      setEditTejido(prenda.tejido || "");
+                      setEditComposicionTejido(prenda.composicion_tejido || "");
+                      setEditPrecioCompra(prenda.precio_compra !== undefined ? prenda.precio_compra : "");
+                      setEditVecesPuesto(prenda.veces_puesto !== undefined ? prenda.veces_puesto : 0);
+                      const nonArmarioTags = (prenda.tags || []).filter(t => typeof t === "string" && !t.startsWith("armario:"));
+                      setEditTags(nonArmarioTags);
+                      setEditTagsText(nonArmarioTags.join(", "));
+                      setEditDescripcion(prenda.descripcion || "");
                     }}
                     className="group bg-tarjeta border border-linea rounded overflow-hidden flex flex-col justify-between hover:border-laton cursor-pointer transition duration-300"
                   >
@@ -2624,266 +2651,583 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
               {/* Top Bar with X button */}
               <div className="flex items-center justify-between p-4 border-b border-linea/60 bg-fondo2/40">
                 <div className="flex items-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full ${showVintedSync ? "bg-[#09b1ba]" : "bg-laton"}`} />
-                  <span className={`font-sans text-[10px] tracking-widest uppercase font-bold ${showVintedSync ? "text-[#09b1ba]" : "text-laton"}`}>
-                    {showVintedSync ? "Venta en Vinted" : "Detalles de la Prenda"}
+                  <span className={`w-1.5 h-1.5 rounded-full ${showVintedSync ? "bg-[#09b1ba]" : isEditingPrenda ? "bg-amber-500" : "bg-laton"}`} />
+                  <span className={`font-sans text-[10px] tracking-widest uppercase font-bold ${showVintedSync ? "text-[#09b1ba]" : isEditingPrenda ? "text-amber-500" : "text-laton"}`}>
+                    {showVintedSync ? "Venta en Vinted" : isEditingPrenda ? "Editar Prenda" : "Detalles de la Prenda"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  id="boton-cerrar-detalle"
-                  onClick={() => setSelectedPrenda(null)}
-                  className="button-press text-tinta-apagada hover:text-laton p-1 rounded transition-colors"
-                >
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  {!showVintedSync && (
+                    <button
+                      type="button"
+                      id="boton-toggle-edicion"
+                      onClick={() => setIsEditingPrenda(!isEditingPrenda)}
+                      className={`button-press flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition ${
+                        isEditingPrenda
+                          ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                          : "text-tinta-apagada hover:text-laton border border-linea/60 hover:border-laton/40"
+                      }`}
+                    >
+                      <Edit size={11} />
+                      {isEditingPrenda ? "Ver Detalles" : "Editar"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    id="boton-cerrar-detalle"
+                    onClick={() => {
+                      setSelectedPrenda(null);
+                      setIsEditingPrenda(false);
+                    }}
+                    className="button-press text-tinta-apagada hover:text-laton p-1 rounded transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {!showVintedSync ? (
-                <>
-                  {/* Standard Garment Detail Modal Body */}
-                  <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] scrollbar-none">
-                    {/* Large Image Preview */}
-                    <div className="relative aspect-square w-full rounded bg-fondo2 overflow-hidden border border-linea/60">
-                      <img
-                        src={selectedPrenda.imageSrc}
-                        alt={selectedPrenda.nombre}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur px-2.5 py-1 rounded text-[9px] text-laton font-medium border border-linea/30 uppercase tracking-widest">
-                        {getCategoryLabel(selectedPrenda.categoria)}
-                      </div>
-                    </div>
-
-                    {/* Info and characteristics */}
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="font-serif text-lg font-bold text-tinta">
-                          {selectedPrenda.nombre}
-                        </h3>
+                isEditingPrenda ? (
+                  <>
+                    {/* Edit Garment Detail Modal Body */}
+                    <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] scrollbar-none text-left">
+                      {/* Image Thumbnail Preview */}
+                      <div className="flex items-center gap-3 bg-fondo2/40 p-2.5 border border-linea/60 rounded">
+                        <div className="relative w-16 h-16 rounded bg-fondo2 overflow-hidden border border-linea/60 shrink-0">
+                          <img
+                            src={selectedPrenda.imageSrc}
+                            alt={selectedPrenda.nombre}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div className="space-y-1 text-left">
+                          <span className="text-[9px] uppercase tracking-wider text-tinta-apagada font-bold block">Imagen de la prenda</span>
+                          <p className="text-xs text-tinta-apagada font-mono truncate max-w-[200px]">ID: #{selectedPrenda.id.split("_")[1] || selectedPrenda.id}</p>
+                        </div>
                       </div>
 
-                      {/* Attributes Grid */}
-                      <div className="grid grid-cols-2 gap-3.5 p-3.5 bg-fondo2/40 border border-linea/60 rounded">
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
-                            Temporada
-                          </span>
-                          <p className="text-sm text-tinta font-medium mt-1 flex items-center gap-1.5">
-                            {selectedPrenda.temporada === "verano" && (
-                              <>
-                                <Sun size={12} className="text-amber-500" /> Verano / Primavera
-                              </>
-                            )}
-                            {selectedPrenda.temporada === "invierno" && (
-                              <>
-                                <Snowflake size={12} className="text-sky-500" /> Invierno / Otoño
-                              </>
-                            )}
-                            {selectedPrenda.temporada === "todo" && <>Multiestacional (Todo el Año)</>}
-                          </p>
+                      {/* Fields Form */}
+                      <div className="space-y-3.5 text-left">
+                        {/* Name */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Nombre de la Prenda</label>
+                          <input
+                            type="text"
+                            value={editNombre}
+                            onChange={(e) => setEditNombre(e.target.value)}
+                            placeholder="Ej: Camisa de Lino Azul"
+                            className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
+                          />
                         </div>
 
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
-                            Formalidad
-                          </span>
-                          <div className="flex items-center gap-1 mt-1.5">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                size={11}
-                                className={i < selectedPrenda.formalidad ? "fill-laton text-laton" : "text-linea"}
-                              />
-                            ))}
+                        {/* Category and Season row */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Categoría</label>
+                            <select
+                              value={editCategoria}
+                              onChange={(e) => setEditCategoria(e.target.value as CategoriaPrenda)}
+                              className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium cursor-pointer"
+                            >
+                              <option value="top">Superior (Top)</option>
+                              <option value="pantalon">Inferior (Pantalón)</option>
+                              <option value="calzado">Calzado</option>
+                              <option value="accesorio">Accesorio</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Temporada</label>
+                            <select
+                              value={editTemporada}
+                              onChange={(e) => setEditTemporada(e.target.value as TemporadaPrenda)}
+                              className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium cursor-pointer"
+                            >
+                              <option value="todo">Todo el año (Multiestacional)</option>
+                              <option value="verano">Verano / Primavera</option>
+                              <option value="invierno">Invierno / Otoño</option>
+                            </select>
                           </div>
                         </div>
 
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
-                            Tono Dominante
-                          </span>
-                          <p className="text-sm text-tinta font-mono max-w-[120px] truncate uppercase flex items-center gap-2 mt-1">
-                            <span
-                              className="w-3.5 h-3.5 rounded-full border border-white/30 inline-block shrink-0 shadow-xs"
-                              style={{ backgroundColor: selectedPrenda.color }}
+                        {/* Formality and Color row */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Formalidad</label>
+                            <div className="flex items-center gap-1.5 h-[38px]">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => setEditFormalidad(i + 1)}
+                                  className="button-press p-0.5 focus:outline-none"
+                                >
+                                  <Star
+                                    size={16}
+                                    className={i < editFormalidad ? "fill-laton text-laton" : "text-linea hover:text-laton/50"}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Color Dominante</label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={editColor.startsWith("#") ? editColor : "#ffffff"}
+                                onChange={(e) => setEditColor(e.target.value)}
+                                className="w-8 h-8 rounded border border-linea cursor-pointer bg-transparent shrink-0"
+                              />
+                              <input
+                                type="text"
+                                value={editColor}
+                                onChange={(e) => setEditColor(e.target.value)}
+                                placeholder="#000000"
+                                className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-2.5 py-1.5 focus:border-laton focus:outline-none font-mono uppercase"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Fabric and Composition row */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Tejido</label>
+                            <input
+                              type="text"
+                              value={editTejido}
+                              onChange={(e) => setEditTejido(e.target.value)}
+                              placeholder="Ej: Lino, Lana, Denim, Algodón"
+                              className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
                             />
-                            {selectedPrenda.color}
-                          </p>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Composición</label>
+                            <input
+                              type="text"
+                              value={editComposicionTejido}
+                              onChange={(e) => setEditComposicionTejido(e.target.value)}
+                              placeholder="Ej: 100% lino, 80% algodón..."
+                              className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
+                            />
+                          </div>
                         </div>
 
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
-                            Identificador
-                          </span>
-                          <p className="text-xs font-mono text-tinta-apagada truncate mt-1">
-                            #{selectedPrenda.id.split("_")[1] || selectedPrenda.id}
-                          </p>
-                        </div>
-                      </div>
+                        {/* Price and Times Worn row */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Precio de Compra (€)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={editPrecioCompra}
+                              onChange={(e) => setEditPrecioCompra(e.target.value === "" ? "" : Number(e.target.value))}
+                              placeholder="Ej: 49.99"
+                              className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
+                            />
+                          </div>
 
-                      {/* AI Detected Fabric and Tags */}
-                      {(selectedPrenda.tejido || (selectedPrenda.tags && selectedPrenda.tags.length > 0)) && (
-                        <div className="p-3.5 bg-fondo border border-linea/60 rounded space-y-2.5">
-                          {selectedPrenda.tejido && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-[10px] uppercase tracking-wider text-laton font-bold">Tejido Identificado</span>
-                              <span className="text-tinta font-semibold bg-linea/40 px-2.5 py-0.5 rounded border border-linea/20 text-xs">{selectedPrenda.tejido}</span>
-                            </div>
-                          )}
-                          {selectedPrenda.tags && selectedPrenda.tags.length > 0 && (
-                            <div className="space-y-1.5">
-                              <span className="text-[10px] uppercase tracking-wider text-laton font-bold block">Estilo & Silueta Automáticos</span>
-                              <div className="flex flex-wrap gap-1.5">
-                                {selectedPrenda.tags.map((tg, iIdx) => (
-                                  <span key={iIdx} className="text-[10.5px] font-sans px-2.5 py-0.5 rounded bg-[#F4F4F5] text-[#18181B] border border-laton/20 font-medium">
-                                    #{tg}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Veces Puesto (Uso)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editVecesPuesto}
+                              onChange={(e) => setEditVecesPuesto(Number(e.target.value))}
+                              className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
+                            />
+                          </div>
                         </div>
-                      )}
 
-                      {/* Wardrobe Capsules Membership */}
-                      <div className="space-y-2 p-3 bg-[#F4F4F5]/30 border border-laton/10 rounded relative">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] uppercase tracking-wider text-laton font-extrabold block">
-                            Clasificación de Armario (Cápsulas)
-                          </span>
-                          {capsuleSavedFlash && (
-                            <span className="text-[9px] text-green-600 dark:text-green-400 font-bold animate-pulse flex items-center gap-1">
-                              ✓ Guardado
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {armariosDisponibles.map((arm) => {
-                            const isMember = getArmariosDePrenda({ ...selectedPrenda, tags: selectedPrendaTags }).includes(arm);
-                            return (
-                              <button
-                                key={arm}
-                                type="button"
-                                onClick={() => {
-                                  if (!selectedPrenda) return;
-                                  const currentArmarios = getArmariosDePrenda({ ...selectedPrenda, tags: selectedPrendaTags });
-                                  let nextArmarios = currentArmarios;
-                                  if (!currentArmarios.includes(arm)) {
-                                    nextArmarios = [...nextArmarios, arm];
-                                  } else {
-                                    nextArmarios = nextArmarios.filter(a => a !== arm);
-                                    if (nextArmarios.length === 0) {
-                                      nextArmarios = ["normal"];
-                                    }
-                                  }
-                                  const nextTags = [
-                                    ...(selectedPrendaTags || []).filter(t => typeof t === "string" && !t.startsWith("armario:")),
-                                    ...nextArmarios.map(a => `armario:${a}`)
-                                  ];
-                                  setSelectedPrendaTags(nextTags);
-                                  
-                                  const updatedPrenda = {
-                                    ...selectedPrenda,
-                                    tags: nextTags
-                                  };
-                                  setSelectedPrenda(updatedPrenda);
-                                  
-                                  // Auto-save instantly to storage & Supabase
-                                  if (onPrendaActualizada) {
-                                    onPrendaActualizada(updatedPrenda);
-                                  }
-                                  
-                                  setCapsuleSavedFlash(true);
-                                  setTimeout(() => setCapsuleSavedFlash(false), 2000);
-                                }}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] border cursor-pointer select-none transition ${
-                                  isMember
-                                    ? "bg-laton/15 border-laton text-laton font-bold"
-                                    : "bg-fondo2/30 border-linea/65 text-tinta-apagada hover:text-tinta hover:border-laton/30"
-                                }`}
-                              >
-                                <span>
-                                  {arm === "normal" && "🏠"}
-                                  {arm === "oficina" && "💼"}
-                                  {arm === "fiesta" && "✨"}
-                                  {arm !== "normal" && arm !== "oficina" && arm !== "fiesta" && "🏷️"} {arm.charAt(0).toUpperCase() + arm.slice(1)}
+                        {/* Style tags list */}
+                        <div className="space-y-1.5 text-left">
+                          <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold block">Etiquetas de Estilo (Tags)</label>
+                          <input
+                            type="text"
+                            placeholder="Separadas por comas (ej: corte-slim, casual, lino-italiano)"
+                            value={editTagsText}
+                            onChange={(e) => {
+                              setEditTagsText(e.target.value);
+                              const tagList = e.target.value
+                                .split(",")
+                                .map(t => t.trim().toLowerCase())
+                                .filter(t => t.length > 0);
+                              setEditTags(tagList);
+                            }}
+                            className="w-full text-xs bg-fondo text-tinta border border-linea rounded px-3 py-2.5 focus:border-laton focus:outline-none font-medium"
+                          />
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {editTags.length === 0 ? (
+                              <span className="text-[10px] text-tinta-apagada italic">Sin etiquetas de estilo</span>
+                            ) : (
+                              editTags.map((t, idx) => (
+                                <span key={idx} className="text-[10px] font-sans px-2.5 py-0.5 rounded bg-[#F4F4F5] text-[#18181B] border border-laton/20 font-medium">
+                                  #{t}
                                 </span>
-                              </button>
-                            );
-                          })}
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-widest text-laton font-extrabold flex items-center gap-1">
+                            <FileText size={10} /> Notas y Descripción Especial
+                          </label>
+                          <textarea
+                            value={editDescripcion}
+                            onChange={(e) => setEditDescripcion(e.target.value)}
+                            placeholder="Agrega notas sobre fit, tejido, procedencia, etc."
+                            className="w-full text-xs bg-fondo text-tinta border border-linea rounded p-2.5 focus:border-laton focus:outline-none min-h-[80px] resize-none leading-relaxed placeholder-tinta-apagada/40 font-sans font-medium"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Operational Action Buttons footer for Edit mode */}
+                    <div className="flex items-center justify-between p-4 border-t border-linea/60 bg-fondo2/40">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPrenda(false)}
+                        className="button-press px-4 py-2 text-[10px] text-tinta-apagada hover:text-tinta border border-linea rounded font-sans font-bold uppercase tracking-wider"
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!editNombre.trim()) {
+                            alert("Por favor ingresa un nombre para la prenda.");
+                            return;
+                          }
+                          
+                          // Combinamos armario tags actuales de selectedPrendaTags con las nuevas tags editadas
+                          const armarioTags = (selectedPrendaTags || []).filter(t => typeof t === "string" && t.startsWith("armario:"));
+                          const finalTags = [
+                            ...armarioTags,
+                            ...editTags.filter(t => !t.startsWith("armario:"))
+                          ];
+
+                          const updatedPrenda: Prenda = {
+                            ...selectedPrenda,
+                            nombre: editNombre,
+                            categoria: editCategoria,
+                            temporada: editTemporada,
+                            formalidad: editFormalidad,
+                            color: editColor,
+                            tejido: editTejido || undefined,
+                            composicion_tejido: editComposicionTejido || undefined,
+                            precio_compra: editPrecioCompra !== "" ? editPrecioCompra : undefined,
+                            veces_puesto: editVecesPuesto,
+                            tags: finalTags,
+                            descripcion: editDescripcion,
+                          };
+
+                          if (onPrendaActualizada) {
+                            onPrendaActualizada(updatedPrenda);
+                          }
+                          
+                          // Actualizar vista local del modal
+                          setSelectedPrenda(updatedPrenda);
+                          setSelectedPrendaTags(finalTags);
+                          setCustomDescripcion(editDescripcion);
+                          setIsEditingPrenda(false);
+                        }}
+                        className="button-press px-5 py-2 bg-laton text-fondo hover:bg-laton-apagado hover:text-white text-[10px] font-bold rounded flex items-center gap-1.5 uppercase tracking-wider"
+                      >
+                        <Check size={12} /> Guardar Cambios
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Standard Garment Detail Modal Body */}
+                    <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] scrollbar-none">
+                      {/* Large Image Preview */}
+                      <div className="relative aspect-square w-full rounded bg-fondo2 overflow-hidden border border-linea/60">
+                        <img
+                          src={selectedPrenda.imageSrc}
+                          alt={selectedPrenda.nombre}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur px-2.5 py-1 rounded text-[9px] text-laton font-medium border border-linea/30 uppercase tracking-widest">
+                          {getCategoryLabel(selectedPrenda.categoria)}
                         </div>
                       </div>
 
-                      {/* Description Input Textarea */}
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase tracking-wider text-laton font-medium flex items-center gap-1">
-                          <FileText size={10} /> Notas y Descripción Especial
-                        </label>
-                        <textarea
-                          value={customDescripcion}
-                          onChange={(e) => setCustomDescripcion(e.target.value)}
-                          placeholder="Agrega notas sobre fit, tejido, etiqueta (ej: Lino italiano de Massimo Dutti, corte Slim)..."
-                          className="w-full text-xs bg-fondo2 text-tinta border border-linea rounded p-2.5 focus:border-laton focus:outline-none min-h-[70px] resize-none leading-relaxed placeholder-tinta-apagada/40 font-sans"
-                        />
+                      {/* Info and characteristics */}
+                      <div className="space-y-3 text-left">
+                        <div>
+                          <h3 className="font-serif text-lg font-bold text-tinta text-left">
+                            {selectedPrenda.nombre}
+                          </h3>
+                        </div>
+
+                        {/* Attributes Grid */}
+                        <div className="grid grid-cols-2 gap-3.5 p-3.5 bg-fondo2/40 border border-linea/60 rounded">
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
+                              Temporada
+                            </span>
+                            <p className="text-sm text-tinta font-medium mt-1 flex items-center gap-1.5">
+                              {selectedPrenda.temporada === "verano" && (
+                                <>
+                                  <Sun size={12} className="text-amber-500" /> Verano / Primavera
+                                </>
+                              )}
+                              {selectedPrenda.temporada === "invierno" && (
+                                <>
+                                  <Snowflake size={12} className="text-sky-500" /> Invierno / Otoño
+                                </>
+                              )}
+                              {selectedPrenda.temporada === "todo" && <>Multiestacional (Todo el Año)</>}
+                            </p>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
+                              Formalidad
+                            </span>
+                            <div className="flex items-center gap-1 mt-1.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={11}
+                                  className={i < selectedPrenda.formalidad ? "fill-laton text-laton" : "text-linea"}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
+                              Tono Dominante
+                            </span>
+                            <p className="text-sm text-tinta font-mono max-w-[120px] truncate uppercase flex items-center gap-2 mt-1">
+                              <span
+                                className="w-3.5 h-3.5 rounded-full border border-white/30 inline-block shrink-0 shadow-xs"
+                                style={{ backgroundColor: selectedPrenda.color }}
+                              />
+                              {selectedPrenda.color}
+                            </p>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
+                              Identificador
+                            </span>
+                            <p className="text-xs font-mono text-tinta-apagada truncate mt-1">
+                              #{selectedPrenda.id.split("_")[1] || selectedPrenda.id}
+                            </p>
+                          </div>
+
+                          {/* Purchase Price & Cost-per-Wear if available */}
+                          {selectedPrenda.precio_compra !== undefined && (
+                            <div>
+                              <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
+                                Precio Compra
+                              </span>
+                              <p className="text-sm text-tinta font-medium mt-1">
+                                {Number(selectedPrenda.precio_compra).toFixed(2)}€
+                              </p>
+                            </div>
+                          )}
+
+                          {selectedPrenda.veces_puesto !== undefined && (
+                            <div>
+                              <span className="text-[10px] uppercase tracking-wider text-tinta-apagada font-semibold">
+                                Veces Puesto / CPW
+                              </span>
+                              <p className="text-sm text-tinta font-medium mt-1 flex items-center gap-1">
+                                {selectedPrenda.veces_puesto} {selectedPrenda.veces_puesto === 1 ? "vez" : "veces"}
+                                {selectedPrenda.precio_compra !== undefined && selectedPrenda.veces_puesto > 0 && (
+                                  <span className="text-[11px] text-laton font-mono">
+                                    ({(selectedPrenda.precio_compra / selectedPrenda.veces_puesto).toFixed(2)}€/uso)
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* AI Detected Fabric, Composition and Tags */}
+                        {(selectedPrenda.tejido || selectedPrenda.composicion_tejido || (selectedPrenda.tags && selectedPrenda.tags.filter(t => !t.startsWith("armario:")).length > 0)) && (
+                          <div className="p-3.5 bg-fondo border border-linea/60 rounded space-y-2.5">
+                            {selectedPrenda.tejido && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-[10px] uppercase tracking-wider text-laton font-bold">Tejido Identificado</span>
+                                <span className="text-tinta font-semibold bg-linea/40 px-2.5 py-0.5 rounded border border-linea/20 text-xs">{selectedPrenda.tejido}</span>
+                              </div>
+                            )}
+                            {selectedPrenda.composicion_tejido && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-[10px] uppercase tracking-wider text-laton font-bold">Composición</span>
+                                <span className="text-tinta-apagada font-medium text-xs">{selectedPrenda.composicion_tejido}</span>
+                              </div>
+                            )}
+                            {selectedPrenda.tags && selectedPrenda.tags.filter(t => !t.startsWith("armario:")).length > 0 && (
+                              <div className="space-y-1.5 text-left">
+                                <span className="text-[10px] uppercase tracking-wider text-laton font-bold block">Estilo & Silueta</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {selectedPrenda.tags.filter(t => !t.startsWith("armario:")).map((tg, iIdx) => (
+                                    <span key={iIdx} className="text-[10.5px] font-sans px-2.5 py-0.5 rounded bg-[#F4F4F5] text-[#18181B] border border-laton/20 font-medium">
+                                      #{tg}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Wardrobe Capsules Membership */}
+                        <div className="space-y-2 p-3 bg-[#F4F4F5]/30 border border-laton/10 rounded relative text-left">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] uppercase tracking-wider text-laton font-extrabold block">
+                              Clasificación de Armario (Cápsulas)
+                            </span>
+                            {capsuleSavedFlash && (
+                              <span className="text-[9px] text-green-600 dark:text-green-400 font-bold animate-pulse flex items-center gap-1">
+                                ✓ Guardado
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {armariosDisponibles.map((arm) => {
+                              const isMember = getArmariosDePrenda({ ...selectedPrenda, tags: selectedPrendaTags }).includes(arm);
+                              return (
+                                <button
+                                  key={arm}
+                                  type="button"
+                                  onClick={() => {
+                                    if (!selectedPrenda) return;
+                                    const currentArmarios = getArmariosDePrenda({ ...selectedPrenda, tags: selectedPrendaTags });
+                                    let nextArmarios = currentArmarios;
+                                    if (!currentArmarios.includes(arm)) {
+                                      nextArmarios = [...nextArmarios, arm];
+                                    } else {
+                                      nextArmarios = nextArmarios.filter(a => a !== arm);
+                                      if (nextArmarios.length === 0) {
+                                        nextArmarios = ["normal"];
+                                      }
+                                    }
+                                    const nextTags = [
+                                      ...(selectedPrendaTags || []).filter(t => typeof t === "string" && !t.startsWith("armario:")),
+                                      ...nextArmarios.map(a => `armario:${a}`)
+                                    ];
+                                    setSelectedPrendaTags(nextTags);
+                                    
+                                    const updatedPrenda = {
+                                      ...selectedPrenda,
+                                      tags: nextTags
+                                    };
+                                    setSelectedPrenda(updatedPrenda);
+                                    
+                                    // Auto-save instantly to storage & Supabase
+                                    if (onPrendaActualizada) {
+                                      onPrendaActualizada(updatedPrenda);
+                                    }
+                                    
+                                    setCapsuleSavedFlash(true);
+                                    setTimeout(() => setCapsuleSavedFlash(false), 2000);
+                                  }}
+                                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] border cursor-pointer select-none transition ${
+                                    isMember
+                                      ? "bg-laton/15 border-laton text-laton font-bold"
+                                      : "bg-fondo2/30 border-linea/65 text-tinta-apagada hover:text-tinta hover:border-laton/30"
+                                  }`}
+                                >
+                                  <span>
+                                    {arm === "normal" && "🏠"}
+                                    {arm === "oficina" && "💼"}
+                                    {arm === "fiesta" && "✨"}
+                                    {arm !== "normal" && arm !== "oficina" && arm !== "fiesta" && "🏷️"} {arm.charAt(0).toUpperCase() + arm.slice(1)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Description Input Textarea */}
+                        <div className="space-y-1 text-left">
+                          <label className="text-[9px] uppercase tracking-wider text-laton font-medium flex items-center gap-1">
+                            <FileText size={10} /> Notas y Descripción Especial
+                          </label>
+                          <textarea
+                            value={customDescripcion}
+                            onChange={(e) => {
+                              setCustomDescripcion(e.target.value);
+                              setEditDescripcion(e.target.value);
+                            }}
+                            placeholder="Agrega notas sobre fit, tejido, etiqueta (ej: Lino italiano de Massimo Dutti, corte Slim)..."
+                            className="w-full text-xs bg-fondo2 text-tinta border border-linea rounded p-2.5 focus:border-laton focus:outline-none min-h-[70px] resize-none leading-relaxed placeholder-tinta-apagada/40 font-sans"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Operational Action Buttons footer */}
-                  <div className="flex items-center justify-between p-4 border-t border-linea/60 bg-fondo2/40">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm("¿Seguro que deseas eliminar esta prenda?")) {
-                          onPrendaEliminada(selectedPrenda.id);
-                          setSelectedPrenda(null);
-                        }
-                      }}
-                      className="button-press flex items-center gap-1 text-[10px] text-tinta-apagada hover:text-red-400 font-sans font-bold uppercase tracking-wider"
-                    >
-                      <Trash2 size={12} /> Eliminar
-                    </button>
-
-                    <div className="flex gap-2">
+                    {/* Operational Action Buttons footer */}
+                    <div className="flex items-center justify-between p-4 border-t border-linea/60 bg-fondo2/40">
                       <button
                         type="button"
                         onClick={() => {
-                          const recommendedPrice = selectedPrenda.formalidad * 12 + 15;
-                          setVintedDraft({
-                            titulo: `Elegante ${selectedPrenda.nombre} - Espejo Selected`,
-                            precio: recommendedPrice,
-                            descripcion: `Bonito/a ${selectedPrenda.nombre.toLowerCase()} en muy buen estado.\n\nTemporada ideal: ${selectedPrenda.temporada === "verano" ? "Primavera/Verano" : selectedPrenda.temporada === "invierno" ? "Otoño/Invierno" : "Cualquier temporada"}.\nDetalles adicionales: ${customDescripcion || "Prenda muy bien cuidada y fácil de combinar."}\n\n#moda #vintagedepot #estilo #armariocircular #segundamano`,
-                          });
-                          setShowVintedSync(true);
-                          setVintedSyncStatus("idle");
-                          setVintedStep(0);
-                        }}
-                        className="button-press px-3 py-1.5 bg-[#09b1ba] text-white hover:bg-[#0aa2ac] font-bold text-[10px] rounded flex items-center gap-1.5 uppercase tracking-wider"
-                      >
-                        <ShoppingBag size={12} /> Subir a Vinted
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onPrendaActualizada && selectedPrenda) {
-                            onPrendaActualizada({
-                              ...selectedPrenda,
-                              tags: selectedPrendaTags,
-                              descripcion: customDescripcion,
-                            });
+                          if (window.confirm("¿Seguro que deseas eliminar esta prenda?")) {
+                            onPrendaEliminada(selectedPrenda.id);
+                            setSelectedPrenda(null);
                           }
-                          setSelectedPrenda(null);
                         }}
-                        className="button-press px-4 py-1.5 bg-laton text-fondo hover:bg-laton-apagado hover:text-white text-[10px] font-bold rounded flex items-center gap-1 uppercase tracking-wider"
+                        className="button-press flex items-center gap-1 text-[10px] text-tinta-apagada hover:text-red-400 font-sans font-bold uppercase tracking-wider"
                       >
-                        <Check size={12} /> Guardar
+                        <Trash2 size={12} /> Eliminar
                       </button>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const recommendedPrice = selectedPrenda.formalidad * 12 + 15;
+                            setVintedDraft({
+                              titulo: `Elegante ${selectedPrenda.nombre} - Espejo Selected`,
+                              precio: recommendedPrice,
+                              descripcion: `Bonito/a ${selectedPrenda.nombre.toLowerCase()} en muy buen estado.\n\nTemporada ideal: ${selectedPrenda.temporada === "verano" ? "Primavera/Verano" : selectedPrenda.temporada === "invierno" ? "Otoño/Invierno" : "Cualquier temporada"}.\nDetalles adicionales: ${customDescripcion || "Prenda muy bien cuidada y fácil de combinar."}\n\n#moda #vintagedepot #estilo #armariocircular #segundamano`,
+                            });
+                            setShowVintedSync(true);
+                            setVintedSyncStatus("idle");
+                            setVintedStep(0);
+                          }}
+                          className="button-press px-3 py-1.5 bg-[#09b1ba] text-white hover:bg-[#0aa2ac] font-bold text-[10px] rounded flex items-center gap-1.5 uppercase tracking-wider"
+                        >
+                          <ShoppingBag size={12} /> Subir a Vinted
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onPrendaActualizada && selectedPrenda) {
+                              onPrendaActualizada({
+                                ...selectedPrenda,
+                                tags: selectedPrendaTags,
+                                descripcion: customDescripcion,
+                              });
+                            }
+                            setSelectedPrenda(null);
+                          }}
+                          className="button-press px-4 py-1.5 bg-laton text-fondo hover:bg-laton-apagado hover:text-white text-[10px] font-bold rounded flex items-center gap-1 uppercase tracking-wider"
+                        >
+                          <Check size={12} /> Guardar
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </>
+                  </>
+                )
               ) : (
                 <>
                   {/* Vinted Express view inline details */}

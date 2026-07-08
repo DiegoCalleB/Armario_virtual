@@ -56,11 +56,22 @@ async function executeWithRetry<T>(
         if (dispatchError) {
           // Despachar evento para notificar al usuario
           const errorMsg = error?.message || String(error || "Error de red/permisos");
+          let friendlyMsg = `No se pudo sincronizar la información de "${operationName}" en la base de datos tras varios intentos. Se ha guardado una copia en local para evitar pérdidas de información.`;
+          
+          if (
+            errorMsg.toLowerCase().includes("could not find the table") ||
+            errorMsg.toLowerCase().includes("schema cache") ||
+            (errorMsg.toLowerCase().includes("relation") && errorMsg.toLowerCase().includes("does not exist")) ||
+            (errorMsg.toLowerCase().includes("column") && errorMsg.toLowerCase().includes("does not exist"))
+          ) {
+            friendlyMsg += " RECOMENDACIÓN: Tu base de datos de Supabase no está sincronizada con los últimos cambios de tablas o columnas. Por favor, copia el contenido del archivo 'schema.sql' de este proyecto y ejecútalo en el SQL Editor del panel de Supabase para solucionarlo.";
+          }
+
           const writeErrorEvent = new CustomEvent("supabase-write-error", {
             detail: {
               operation: operationName,
               error: errorMsg,
-              message: `No se pudo sincronizar la información de "${operationName}" en la base de datos tras varios intentos. Se ha guardado una copia en local para evitar pérdidas de información.`
+              message: friendlyMsg
             }
           });
           window.dispatchEvent(writeErrorEvent);
