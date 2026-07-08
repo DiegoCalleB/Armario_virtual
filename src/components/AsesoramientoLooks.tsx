@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Prenda, Rostro, Look, EventoConfig, HistorialLook, PerfilEstilo } from "../types";
 import { Sparkles, Compass, Thermometer, ChevronRight, CheckCircle2, RotateCcw, HelpCircle, Eye, AlertCircle, Camera, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { fileToBase64, resizeImage } from "../utils";
+import { fileToBase64, resizeImage, obtenerCapaDePrenda } from "../utils";
 
 // Resiliently resolve garments from requested IDs
 const getResilientMatchingGarments = (id_prendas: string[] | undefined, armario: Prenda[]): Prenda[] => {
@@ -474,7 +474,20 @@ export default function AsesoramientoLooks({
       opacity?: number;
     }> = {};
 
-    matching.forEach((garment, idx) => {
+    const sortedMatching = [...matching].sort((a, b) => {
+      const order = { calzado: 1, pantalon: 2, top: 3, accesorio: 4 };
+      const catA = order[a.categoria] || 5;
+      const catB = order[b.categoria] || 5;
+      if (catA !== catB) {
+        return catA - catB;
+      }
+      if (a.categoria === "top" && b.categoria === "top") {
+        return obtenerCapaDePrenda(a).nivel - obtenerCapaDePrenda(b).nivel;
+      }
+      return 0;
+    });
+
+    sortedMatching.forEach((garment, idx) => {
       let defaultY = 40;
       let defaultScale = 100;
 
@@ -806,50 +819,61 @@ export default function AsesoramientoLooks({
                       {(() => {
                         const matchingGarments = getResilientMatchingGarments(selectedLook.id_prendas, armario);
 
-                      const tops = matchingGarments.filter(p => p.categoria === "top");
+                      const tops = matchingGarments.filter(p => p.categoria === "top")
+                        .sort((a, b) => obtenerCapaDePrenda(a).nivel - obtenerCapaDePrenda(b).nivel);
                       const pantalones = matchingGarments.filter(p => p.categoria === "pantalon");
                       const calzados = matchingGarments.filter(p => p.categoria === "calzado");
                       const accesorios = matchingGarments.filter(p => p.categoria === "accesorio");
 
-                      const renderPrendaCardItem = (item: Prenda, compact = false) => (
-                        <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#18181B]/50 transition duration-200 shadow-md">
-                          <div className={`${compact ? "w-9 h-9" : "w-12 h-12"} rounded overflow-hidden border border-linea/40 shrink-0 bg-fondo`}>
-                            <img
-                              src={item.imageSrc}
-                              alt={item.nombre}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1 text-left">
-                            <div className="flex items-center justify-between gap-1">
-                              <p className="text-[8px] uppercase tracking-wider text-[#18181B]/80 font-bold leading-none">
-                                {item.categoria === "top" ? "Prenda Superior" : item.categoria === "pantalon" ? "Prenda Inferior" : item.categoria === "calzado" ? "Calzado" : "Accesorio"}
-                              </p>
-                              <span className="text-[8px] text-tinta-apagada px-1.5 py-0.5 rounded bg-fondo font-medium uppercase font-sans">
-                                Nivel {item.formalidad}
-                              </span>
+                      const renderPrendaCardItem = (item: Prenda, compact = false) => {
+                        const capaInfo = obtenerCapaDePrenda(item);
+                        return (
+                          <div key={item.id} className="bg-tarjeta border border-linea rounded-lg p-2.5 flex gap-3 items-center hover:border-[#18181B]/50 transition duration-200 shadow-md">
+                            <div className={`${compact ? "w-9 h-9" : "w-12 h-12"} rounded overflow-hidden border border-linea/40 shrink-0 bg-fondo`}>
+                              <img
+                                src={item.imageSrc}
+                                alt={item.nombre}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
                             </div>
-                            <p className="font-serif text-xs font-semibold text-tinta truncate mt-0.5" title={item.nombre}>
-                              {item.nombre}
-                            </p>
-                            <div className="flex items-center justify-between mt-1">
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className="w-2.5 h-2.5 rounded-full border border-white/10"
-                                  style={{ backgroundColor: item.color }}
-                                />
-                                <span className="text-[9px] font-mono text-tinta-apagada font-light uppercase">
-                                  {item.color}
+                            <div className="min-w-0 flex-1 text-left">
+                              <div className="flex items-center justify-between gap-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="text-[8px] uppercase tracking-wider text-[#18181B]/80 font-bold leading-none">
+                                    {item.categoria === "top" ? "Prenda Superior" : item.categoria === "pantalon" ? "Prenda Inferior" : item.categoria === "calzado" ? "Calzado" : "Accesorio"}
+                                  </p>
+                                  {item.categoria === "top" && (
+                                    <span className={`text-[7px] px-1 py-0.2 rounded uppercase font-bold tracking-wider ${capaInfo.color} ${capaInfo.bg}`}>
+                                      {capaInfo.etiqueta}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[8px] text-tinta-apagada px-1.5 py-0.5 rounded bg-fondo font-medium uppercase font-sans shrink-0">
+                                  Nivel {item.formalidad}
                                 </span>
                               </div>
-                              <span className="text-[8.5px] text-tinta-apagada/70 italic capitalize">
-                                {item.temporada === "todo" ? "Todo el año" : item.temporada}
-                              </span>
+                              <p className="font-serif text-xs font-semibold text-tinta truncate mt-0.5" title={item.nombre}>
+                                {item.nombre}
+                              </p>
+                              <div className="flex items-center justify-between mt-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full border border-white/10"
+                                    style={{ backgroundColor: item.color }}
+                                  />
+                                  <span className="text-[9px] font-mono text-tinta-apagada font-light uppercase">
+                                    {item.color}
+                                  </span>
+                                </div>
+                                <span className="text-[8.5px] text-tinta-apagada/70 italic capitalize">
+                                  {item.temporada === "todo" ? "Todo el año" : item.temporada}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
+                        );
+                      };
 
                       return (
                         <div className="space-y-4">
@@ -870,8 +894,36 @@ export default function AsesoramientoLooks({
                                   <span className="text-[8px] text-tinta-apagada block italic font-light">Tops & Abrigos</span>
                                 </div>
                                 <div className="flex-1 w-full flex flex-col gap-2">
+                                  {tops.length > 1 && (
+                                    <div className="flex items-center gap-2 mb-1.5 px-3 py-1.5 bg-[#251e15] rounded border border-laton/20 shadow-inner">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-laton animate-pulse shrink-0" />
+                                      <p className="text-[9.5px] font-mono font-bold text-laton uppercase tracking-wider">
+                                        Superposición activa ({tops.length} capas: {tops.map(t => obtenerCapaDePrenda(t).desc).join(" + ")})
+                                      </p>
+                                    </div>
+                                  )}
                                   {tops.length > 0 ? (
-                                    tops.map((item) => renderPrendaCardItem(item))
+                                    <div className="relative pl-3.5 flex flex-col gap-3">
+                                      {tops.length > 1 && (
+                                        <div className="absolute left-0.5 top-3 bottom-3 w-0.5 border-l border-dashed border-laton/30" />
+                                      )}
+                                      {tops.map((item, idx) => {
+                                        const capaInfo = obtenerCapaDePrenda(item);
+                                        return (
+                                          <div key={item.id} className="relative">
+                                            {tops.length > 1 && (
+                                              <div 
+                                                className="absolute -left-[21px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-laton text-[#1a1610] font-mono text-[9px] font-extrabold flex items-center justify-center border border-[#1a1610] shadow"
+                                                title={capaInfo.etiqueta}
+                                              >
+                                                {idx + 1}
+                                              </div>
+                                            )}
+                                            {renderPrendaCardItem(item)}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   ) : (
                                     <p className="text-[10px] text-tinta-apagada italic border border-dashed border-linea/40 rounded p-3 text-center bg-fondo/20">Sin prenda superior para el look</p>
                                   )}
@@ -1318,8 +1370,15 @@ export default function AsesoramientoLooks({
                                           <img src={garment.imageSrc} alt="" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="min-w-0 pr-1 flex-1">
-                                          <p className="text-[9px] font-bold text-laton truncate leading-tight uppercase font-mono">{garment.categoria}</p>
-                                          <p className="text-[9.5px] text-tinta truncate leading-none font-medium">{garment.nombre}</p>
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <p className="text-[9px] font-bold text-laton truncate leading-tight uppercase font-mono">{garment.categoria}</p>
+                                            {garment.categoria === "top" && (
+                                              <span className={`text-[6.5px] px-1 py-0.2 rounded font-mono font-bold shrink-0 ${obtenerCapaDePrenda(garment).color} ${obtenerCapaDePrenda(garment).bg}`}>
+                                                C{obtenerCapaDePrenda(garment).nivel}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <p className="text-[9.5px] text-tinta truncate leading-none font-medium mt-1">{garment.nombre}</p>
                                         </div>
                                       </button>
                                     ))}
@@ -1331,7 +1390,21 @@ export default function AsesoramientoLooks({
                                       <div className="flex justify-between items-center border-b border-linea/40 pb-2 flex-wrap gap-2">
                                         <div className="flex flex-col">
                                           <span className="text-[10px] uppercase text-laton font-bold tracking-widest font-mono">Ajuste de Prenda Virtual</span>
-                                          <span className="text-[8px] text-tinta-apagada font-mono uppercase mt-0.5">Prenda: {armario.find(p => p.id === selectedGarmentId)?.nombre || "Cargada"}</span>
+                                          {(() => {
+                                            const activeGarment = armario.find(p => p.id === selectedGarmentId);
+                                            if (!activeGarment) return null;
+                                            const capaInfo = obtenerCapaDePrenda(activeGarment);
+                                            return (
+                                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                <span className="text-[8.5px] text-tinta-apagada font-mono uppercase">Prenda: {activeGarment.nombre}</span>
+                                                {activeGarment.categoria === "top" && (
+                                                  <span className={`text-[7px] px-1 py-0.2 rounded font-mono font-bold shrink-0 ${capaInfo.color} ${capaInfo.bg}`}>
+                                                    {capaInfo.etiqueta} — {capaInfo.desc}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                         <div className="flex gap-1.5 flex-wrap">
                                           <button
@@ -1358,7 +1431,7 @@ export default function AsesoramientoLooks({
                                             }}
                                             className="px-2 py-0.5 text-[8px] uppercase font-bold rounded border border-linea/80 text-tinta-apagada hover:text-tinta bg-fondo transition"
                                           >
-                                            Bajar Capa
+                                            Subir Capa
                                           </button>
                                           <button
                                             type="button"
@@ -1370,7 +1443,7 @@ export default function AsesoramientoLooks({
                                             }}
                                             className="px-2 py-0.5 text-[8px] uppercase font-bold rounded border border-linea/80 text-tinta-apagada hover:text-tinta bg-fondo transition"
                                           >
-                                            Subir Capa
+                                            Bajar Capa
                                           </button>
                                           <button
                                             type="button"

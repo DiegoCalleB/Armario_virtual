@@ -1,3 +1,5 @@
+import { Prenda } from "./types";
+
 /**
  * Resizes an image base64 data string to a maximum dimension of maxDimension (768px)
  * using HTML Canvas in client side.
@@ -211,3 +213,132 @@ export function removeBackgroundAndSharpenCanvas(base64Str: string, tolerance = 
     };
   });
 }
+
+export interface InfoCapa {
+  nivel: number;
+  etiqueta: string;
+  color: string; // text/border color
+  bg: string;    // bg color
+  desc: string;
+}
+
+export function obtenerCapaDePrenda(prenda: Prenda): InfoCapa {
+  if (prenda.categoria !== "top") {
+    if (prenda.categoria === "pantalon") {
+      return {
+        nivel: 10,
+        etiqueta: "Parte Inferior",
+        color: "text-zinc-600 border border-zinc-200/50",
+        bg: "bg-zinc-100/70",
+        desc: "Pantalón o parte inferior"
+      };
+    }
+    if (prenda.categoria === "calzado") {
+      return {
+        nivel: 20,
+        etiqueta: "Calzado",
+        color: "text-amber-700 border border-amber-200/50",
+        bg: "bg-amber-50/70",
+        desc: "Zapatos / Zapatillas"
+      };
+    }
+    return {
+      nivel: 30,
+      etiqueta: "Accesorio",
+      color: "text-teal-700 border border-teal-200/50",
+      bg: "bg-teal-50/70",
+      desc: "Accesorio / Complemento"
+    };
+  }
+
+  const nombreLower = (prenda.nombre || "").toLowerCase();
+  const descLower = (prenda.descripcion || "").toLowerCase();
+  const tejidoLower = (prenda.tejido || "").toLowerCase();
+  const tagsStr = (prenda.tags || []).join(" ").toLowerCase();
+
+  const fullText = `${nombreLower} ${descLower} ${tejidoLower} ${tagsStr}`;
+
+  // 1. Check for Outer Layer (Abrigo, chaqueta, blazer, etc.)
+  if (
+    fullText.includes("abrigo") ||
+    fullText.includes("chaqueta") ||
+    fullText.includes("cazadora") ||
+    fullText.includes("gabardina") ||
+    fullText.includes("parca") ||
+    fullText.includes("parka") ||
+    fullText.includes("plumifero") ||
+    fullText.includes("plumífero") ||
+    fullText.includes("chubasquero") ||
+    fullText.includes("americana") ||
+    fullText.includes("blazer") ||
+    fullText.includes("sobretodo") ||
+    fullText.includes("trench") ||
+    fullText.includes("bomber") ||
+    fullText.includes("chupa") ||
+    fullText.includes("cortavientos") ||
+    fullText.includes("chaleco") ||
+    fullText.includes("jacket") ||
+    fullText.includes("coat") ||
+    fullText.includes("cardigan grueso")
+  ) {
+    return {
+      nivel: 4,
+      etiqueta: "Capa Exterior (Capa 4)",
+      color: "text-rose-700 border border-rose-200/50",
+      bg: "bg-rose-50/70",
+      desc: "Abrigo / Chaqueta / Americana"
+    };
+  }
+
+  // 2. Check for Warm Layer (Jersey, sudadera, etc.)
+  if (
+    fullText.includes("jersey") ||
+    fullText.includes("suéter") ||
+    fullText.includes("sueter") ||
+    fullText.includes("sudadera") ||
+    fullText.includes("cardigan") ||
+    fullText.includes("cárdigan") ||
+    fullText.includes("sweater") ||
+    fullText.includes("hoodie") ||
+    fullText.includes("pull") ||
+    fullText.includes("lana") ||
+    fullText.includes("pashmina") ||
+    fullText.includes("rebeca")
+  ) {
+    return {
+      nivel: 3,
+      etiqueta: "Capa de Abrigo (Capa 3)",
+      color: "text-amber-700 border border-amber-200/50",
+      bg: "bg-amber-50/70",
+      desc: "Jersey / Sudadera / Punto"
+    };
+  }
+
+  // 3. Check for Mid Layer (Camisa, blusa, polo, etc.)
+  if (
+    fullText.includes("camisa") ||
+    fullText.includes("blusa") ||
+    fullText.includes("polo") ||
+    fullText.includes("camisola") ||
+    fullText.includes("guayabera") ||
+    fullText.includes("shirt")
+  ) {
+    return {
+      nivel: 2,
+      etiqueta: "Capa Intermedia (Capa 2)",
+      color: "text-sky-700 border border-sky-200/50",
+      bg: "bg-sky-50/70",
+      desc: "Camisa / Blusa / Polo"
+    };
+  }
+
+  // 4. Base Layer (Camiseta, top, t-shirt, tirantes, etc.)
+  return {
+    nivel: 1,
+    etiqueta: "Capa Interior (Capa 1)",
+    color: "text-emerald-700 border border-emerald-200/50",
+    bg: "bg-emerald-50/70",
+    desc: "Camiseta / Top básico"
+  };
+}
+

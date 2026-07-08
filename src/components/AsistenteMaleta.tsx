@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Prenda, PerfilEstilo } from "../types";
 import { Sparkles, Briefcase, MapPin, Calendar, Sun, CloudRain, Thermometer, ShoppingBag, CheckCircle, Flame, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { obtenerCapaDePrenda } from "../utils";
 
 interface AsistenteMaletaProps {
   armario: Prenda[];
@@ -324,21 +325,42 @@ export default function AsistenteMaleta({ armario, perfilEstilo }: AsistenteMale
                         {/* Combined thumbnail indicators */}
                         <div className="flex items-center gap-2 pt-1 border-t border-linea/20">
                           <span className="text-[9px] uppercase font-bold tracking-wider text-tinta-apagada font-mono pr-2 shrink-0">Combinación:</span>
-                          <div className="flex items-center gap-1.5">
-                            {comb.prendas_combinadas.map((id) => {
-                              const p = findPrenda(id);
-                              if (!p) return null;
-                              return (
-                                <img
-                                  key={id}
-                                  src={p.imageSrc}
-                                  alt={p.nombre}
-                                  title={p.nombre}
-                                  className="w-8 h-8 rounded-full border border-linea object-cover bg-fondo2"
-                                  referrerPolicy="no-referrer"
-                                />
-                              );
-                            })}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {(() => {
+                              const resolved = comb.prendas_combinadas
+                                .map(findPrenda)
+                                .filter((p): p is Prenda => !!p)
+                                .sort((a, b) => {
+                                  const order = { top: 1, pantalon: 2, calzado: 3, accesorio: 4 };
+                                  const catA = order[a.categoria as keyof typeof order] || 5;
+                                  const catB = order[b.categoria as keyof typeof order] || 5;
+                                  if (catA !== catB) return catA - catB;
+                                  if (a.categoria === "top" && b.categoria === "top") {
+                                    return obtenerCapaDePrenda(a).nivel - obtenerCapaDePrenda(b).nivel;
+                                  }
+                                  return 0;
+                                });
+                              return resolved.map((p) => {
+                                const capaInfo = obtenerCapaDePrenda(p);
+                                const isTop = p.categoria === "top";
+                                const tooltipTitle = isTop ? `${p.nombre} (${capaInfo.etiqueta})` : p.nombre;
+                                return (
+                                  <div key={p.id} className="relative group shrink-0" title={tooltipTitle}>
+                                    <img
+                                      src={p.imageSrc}
+                                      alt={p.nombre}
+                                      className="w-8 h-8 rounded-full border border-linea object-cover bg-fondo2 hover:scale-110 transition duration-150"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    {isTop && (
+                                      <span className={`absolute -bottom-1 -right-1 text-[6.5px] font-mono font-extrabold px-1 rounded uppercase tracking-tighter shadow-sm border ${capaInfo.color} ${capaInfo.bg} border-linea/20`}>
+                                        C{capaInfo.nivel}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
                       </div>
