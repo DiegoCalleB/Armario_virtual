@@ -56,35 +56,29 @@ const cropGarmentImage = (
         // Validate the crop coordinates or apply smart fallback coordinates if suspicious/hallucinated
         const widthPercent = Math.abs(xmaxScale - xminScale);
         const heightPercent = Math.abs(ymaxScale - yminScale);
-        const areaPercent = widthPercent * heightPercent; // scale of 0 to 1,000,000
 
         let isSuspicious = false;
 
-        // 1. If coordinates cover almost the whole image (e.g. >80% area)
-        if (areaPercent >= 800000) {
-          isSuspicious = true;
-          console.warn(`[CROP] El area de recorte es casi la imagen completa (${areaPercent / 10000}%). Sospechoso. Categoria: ${categoria}`);
-        }
-
-        // 2. If coordinates are NaN or extremely small
-        if (isNaN(yminScale) || isNaN(xminScale) || isNaN(ymaxScale) || isNaN(xmaxScale) || widthPercent < 15 || heightPercent < 15) {
+        // 1. If coordinates are NaN or extremely small
+        if (isNaN(yminScale) || isNaN(xminScale) || isNaN(ymaxScale) || isNaN(xmaxScale) || widthPercent < 5 || heightPercent < 5) {
           isSuspicious = true;
         }
 
-        // 3. Physical anomaly heuristics (e.g. pants in upper body, shoes in upper body)
+        // 2. Physical anomaly heuristics (e.g. pants in upper body, shoes in upper body)
+        // Only run physical anomaly checks when confident, without aggressive full-image area limitations
         if (categoria) {
           const cat = String(categoria).toLowerCase();
           if (cat === "pantalon") {
-            // Pants cannot be purely in the upper 45% of the image
-            if (Math.max(yminScale, ymaxScale) < 450) {
+            // If the entire pants are located strictly in the upper 35% of the image
+            if (Math.max(yminScale, ymaxScale) < 350) {
               isSuspicious = true;
-              console.warn(`[CROP] Sospechoso: pantalones ubicados completamente en la mitad superior.`);
+              console.warn(`[CROP] Sospechoso: pantalones ubicados completamente en el tercio superior.`);
             }
           } else if (cat === "calzado") {
-            // Shoes cannot be purely in the upper 65% of the image
-            if (Math.max(yminScale, ymaxScale) < 650) {
+            // If the shoes are located strictly in the upper 50% of the image
+            if (Math.max(yminScale, ymaxScale) < 500) {
               isSuspicious = true;
-              console.warn(`[CROP] Sospechoso: calzado ubicado en la mitad superior/media.`);
+              console.warn(`[CROP] Sospechoso: calzado ubicado completamente en la mitad superior.`);
             }
           }
         }
@@ -565,7 +559,71 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
     const arr = Array.isArray(nuevaPrendaOrArray) ? nuevaPrendaOrArray : [nuevaPrendaOrArray];
     const activeArm = activeArmarioFilter !== "all" ? activeArmarioFilter : "normal";
     
-    const updated = arr.map(p => {
+    // Duplicate Checking Helper
+    const esPrendaDuplicada = (nueva: Prenda, existentes: Prenda[]): boolean => {
+      return existentes.some(existente => {
+        if (existente.categoria !== nueva.categoria) return false;
+        
+        const nombreNueva = (nueva.nombre || "").toLowerCase().replace(/[^a-z0-9áéíóúüñ]/g, " ").trim();
+        const nombreExistente = (existente.nombre || "").toLowerCase().replace(/[^a-z0-9áéíóúüñ]/g, " ").trim();
+        
+        const exactNameMatch = nombreNueva === nombreExistente;
+        
+        const marcaNueva = (nueva.marca || "No identificada").toLowerCase().trim();
+        const marcaExistente = (existente.marca || "No identificada").toLowerCase().trim();
+        const brandMatch = marcaNueva === marcaExistente || 
+                           ((marcaNueva === "" || marcaNueva === "no identificada") && 
+                            (marcaExistente === "" || marcaExistente === "no identificada"));
+
+        const colorNueva = (nueva.color || "").toLowerCase().trim();
+        const colorExistente = (existente.color || "").toLowerCase().trim();
+        const colorMatch = colorNueva === colorExistente;
+
+        const tejidoNueva = (nueva.tejido || "").toLowerCase().trim();
+        const tejidoExistente = (existente.tejido || "").toLowerCase().trim();
+        const fabricMatch = tejidoNueva === tejidoExistente;
+
+        // Case 1: Name matches exactly, brand matches, and either color or fabric matches
+        if (exactNameMatch && brandMatch && (colorMatch || fabricMatch)) {
+          return true;
+        }
+        // Case 2: Name, color, and brand are all identical
+        if (exactNameMatch && colorMatch && brandMatch) {
+          return true;
+        }
+        return false;
+      });
+    };
+
+    const duplicatesSkipped: string[] = [];
+    const addedUniqueKeys = new Set<string>();
+    
+    const uniquePrendasToAdd = arr.filter(p => {
+      const isDupInWardrobe = esPrendaDuplicada(p, prendas);
+      const batchKey = `${(p.nombre || "").toLowerCase().trim()}_${p.categoria}`;
+      const isDupInBatch = addedUniqueKeys.has(batchKey);
+      
+      if (isDupInWardrobe || isDupInBatch) {
+        if (!duplicatesSkipped.includes(p.nombre)) {
+          duplicatesSkipped.push(p.nombre);
+        }
+        return false;
+      }
+      
+      addedUniqueKeys.add(batchKey);
+      return true;
+    });
+
+    if (duplicatesSkipped.length > 0) {
+      alert(`Se han omitido ${duplicatesSkipped.length} prenda(s) duplicada(s) que ya se encuentran registradas en el armario:\n- ${duplicatesSkipped.join("\n- ")}`);
+    }
+
+    if (uniquePrendasToAdd.length === 0) {
+      setIsAddModalOpen(false);
+      return;
+    }
+
+    const updated = uniquePrendasToAdd.map(p => {
       const current = getArmariosDePrenda(p);
       let next = current;
       if (activeArm !== "normal" && current.length === 1 && current[0] === "normal") {
@@ -861,7 +919,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
       return;
     }
 
-    if (validImageFiles.length === 1) {
+    if (validImageFiles.length === 1 && !isMultiMode) {
       setError(null);
       setLoading(true);
       setLoadingText("Cargando imagen...");
@@ -964,6 +1022,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                 formalidad: isNaN(formalidadVal) ? 3 : Math.max(1, Math.min(5, formalidadVal)),
                 temporada: (item.temporada as TemporadaPrenda) || "todo",
                 imageSrc: croppedImg,
+                marca: item.marca || "No identificada",
                 tejido: item.tejido || "Algodón mixto",
                 tags: Array.isArray(item.tags) ? item.tags : ["Modern", "Básico"],
               };
