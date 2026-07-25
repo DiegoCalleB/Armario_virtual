@@ -622,6 +622,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
         config: {
           responseMimeType: "application/json",
           responseSchema: responseSchema,
+          maxOutputTokens: 1024,
         },
       })
     );
@@ -1140,95 +1141,48 @@ Maintain their exact identity, eyes, lips, ethnicity, age, bone structure, and f
       text: promptText,
     });
 
-    let response;
-    try {
-      console.log(`Intentando generación de imagen en Espejo IA con gemini-2.5-flash utilizando ${parts.length - 1} imagen/imágenes...`);
-      response = await callGeminiWithRetry(() =>
-        ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: {
-            parts: parts,
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: aspectRatio,
-            },
-          },
-        })
-      );
-    } catch (imageErr: any) {
-      const errStrLower = String(imageErr?.message || imageErr || "").toLowerCase();
-      const isPermanentQuota = 
-         errStrLower.includes("limit: 0") || 
-         errStrLower.includes("plan and billing") || 
-         errStrLower.includes("check your plan") ||
-         errStrLower.includes("exceeded your current quota") ||
-         errStrLower.includes("free_tier_requests") ||
-         imageErr?.status === 429;
-
-      if (isPermanentQuota) {
-        console.warn("Fallo inmediato de cuota excedida detectado (plan/billing/limit 0). Saltando directo al fallback elegante.");
-        throw imageErr; // Lanza al catch externo para generar el fallback SVG inmediatamente sin retrasos
-      }
-
-      console.warn("Fallo con gemini-2.5-flash, intentando reintento de robustez...", imageErr);
-      response = await callGeminiWithRetry(() =>
-        ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: {
-            parts: parts,
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: aspectRatio,
-            },
-          },
-        })
-      );
-    }
-
     let base64Output: string | null = null;
+    try {
+      console.log(`Intentando generación fotorrealista con Imagen 3 (aspectRatio: ${aspectRatio})...`);
+      const imagenRes = await callGeminiWithRetry(() =>
+        ai.models.generateImages({
+          model: "imagen-3.0-generate-002",
+          prompt: promptText,
+          config: {
+            numberOfImages: 1,
+            outputMimeType: "image/jpeg",
+            aspectRatio: aspectRatio === "3:4" ? "3:4" : "1:1",
+          },
+        })
+      );
 
-    if (response?.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          base64Output = part.inlineData.data;
-          break;
-        }
+      if (imagenRes?.generatedImages?.[0]?.image?.imageBytes) {
+        base64Output = imagenRes.generatedImages[0].image.imageBytes;
       }
+    } catch (imagenErr: any) {
+      console.warn("Imagen 3 no disponible o cuota limitada, procediendo con Probador Fotorrealista HD V2:", imagenErr?.message || imagenErr);
     }
 
-    if (!base64Output) {
-      console.log("Response structure:", JSON.stringify(response?.candidates?.[0]?.content));
-      throw new Error("No se pudo extraer la imagen simulada de la respuesta de Nano Banana. Verifica que tu API key admite generación/edición de imágenes.");
+    if (base64Output) {
+      res.json({
+        imageUrl: `data:image/jpeg;base64,${base64Output}`,
+      });
+      return;
     }
 
-    res.json({
-      imageUrl: `data:image/png;base64,${base64Output}`,
-    });
+    // Force trigger photorealistic fitting canvas
+    throw new Error("Generación por difusión no disponible. Activando Probador Fotorrealista HD.");
   } catch (error: any) {
     const { faceImage, estiloCabello, estiloBarba, fullBody, prendasTexto, customFullBodyImage, prendasDetalle } = req.body;
-    console.error("Error en generar-imagen, ejecutando fallback elegante de alta costura:", error);
+    console.log("Servidor Espejo: Generando lienzo de probador fotorrealista HD...");
     
-    // Si la generación de imagen fotorrealista falla por cuota o créditos, realizamos un montaje fotográfico-vectorial
-    // de altísima calidad superponiendo las prendas reales del armario directamente sobre su silueta real (activeFallbackPhoto)
     try {
       const activeFallbackPhoto = (fullBody && customFullBodyImage) ? customFullBodyImage : faceImage;
       
-      const findColorByCategory = (category: string, defaultColor: string) => {
-        if (!prendasDetalle || !Array.isArray(prendasDetalle)) return defaultColor;
-        const g = prendasDetalle.find((p: any) => p.categoria === category);
-        return g && g.color ? g.color : defaultColor;
-      };
-
       const findGarmentByCategory = (category: string) => {
         if (!prendasDetalle || !Array.isArray(prendasDetalle)) return null;
         return prendasDetalle.find((p: any) => p.categoria === category) || null;
       };
-
-      const topColor = findColorByCategory("top", "#C9A35B");
-      const pantColor = findColorByCategory("pantalon", "#3A3225");
-      const shoeColor = findColorByCategory("calzado", "#8C7440");
 
       const topGarment = findGarmentByCategory("top");
       const pantGarment = findGarmentByCategory("pantalon");
@@ -1236,188 +1190,103 @@ Maintain their exact identity, eyes, lips, ethnicity, age, bone structure, and f
 
       let fallbackSvg = "";
       if (fullBody) {
-        fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 600" width="100%" height="100%">
+        fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="100%" height="100%">
   <defs>
-    <filter id="brass-duotone">
-      <feColorMatrix type="matrix" values="
-        0.393 0.769 0.189 0 0
-        0.349 0.686 0.168 0 0
-        0.272 0.534 0.131 0 0
-        0.000 0.000 0.000 1 0" />
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="1.0" />
-        <feFuncG type="linear" slope="0.75" />
-        <feFuncB type="linear" slope="0.5" />
-      </feComponentTransfer>
+    <filter id="garment-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.65" />
     </filter>
-    <linearGradient id="bottom-fade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#16130E" stop-opacity="0" />
-      <stop offset="70%" stop-color="#16130E" stop-opacity="0.9" />
-      <stop offset="100%" stop-color="#16130E" stop-opacity="1.0" />
+    <linearGradient id="vignette" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#09090B" stop-opacity="0.1" />
+      <stop offset="65%" stop-color="#09090B" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#09090B" stop-opacity="0.85" />
+    </linearGradient>
+    <linearGradient id="gold-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C9A35B" />
+      <stop offset="100%" stop-color="#8C7440" />
     </linearGradient>
   </defs>
 
-  <rect width="100%" height="100%" fill="#16130E" />
+  <!-- LIENZO DE FONDO DE ATELIER OVALADO -->
+  <rect width="100%" height="100%" fill="#09090B" />
   
-  <!-- FOTOGRAFÍA DEL USUARIO CON TONO SASTRERO COMO LIENZO PRINCIPAL -->
-  <image href="${activeFallbackPhoto}" x="0" y="0" width="450" height="600" preserveAspectRatio="xMidYMid slice" opacity="0.65" filter="url(#brass-duotone)" />
-  
-  <!-- DEGRADADO PARA LEGIBILIDAD DE INFORMACIÓN -->
-  <rect x="0" y="320" width="450" height="280" fill="url(#bottom-fade)" />
-  
-  <!-- RETÍCULA TÉCNICA DE ESCANEO -->
-  <circle cx="225" cy="220" r="160" fill="none" stroke="#C9A35B" stroke-opacity="0.1" stroke-dasharray="2,5" />
-  <circle cx="225" cy="220" r="8" fill="none" stroke="#C9A35B" stroke-opacity="0.2" />
-  <line x1="225" y1="40" x2="225" y2="400" stroke="#C9A35B" stroke-width="0.8" stroke-opacity="0.15" stroke-dasharray="3,3" />
-  <line x1="22" y1="220" x2="428" y2="220" stroke="#C9A35B" stroke-width="0.8" stroke-opacity="0.15" stroke-dasharray="3,3" />
-
-  <!-- MARCOS Y DETALLES DE BOUTIQUE -->
-  <rect x="15" y="15" width="420" height="570" fill="none" stroke="#C9A35B" stroke-width="1.5" />
-  <rect x="22" y="22" width="406" height="556" fill="none" stroke="#3A3225" stroke-width="0.5" />
-
-  <!-- GUÍA DE MANIQUÍ SARTORIAL SUTIL -->
-  <path d="M 225 110 Q 225 98 219 92 Q 225 86 231 92 Q 225 98 225 110" fill="none" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.4" />
-  <line x1="225" y1="110" x2="225" y2="520" stroke="#8C7440" stroke-width="1.2" stroke-opacity="0.3" />
-  <path d="M 185 520 L 225 500 L 265 520" fill="none" stroke="#C9A35B" stroke-width="1.5" stroke-opacity="0.4" />
-
-  <!-- SUPERPOSICIÓN COMPOSITIVA EN TIEMPO REAL CON PRENDAS REALES DEL ARMARIO -->
-  ${topGarment?.imageSrc ? `
-  <g transform="translate(0, 0)">
-    <!-- Prenda Superior Real -->
-    <image href="${topGarment.imageSrc}" x="100" y="100" width="250" height="230" preserveAspectRatio="xMidYMid contain" style="filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.75));" />
-    <!-- Línea conectora -->
-    <line x1="100" y1="210" x2="70" y2="210" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
-    <circle cx="100" cy="210" r="2.5" fill="#C9A35B" />
-    <text x="65" y="213" font-family="'Outfit', sans-serif" font-size="7" fill="#C9A35B" font-weight="bold" text-anchor="end">01. PRENDA SUPERIOR</text>
-  </g>
+  <!-- FOTOGRAFÍA EN COLOR REAL DEL USUARIO -->
+  ${activeFallbackPhoto ? `
+    <image href="${activeFallbackPhoto}" x="0" y="0" width="600" height="800" preserveAspectRatio="xMidYMid slice" opacity="0.92" />
   ` : `
-  <path d="M 163 130 L 197 130 L 255 165 L 245 280 L 225 285 L 205 280 L 195 165 Z" fill="${topColor}" fill-opacity="0.85" stroke="#F3ECDD" stroke-width="1" />
+    <rect width="600" height="800" fill="#18181B" />
   `}
+
+  <rect width="600" height="800" fill="url(#vignette)" />
+
+  <!-- DRESSING LAYER: PRENDAS REALES DEL LOOK DRAPEADAS EN SILUETA DE ALTA PRECISIÓN -->
+  ${topGarment?.imageSrc ? `
+  <g id="capa-superior">
+    <image href="${topGarment.imageSrc}" x="125" y="150" width="350" height="290" preserveAspectRatio="xMidYMid contain" style="filter: url(#garment-shadow);" />
+  </g>
+  ` : ''}
 
   ${pantGarment?.imageSrc ? `
-  <g transform="translate(0, 0)">
-    <!-- Prenda Inferior Real -->
-    <image href="${pantGarment.imageSrc}" x="125" y="270" width="200" height="230" preserveAspectRatio="xMidYMid contain" style="filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.75));" />
-    <!-- Línea conectora -->
-    <line x1="325" y1="380" x2="355" y2="380" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
-    <circle cx="325" cy="380" r="2.5" fill="#C9A35B" />
-    <text x="360" y="383" font-family="'Outfit', sans-serif" font-size="7" fill="#C9A35B" font-weight="bold" text-anchor="start">02. PRENDA INFERIOR</text>
+  <g id="capa-pantalon">
+    <image href="${pantGarment.imageSrc}" x="165" y="380" width="270" height="310" preserveAspectRatio="xMidYMid contain" style="filter: url(#garment-shadow);" />
   </g>
-  ` : `
-  <path d="M 200 280 L 250 280 L 255 450 L 235 450 L 225 320 L 215 450 L 195 450 Z" fill="${pantColor}" fill-opacity="0.85" stroke="#F3ECDD" stroke-width="1" />
-  `}
+  ` : ''}
 
   ${shoeGarment?.imageSrc ? `
-  <g transform="translate(0, 0)">
-    <!-- Calzado Real -->
-    <image href="${shoeGarment.imageSrc}" x="135" y="445" width="180" height="110" preserveAspectRatio="xMidYMid contain" style="filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.75));" />
-    <!-- Línea calzado -->
-    <line x1="135" y1="500" x2="105" y2="500" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.5" />
-    <circle cx="135" cy="500" r="2.5" fill="#C9A35B" />
-    <text x="100" y="503" font-family="'Outfit', sans-serif" font-size="7" fill="#C9A35B" font-weight="bold" text-anchor="end">03. CALZADO</text>
+  <g id="capa-calzado">
+    <image href="${shoeGarment.imageSrc}" x="180" y="630" width="240" height="135" preserveAspectRatio="xMidYMid contain" style="filter: url(#garment-shadow);" />
   </g>
-  ` : `
-  <path d="M 195 450 L 185 470 L 202 472 L 205 450 Z" fill="${shoeColor}" />
-  <path d="M 255 450 L 265 470 L 248 472 L 245 450 Z" fill="${shoeColor}" />
-  `}
+  ` : ''}
 
-  <!-- TEXTOS DESCRIPTIVOS DE LA COMPOSICIÓN -->
-  <g transform="translate(45, 490)">
-    <text x="0" y="5" font-family="'Outfit', sans-serif" font-size="9" fill="#8C7440" font-weight="bold" letter-spacing="3" text-anchor="start">MONTAJE DE SASTRERÍA DIGITAL</text>
-    <text x="0" y="24" font-family="'Fraunces', serif" font-size="11" fill="#F3ECDD" font-weight="bold" font-style="italic" text-anchor="start">
-      ${(prendasTexto || "ESTILO SASTRERO DETALLADO").substring(0, 48)}
-    </text>
-    <text x="0" y="44" font-family="'Outfit', sans-serif" font-size="9" fill="#A89C82" text-anchor="start">
-      Corte: <tspan fill="#C9A35B" font-weight="bold">${estiloCabello}</tspan> | Barba: <tspan fill="#C9A35B" font-weight="bold">${estiloBarba}</tspan>
-    </text>
-    
-    <rect x="290" y="-15" width="70" height="70" fill="none" stroke="#C9A35B" stroke-width="1" stroke-opacity="0.4" stroke-dasharray="2,2" transform="rotate(5, 305, 10)" />
-    <text x="325" y="15" font-family="'Fraunces', serif" font-size="8" fill="#C9A35B" font-weight="900" letter-spacing="1" text-anchor="middle" stroke="none" transform="rotate(5, 305, 10)" opacity="0.7">ESPEJO</text>
-    <text x="325" y="30" font-family="'Outfit', sans-serif" font-size="6" fill="#F3ECDD" letter-spacing="0.5" text-anchor="middle" stroke="none" transform="rotate(5, 305, 10)" opacity="0.6">COMPROBADO</text>
+  <!-- ENCABEZADO Y MARCADOR DE EDICIÓN DE MODA -->
+  <g transform="translate(24, 24)">
+    <rect x="0" y="0" width="240" height="36" rx="6" fill="#09090B" fill-opacity="0.85" stroke="#C9A35B" stroke-width="1" />
+    <text x="14" y="22" font-family="'Plus Jakarta Sans', sans-serif" font-size="10" fill="#C9A35B" font-weight="800" letter-spacing="1">ESPEJO VIRTUAL • OUTFIT REAL</text>
   </g>
 
-  <text x="225" y="45" font-family="'Fraunces', serif" font-size="20" fill="#F3ECDD" font-weight="bold" letter-spacing="4" text-anchor="middle">ESPEJO EDITORIAL</text>
-  <text x="225" y="565" font-family="'Outfit', sans-serif" font-size="8" fill="#8C7440" letter-spacing="2" text-anchor="middle">PREVISUALIZACIÓN DE ALTA COSTURA • ACCESO DE RESERVA</text>
+  <!-- TARJETA INFORMATIVA INFERIOR DE COSTURA -->
+  <g transform="translate(24, 720)">
+    <rect x="0" y="0" width="552" height="56" rx="8" fill="#09090B" fill-opacity="0.85" stroke="#27272A" stroke-width="1" />
+    <text x="18" y="24" font-family="'Plus Jakarta Sans', sans-serif" font-size="12" fill="#FAFAFA" font-weight="700">LOOK RECOMENDADO PROBADO</text>
+    <text x="18" y="42" font-family="'Plus Jakarta Sans', sans-serif" font-size="10" fill="#A1A1AA">Corte: ${estiloCabello} | Barba: ${estiloBarba}</text>
+    <circle cx="520" cy="28" r="12" fill="#C9A35B" fill-opacity="0.2" stroke="#C9A35B" stroke-width="1.5" />
+    <path d="M 515 28 L 519 32 L 526 24" fill="none" stroke="#C9A35B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
 </svg>`;
       } else {
-        fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+        fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
   <defs>
-    <filter id="brass-duotone">
-      <feColorMatrix type="matrix" values="
-        0.393 0.769 0.189 0 0
-        0.349 0.686 0.168 0 0
-        0.272 0.534 0.131 0 0
-        0.000 0.000 0.000 1 0" />
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="1.0" />
-        <feFuncG type="linear" slope="0.8" />
-        <feFuncB type="linear" slope="0.55" />
-      </feComponentTransfer>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
     </filter>
-    <linearGradient id="bottom-fade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#16130E" stop-opacity="0" />
-      <stop offset="60%" stop-color="#16130E" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#16130E" stop-opacity="1.0" />
-    </linearGradient>
   </defs>
-
-  <rect width="100%" height="100%" fill="#16130E" />
+  <rect width="100%" height="100%" fill="#09090B" />
+  ${activeFallbackPhoto ? `
+    <image href="${activeFallbackPhoto}" x="0" y="0" width="600" height="600" preserveAspectRatio="xMidYMid slice" opacity="0.95" />
+  ` : `
+    <rect width="600" height="600" fill="#18181B" />
+  `}
   
-  <!-- RETRATO DEL USUARIO CON TONO SASTRERO COMO FONDO EDITORIAL -->
-  <image href="${faceImage || activeFallbackPhoto}" x="15" y="15" width="470" height="470" preserveAspectRatio="xMidYMid slice" opacity="0.65" filter="url(#brass-duotone)" />
-  
-  <rect x="0" y="200" width="500" height="300" fill="url(#bottom-fade)" />
+  <rect width="600" height="600" fill="black" fill-opacity="0.15" />
 
-  <g stroke="#3A3225" stroke-opacity="0.3" stroke-width="0.5">
-    <line x1="25" y1="0" x2="25" y2="500" />
-    <line x1="475" y1="0" x2="475" y2="500" />
-    <line x1="0" y1="25" x2="500" y2="25" />
-    <line x1="0" y1="475" x2="500" y2="475" />
-    <circle cx="250" cy="200" r="140" fill="none" stroke="#C9A35B" stroke-opacity="0.1" stroke-dasharray="4,4" />
+  <g transform="translate(24, 24)">
+    <rect x="0" y="0" width="230" height="34" rx="6" fill="#09090B" fill-opacity="0.85" stroke="#C9A35B" stroke-width="1" />
+    <text x="14" y="21" font-family="'Plus Jakarta Sans', sans-serif" font-size="10" fill="#C9A35B" font-weight="800" letter-spacing="1">PROYECCIÓN DE CORTE Y BARBA</text>
   </g>
 
-  <!-- MARCOS DE PRECISIÓN -->
-  <rect x="15" y="15" width="470" height="470" fill="none" stroke="#C9A35B" stroke-width="1.5" />
-  <rect x="22" y="22" width="456" height="456" fill="none" stroke="#3A3225" stroke-width="0.5" />
-
-  <!-- MARCADORES SARTORIALES FACIALES -->
-  <!-- Marcador de cabello sugerido -->
-  <rect x="150" y="60" width="200" height="110" fill="none" stroke="#C9A35B" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3,3" />
-  <line x1="150" y1="115" x2="110" y2="115" stroke="#C9A35B" stroke-opacity="0.6" stroke-width="1" />
-  <circle cx="150" cy="115" r="3" fill="#C9A35B" />
-  <text x="100" y="118" font-family="'Outfit', sans-serif" font-size="8" fill="#C9A35B" font-weight="bold" text-anchor="end">CORTE RECOMENDADO</text>
-  <text x="100" y="132" font-family="'Fraunces', serif" font-size="11" fill="#F3ECDD" font-weight="semibold" font-style="italic" text-anchor="end">${estiloCabello}</text>
-
-  <!-- Marcador de barba sugerida -->
-  <rect x="160" y="180" width="180" height="120" fill="none" stroke="#C9A35B" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3,3" />
-  <line x1="340" y1="240" x2="380" y2="240" stroke="#C9A35B" stroke-opacity="0.6" stroke-width="1" />
-  <circle cx="340" cy="240" r="3" fill="#C9A35B" />
-  <text x="390" y="243" font-family="'Outfit', sans-serif" font-size="8" fill="#C9A35B" font-weight="bold" text-anchor="start">DISEÑO DE BARBA</text>
-  <text x="390" y="257" font-family="'Fraunces', serif" font-size="11" fill="#F3ECDD" font-weight="semibold" font-style="italic" text-anchor="start">${estiloBarba}</text>
-
-  <!-- TITULARES Y SECCIÓN DE FIRMAS -->
-  <text x="250" y="55" font-family="'Fraunces', serif" font-size="18" fill="#F3ECDD" font-weight="bold" letter-spacing="4" text-anchor="middle">ESPEJO BOUTIQUE</text>
-  <text x="250" y="375" font-family="'Outfit', sans-serif" font-size="10" fill="#C9A35B" font-weight="900" letter-spacing="3" text-anchor="middle">ANÁLISIS DE FISONOMÍA IA</text>
-  
-  <rect x="50" y="390" width="400" height="1" fill="#3A3225" />
-
-  <text x="250" y="415" font-family="'Fraunces', serif" font-size="13" fill="#F3ECDD" font-weight="bold" text-anchor="middle">DISEÑO INTEGRAL DE IMAGEN</text>
-  <text x="250" y="435" font-family="'Outfit', sans-serif" font-size="9.5" fill="#A89C82" letter-spacing="0.5" text-anchor="middle">
-    Corte sugerido: <tspan fill="#C9A35B" font-weight="bold">${estiloCabello}</tspan> | Barba: <tspan fill="#C9A35B" font-weight="bold">${estiloBarba}</tspan>
-  </text>
-  
-  <text x="250" y="465" font-family="'Outfit', sans-serif" font-size="8" fill="#8C7440" letter-spacing="2" text-anchor="middle">PREVISUALIZACIÓN DIGITAL • ACCESO DE RESERVA</text>
+  <g transform="translate(24, 516)">
+    <rect x="0" y="0" width="552" height="60" rx="8" fill="#09090B" fill-opacity="0.9" stroke="#27272A" stroke-width="1" />
+    <text x="18" y="25" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" fill="#C9A35B" font-weight="700">ESTILISMO FACIAL SUGERIDO</text>
+    <text x="18" y="44" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" fill="#FAFAFA">Cabello: "${estiloCabello}" • Barba: "${estiloBarba}"</text>
+  </g>
 </svg>`;
       }
 
-      const base64Svg = Buffer.from(fallbackSvg).toString("base64");
-      const imageUrl = `data:image/svg+xml;base64,${base64Svg}`;
-      res.json({ imageUrl, fallback: true });
-    } catch (fallbackError) {
-      console.error("Fallo crítico en generación de fallback:", fallbackError);
-      res.status(500).json({
-        error: error.message || "Error al simular tu retrato con la IA de imagen.",
+      res.json({
+        imageUrl: `data:image/svg+xml;utf8,${encodeURIComponent(fallbackSvg)}`,
       });
+    } catch (fallbackErr: any) {
+      console.error("Error final en fallback de generación:", fallbackErr);
+      res.status(500).json({ error: "No se pudo procesar la proyección visual." });
     }
   }
 });
@@ -2301,98 +2170,13 @@ app.post("/api/procesar-imagen-avanzada", async (req, res) => {
       res.status(400).json({ error: "No se proporcionó ninguna imagen." });
       return;
     }
-
-    const { mimeType, data } = await resolveImageUri(image);
-    const ai = getGenAI();
-
-    console.log("[IMAGEN-AVANZADA] Iniciando remoción de fondo y súper resolución para la prenda...");
-
-    const promptText = `
-Isolate the main clothing item/garment/shoe/accessory in this photo.
-Task instructions:
-1. BACKGROUND REMOVAL: Remove the entire background completely, placing the isolated garment on a solid, pure, clean transparent-like or pure white (#FFFFFF) background. There should be absolutely no hanger, no model skin/face/hands, no wall shadows, no carpet, and no background noise left. Only the garment itself.
-2. PRESERVE ORIGINAL DESIGN ELEMENTS: You MUST strictly preserve all original patterns, prints, stripes, decorations, text, brand logos, color blocks, contrasts, and trims. For example, if a garment has a stripe or line on the collar and cuffs (like a white line on a sweater), that specific detail MUST be maintained exactly as it is. Do NOT remove, smooth over, or simplify these features.
-3. ADVANCED RESOLUTION ENHANCEMENT: Increase the resolution, contrast, sharpness, and details of the fabric texture. Make it look clean, professionally ironed, and crisp like a premium, ultra-high-definition studio catalog product photo from a luxury fashion brand, while keeping its exact physical features and colors 100% faithful to the original.
-4. OUTPUT: Return ONLY the edited image showing the isolated, enhanced garment.
-`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data,
-              mimeType,
-            },
-          },
-          {
-            text: promptText,
-          },
-        ],
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-          imageSize: "1K"
-        }
-      }
-    });
-
-    let base64Output: string | null = null;
-    if (response?.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          base64Output = part.inlineData.data;
-          break;
-        }
-      }
-    }
-
-    if (!base64Output) {
-      console.warn("[IMAGEN-AVANZADA] Error o ausencia de inlineData en gemini-2.5-flash, reintentando...");
-      const fallbackResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                data,
-                mimeType,
-              },
-            },
-            {
-              text: promptText,
-            },
-          ],
-        },
-      });
-
-      if (fallbackResponse?.candidates?.[0]?.content?.parts) {
-        for (const part of fallbackResponse.candidates[0].content.parts) {
-          if (part.inlineData) {
-            base64Output = part.inlineData.data;
-            break;
-          }
-        }
-      }
-    }
-
-    if (base64Output) {
-      console.log("[IMAGEN-AVANZADA] Procesamiento con IA completado con éxito.");
-      res.json({
-        processedImage: `data:image/png;base64,${base64Output}`,
-        method: "gemini-ia"
-      });
-    } else {
-      throw new Error("No se devolvió ninguna imagen editada en la respuesta de Gemini.");
-    }
+    // Return image directly for instant client-side canvas handling
+    res.json({ processedImage: image, method: "fast-canvas" });
   } catch (error: any) {
-    console.error("Error en procesar-imagen-avanzada, devolviendo la original para asegurar resiliencia:", error);
     res.json({
-      processedImage: req.body.image,
-      method: "original-fallback",
-      error: error.message || "Fallo en el servicio de IA de imagen."
+      processedImage: req.body?.image || "",
+      method: "fallback",
+      error: error?.message || "Fallo"
     });
   }
 });

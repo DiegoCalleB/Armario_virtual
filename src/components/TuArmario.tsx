@@ -173,7 +173,7 @@ const cropGarmentImage = (
 };
 
 /**
- * Removes background and upscales the garment image using Gemini 3.1 Flash Image editing or high-precision local fallback.
+ * Removes background and upscales the garment image using high-precision, ultra-fast local Canvas processing.
  */
 const processImageToTransparentAndHD = async (
   base64Src: string,
@@ -182,29 +182,8 @@ const processImageToTransparentAndHD = async (
   if (!base64Src || base64Src.startsWith("data:image/svg+xml")) {
     return base64Src;
   }
-  try {
-    if (onProgress) {
-      onProgress("Removiendo fondo y mejorando resolución con IA avanzada...");
-    }
-    const res = await fetch("/api/procesar-imagen-avanzada", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: base64Src }),
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      if (data.processedImage) {
-        console.log("Background removal & advanced resolution upscaling completed:", data.method);
-        return data.processedImage;
-      }
-    }
-  } catch (err) {
-    console.warn("Fallo en procesado servidor IA, aplicando fallback canvas local de súper resolución:", err);
-  }
-  
   if (onProgress) {
-    onProgress("Aplicando remoción de fondo y nitidez premium local...");
+    onProgress("Ajustando fondo transparente y perfilando silueta...");
   }
   return await removeBackgroundAndSharpenCanvas(base64Src);
 };

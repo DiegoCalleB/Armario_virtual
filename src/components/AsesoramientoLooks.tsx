@@ -369,25 +369,58 @@ export default function AsesoramientoLooks({
       let prendasTexto = "";
       let matchingPrendas: any[] = [];
       if (fullBody) {
-        matchingPrendas = getResilientMatchingGarments(look.id_prendas, armario);
+        const rawMatching = getResilientMatchingGarments(look.id_prendas, armario);
+        matchingPrendas = await Promise.all(
+          rawMatching.map(async (p) => {
+            let optImg = p.imageSrc;
+            if (optImg && optImg.length > 100000) {
+              try {
+                optImg = await resizeImage(optImg, 512);
+              } catch (e) {
+                // ignore
+              }
+            }
+            return {
+              ...p,
+              imageSrc: optImg,
+            };
+          })
+        );
+
         prendasTexto = matchingPrendas
           .map((p) => `${p?.nombre} (categoría: ${p?.categoria === "top" ? "prenda superior" : p?.categoria === "pantalon" ? "prenda inferior" : p?.categoria === "calzado" ? "calzado" : "accesorio"}, color: ${p?.color}${p?.tejido ? `, tejido: ${p?.tejido}` : ""})`)
           .join(", combinado con ");
       }
 
-      // Trigger user paid flow setting check via show_aistudio_ui under standard model requirements if key is paid,
-      // but the server takes care of the configuration directly.
+      let optimizedFace = rostro?.imageSrc;
+      if (optimizedFace && optimizedFace.length > 150000) {
+        try {
+          optimizedFace = await resizeImage(optimizedFace, 600);
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      let optimizedBody = fullBody && customFullBodyPhoto ? customFullBodyPhoto : undefined;
+      if (optimizedBody && optimizedBody.length > 150000) {
+        try {
+          optimizedBody = await resizeImage(optimizedBody, 700);
+        } catch (e) {
+          // ignore
+        }
+      }
+
       const res = await fetch("/api/generar-imagen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          faceImage: rostro?.imageSrc || undefined,
+          faceImage: optimizedFace || undefined,
           estiloCabello: look.pelo_sugerido,
           estiloBarba: look.barba_sugerida,
           fullBody,
           prendasTexto,
           prendasDetalle: matchingPrendas,
-          customFullBodyImage: fullBody && customFullBodyPhoto ? customFullBodyPhoto : undefined,
+          customFullBodyImage: optimizedBody,
         }),
       });
 
