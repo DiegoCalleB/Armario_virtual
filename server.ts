@@ -382,7 +382,7 @@ app.post("/api/analizar-rostro", async (req, res) => {
 
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: [
           {
             inlineData: {
@@ -607,7 +607,7 @@ Responde estrictamente con el formato JSON definido en el esquema de respuesta.`
 
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: [
           {
             inlineData: {
@@ -920,7 +920,7 @@ Responde estrictamente utilizando el esquema de formato JSON siguiente.`;
 
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -1142,10 +1142,10 @@ Maintain their exact identity, eyes, lips, ethnicity, age, bone structure, and f
 
     let response;
     try {
-      console.log(`Intentando generación de imagen en Espejo IA con gemini-3.1-flash-lite-image utilizando ${parts.length - 1} imagen/imágenes...`);
+      console.log(`Intentando generación de imagen en Espejo IA con gemini-2.5-flash utilizando ${parts.length - 1} imagen/imágenes...`);
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
-          model: "gemini-3.1-flash-lite-image",
+          model: "gemini-2.5-flash",
           contents: {
             parts: parts,
           },
@@ -1171,10 +1171,10 @@ Maintain their exact identity, eyes, lips, ethnicity, age, bone structure, and f
         throw imageErr; // Lanza al catch externo para generar el fallback SVG inmediatamente sin retrasos
       }
 
-      console.warn("Fallo con gemini-3.1-flash-lite-image, intentando fallback de robustez con gemini-3.1-flash-image...", imageErr);
+      console.warn("Fallo con gemini-2.5-flash, intentando reintento de robustez...", imageErr);
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
-          model: "gemini-3.1-flash-image",
+          model: "gemini-2.5-flash",
           contents: {
             parts: parts,
           },
@@ -1472,7 +1472,7 @@ Responde obligatoriamente en estricto formato JSON, siguiendo el esquema estruct
 
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -1644,7 +1644,7 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
 
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: promptText,
         config: {
           responseMimeType: "application/json",
@@ -1767,7 +1767,7 @@ Responde estrictamente con el formato JSON definido en el esquema.`;
 
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: promptText,
         config: {
           responseMimeType: "application/json",
@@ -1917,7 +1917,7 @@ Evalúa técnicamente:
 Escribe una sugerencia muy útil, práctica y sencilla (máximo 3 líneas). Usa un tono muy amigable y accesible para todo el mundo. No utilices jergas complejas de sastrería ni palabras pretenciosas.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: promptText,
       config: {
         maxOutputTokens: 250,
@@ -1956,7 +1956,7 @@ Elabora un consejo práctico de moda sostenible y amortización de prendas:
 Escribe un análisis amigable, sencillo y útil (máximo 4 líneas de texto). No incluyas listas de viñetas, manténlo como un párrafo continuo y directo. No utilices jergas complejas de sastrería ni palabras rebuscadas.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: promptText,
       config: {
         maxOutputTokens: 300,
@@ -2095,7 +2095,7 @@ Responde únicamente con el esquema JSON válido, sin delimitadores de código m
 
     const chatResponse = await callGeminiWithRetry(() =>
       ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -2242,7 +2242,7 @@ OUTPUT: A single photorealistic full-body photograph. No text, no borders, no co
     try {
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
-          model: "gemini-3.1-flash-lite-image",
+          model: "gemini-2.5-flash",
           contents: {
             parts,
           },
@@ -2254,10 +2254,10 @@ OUTPUT: A single photorealistic full-body photograph. No text, no borders, no co
         })
       );
     } catch (err: any) {
-      console.warn("[PROBAR-LOOK] Error con gemini-3.1-flash-lite-image, intentando fallback de robustez con gemini-3.1-flash-image...", err);
+      console.warn("[PROBAR-LOOK] Error con gemini-2.5-flash, intentando reintento de robustez...", err);
       response = await callGeminiWithRetry(() =>
         ai.models.generateContent({
-          model: "gemini-3.1-flash-image",
+          model: "gemini-2.5-flash",
           contents: {
             parts,
           },
@@ -2317,7 +2317,7 @@ Task instructions:
 `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-image",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           {
@@ -2350,9 +2350,9 @@ Task instructions:
     }
 
     if (!base64Output) {
-      console.warn("[IMAGEN-AVANZADA] Error o ausencia de inlineData en gemini-3.1-flash-image, intentando con gemini-3.1-flash-lite-image...");
+      console.warn("[IMAGEN-AVANZADA] Error o ausencia de inlineData en gemini-2.5-flash, reintentando...");
       const fallbackResponse = await ai.models.generateContent({
-        model: "gemini-3.1-flash-lite-image",
+        model: "gemini-2.5-flash",
         contents: {
           parts: [
             {

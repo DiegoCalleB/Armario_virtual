@@ -1587,7 +1587,7 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                     <input
                       ref={fileInputRef}
                       type="file"
-                      multiple
+                      multiple={isMultiMode}
                       className="hidden"
                       accept="image/*"
                       onChange={handleFileChange}
@@ -1613,7 +1613,10 @@ export default function TuArmario({ prendas, onPrendaAgregada, onPrendaEliminada
                           <Plus size={20} />
                         </div>
                         <p className="font-serif text-base text-tinta font-semibold">Registrar con IA</p>
-                        <p className="text-[11px] text-tinta-apagada mt-0.5 mb-4 font-light">Arrastra fotos de prendas o haz clic para subir</p>
+                        <p className="text-[11px] text-tinta-apagada mt-0.5 mb-2 font-light">Arrastra fotos de prendas o haz clic para subir</p>
+                        <p className="text-[9.5px] text-laton/90 bg-tarjeta/50 border border-linea/40 px-3 py-1.5 rounded-md mb-4 max-w-[280px] leading-relaxed mx-auto font-sans font-light">
+                          💡 <b>Consejo móvil:</b> Si la galería de tu móvil se queda en <i>"preparando contenido..."</i>, prueba seleccionando una foto guardada localmente o activa el Modo Lote abajo.
+                        </p>
                         
                         <div className="flex flex-wrap gap-3 justify-center" onClick={(e) => e.stopPropagation()}>
                           <button
